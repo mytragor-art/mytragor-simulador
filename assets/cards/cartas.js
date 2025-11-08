@@ -302,7 +302,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: 'assets/allies/tamandua_guardiao
     name: 'Gladiador Implacável', kind: 'ally', img: 'assets/allies/gladiador_implacavel.png', cost: 4, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 9, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'buff_on_kill', effectValue: { atk: 1, ac: 1 }, text: 'Ao derrotar um inimigo, ganha +1 de ATK e +1 de AC permanentemente.'
   },
   {
-  name: 'Kornex Ronin', kind: 'ally', img: 'assets/allies/kornex_ronin.png', cost: 2, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 9, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'kornex_buff_per_marcial_in_play', effectValue: 1, text: 'Ganha +1 de ATK para cada outra carta de filiação Marcial em campo (inclui escolhido, aliados, ambientes, equipamentos).'
+  name: 'Kornex Ronin', kind: 'ally', img: 'assets/allies/kornex_ronin.png', cost: 2, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 9, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'kornex_buff_per_marcial_in_play', effectValue: 1, text: 'Ganha +1 de ATK e +1 de DANO para cada outra carta de filiação Marcial em campo (inclui escolhido, aliados, ambientes, equipamentos).'
   },
   {
     name: 'Livro Arcano Instável', kind: 'equip', img: 'assets/equip/livro_arcano_instavel.png', cost: 2, classe: '', tipo: 'Equipamento', filiacao: 'Arcana', effect: 'olhar_topo', atkBonus: 1, text: 'O aliado equipado ganha +1 de ATK. Ao entrar em campo, olhe as 2 cartas do topo do seu deck, escolha uma para voltar ao topo e a outra vai para o fundo.'

@@ -1815,12 +1815,15 @@ function render(){
           if(a && Array.isArray(a.equipments)) a.equipments.forEach(eq => { if(eq && eq.filiacao && eq.filiacao.toLowerCase() === 'marcial') count++; });
         });
         if(STATE[side].leader && Array.isArray(STATE[side].leader.equipments)) STATE[side].leader.equipments.forEach(eq => { if(eq && eq.filiacao && eq.filiacao.toLowerCase() === 'marcial') count++; });
-        // Remove bônus anterior
-        if(typeof card._kornexAtkBonus === 'number') card.atkBonus = (card.atkBonus||0) - card._kornexAtkBonus;
-        // Aplica novo bônus somente em atkBonus
+        // Remove bônus anterior (atk and damage)
+        if (typeof card._kornexAtkBonus === 'number') card.atkBonus = (card.atkBonus || 0) - card._kornexAtkBonus;
+        if (typeof card._kornexDmgBonus === 'number') card.damage = (card.damage || 0) - card._kornexDmgBonus;
+        // Aplica novo bônus em atkBonus E em damage (Kornex: +ATK e +DANO por cada Marcial)
         const per = Number(card.effectValue || 1) || 0;
         card._kornexAtkBonus = count * per;
-        card.atkBonus = (card.atkBonus||0) + card._kornexAtkBonus;
+        card._kornexDmgBonus = count * per;
+        card.atkBonus = (card.atkBonus || 0) + card._kornexAtkBonus;
+        card.damage = (card.damage || 0) + card._kornexDmgBonus;
       });
     });
     // Ademais (líder Aranha Negra): ganha +1 ATK e +1 AC para cada carta "Aranhas Negras" no SEU campo
