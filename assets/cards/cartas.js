@@ -173,7 +173,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: 'assets/allies/tamandua_guardiao
 
   // Magias, Equipamentos, Ambientes, Truques
   {
-    name: 'Mãos Flamejantes', kind: 'spell', img: 'assets/spell/maos_flamejantes.png', cost: 2, classe: '', tipo: 'Magia', filiacao: 'Arcana', effect: 'dano_2_inimigo', text: 'Cause 2 de dano a um inimigo.'
+  name: 'Mãos Flamejantes', kind: 'spell', img: 'assets/spell/Maos_flamejantes.png', cost: 2, classe: '', tipo: 'Magia', filiacao: 'Arcana', effect: 'dano_2_inimigo', text: 'Cause 2 de dano a um inimigo.'
   },
   {
     name: 'Espionagem Sorrateira', kind: 'spell', img: 'assets/spell/espionagem_sorrateira.png', cost: 4, classe: '', tipo: 'Magia', filiacao: 'Sombras', effect: 'espionagem_sorrateira',
