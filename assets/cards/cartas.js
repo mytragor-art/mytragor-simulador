@@ -89,7 +89,7 @@ const CARD_DEFS = [
     name: 'Goblin Sabotador', kind: 'ally', img: 'assets/allies/goblin_sabotador.png', cost: 3, classe: 'Criatura', tipo: 'Humanoide', filiacao: 'Neutra', ac: 6, hp: 2, maxHp: 2, damage: 1, atkBonus: 1, keywords: [], effect: 'destroy_equip_on_enter', text: 'Ao entrar em campo, destrua um equipamento em campo.'
   },
   {
-    name: 'Thron, o Martelo da Montanha', kind: 'ally', img: 'assets/allies/thor_martelo_montanha.png', cost: 5, classe: 'Guerreiro', tipo: 'Anão', filiacao: 'Neutra', ac: 8, hp: 6, maxHp: 6, damage: 4, atkBonus: 4, keywords: ['atropelar'], effect: '', text: 'Atropelar'
+  name: 'Thron, o Martelo da Montanha', kind: 'ally', img: 'assets/allies/thor_martelo_montanha.png', cost: 5, classe: 'Guerreiro', tipo: 'Anão', filiacao: 'Neutra', ac: 8, hp: 6, maxHp: 6, damage: 4, atkBonus: 4, keywords: ['atropelar'], effect: '', text: 'Atropelar'
   },
   {
     name: 'Ogro da Montanha', kind: 'ally', img: 'assets/allies/ogro_montanha.png', cost: 6, classe: 'Criatura', tipo: 'Humanoide', filiacao: 'Neutra', ac: 7, hp: 6, maxHp: 6, damage: 5, atkBonus: 3, keywords: ['atropelar'], effect: '', text: 'Atropelar'
