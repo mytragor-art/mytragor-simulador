@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Mytragor — Início</title>
   <style>
     /* Fantasy font (fallback to serif if unavailable) */
@@ -108,6 +111,24 @@
       text-align:center;
     }
   </style>
+  <script>
+    // Cache-bust local assets on page load so visitors get latest files.
+    (function(){
+      try{
+        const v = 'v=' + Date.now();
+        function addQ(el, attr){
+          const url = el.getAttribute(attr);
+          if(!url) return;
+          if(/^(https?:|data:|file:|\/\/)/i.test(url)) return; // skip absolute/data URLs
+          if(url.indexOf('?')>-1) el.setAttribute(attr, url + '&' + v); else el.setAttribute(attr, url + '?' + v);
+        }
+        // Bust local styles, scripts and common images
+        document.querySelectorAll('link[rel=stylesheet], script[src], img').forEach(el=>{
+          if(el.tagName==='LINK') addQ(el,'href'); else if(el.tagName==='SCRIPT') addQ(el,'src'); else addQ(el,'src');
+        });
+      }catch(e){console.warn('cache-bust failed',e)}
+    })();
+  </script>
   <!-- Inline modal styles (polished, accessible) -->
   <style>
     /* Overlay */

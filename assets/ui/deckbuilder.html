@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Montador de Deck - Simulador Mytragor</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <style>
   body { background: #000000; color: #e2e8f0; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 0; min-height: 100vh; }
     .container {
@@ -95,6 +98,22 @@
   .card-preview img { width:120px; height:180px; object-fit:cover; border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,0.6); }
   .card-preview .meta { margin-left:12px; max-height:180px; overflow:auto }
   </style>
+  <script>
+    (function(){
+      try{
+        const v = 'v=' + Date.now();
+        function addQ(el, attr){
+          const url = el.getAttribute(attr);
+          if(!url) return;
+          if(/^(https?:|data:|file:|\/\/)/i.test(url)) return;
+          if(url.indexOf('?')>-1) el.setAttribute(attr, url + '&' + v); else el.setAttribute(attr, url + '?' + v);
+        }
+        document.querySelectorAll('link[rel=stylesheet], script[src], img').forEach(el=>{
+          if(el.tagName==='LINK') addQ(el,'href'); else addQ(el,'src');
+        });
+      }catch(e){ console.warn('cache-bust failed', e); }
+    })();
+  </script>
 </head>
 <body>
   <button id="btnBackMenu" onclick="location.href='../../index.html'" title="Voltar ao menu" style="position:fixed;right:18px;top:18px;z-index:9999;padding:10px 14px;border-radius:10px;background:linear-gradient(180deg,#facc15,#f59e0b);color:#111;border:1px solid rgba(250,200,60,0.12);box-shadow:0 8px 20px rgba(250,180,20,0.06);font-weight:800;">Voltar ao menu</button>

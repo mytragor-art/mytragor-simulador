@@ -1,223 +1,79 @@
 # EFFECTS — Nomenclaturas e comportamentos
 
-Este arquivo lista as nomenclaturas (keys) de `effect` usadas no projeto Mytragor e descreve o que cada efeito faz, quais campos adicionais são esperados (`effectValue`, `dmgBonus`, etc.) e recomendações de uso ao adicionar novas cartas em `assets/cards/cartas.js`.
+Este arquivo lista as chaves (`effect`) usadas no projeto Mytragor, descreve o comportamento esperado de cada efeito, os campos auxiliares mais comuns (por exemplo `effectValue`, `dmgBonus`) e boas práticas ao adicionar novas cartas em `assets/cards/cartas.js`.
 
-Use este guia quando for criar novas cartas para garantir que o campo `effect` receba um nome correto e que todos os parâmetros necessários sejam preenchidos.
+Use-o como referência ao criar ou revisar cartas para garantir consistência entre definição e motor do simulador.
 
 ---
 
 ## Convenções gerais
-- `effect` (string): nome do comportamento especial da carta (por exemplo, `curar_animal`, `destroy_equip`).
-- `effectValue` (number, opcional): valor numérico usado por alguns efeitos (ex.: quantidade de cura, bônus de ATK temporário).
-- `escolha1` (boolean, opcional): indica que a carta oferece uma escolha entre duas opções (usada com `effectA` e `effectB`).
-- Propriedades de equipamento (aplicadas automaticamente ao equipar se presentes):
-  - `atkBonus`: valor adicionado ao ataque/atkBonus do alvo (se usado no projeto).
-  - `dmgBonus` ou `damageBonus`: valor adicionado ao `damage` (dano) do alvo quando equipado.
-  - `acBonus`: valor adicionado à classe de armadura (AC) do alvo.
-  - `hpBonus`: vida adicionada (geralmente ajusta `hp`/`maxHp` quando aplicado).
-  - `acBonus`, `hpBonus` etc. são aplicados pela lógica de equip do simulador — use nomes consistentes (veja exemplos abaixo).
-- Nomes de efeitos devem ser curtos, em snake_case e descritivos (por ex. `curar_animal`, `destroy_equip`).
+
+- `effect` (string): nome do comportamento especial da carta (ex.: `curar_animal`, `destroy_equip`).
+- `effectValue` (number | object, opcional): magnitude do efeito (cura, dano, bônus, etc.).
+- `escolha1` (boolean, opcional): indica escolha entre duas opções (usar com `effectA` / `effectB`).
+- Propriedades aplicadas por equipamentos ou buffs (nomes recomendados): `atkBonus`, `dmgBonus` / `damageBonus`, `acBonus`, `hpBonus`.
+- Prefira nomes curtos em snake_case para `effect` (ex.: `atk_per_marcial_in_play`).
 
 ---
 
-## Lista de efeitos conhecidos e descrição
+## Efeitos padronizados (resumo)
 
-### curar_animal
-  { effect: 'curar_animal', effectValue: 1 }
+Nota: esta lista apresenta os efeitos detectados no código e recomendações de uso. Se o projeto contiver aliases (nomes antigos), considere normalizá-los utilizando os nomes abaixo.
 
-## Efeitos adicionais (padronizações e mapeamentos)
-
-Este projeto evoluiu com nomes distintos para efeitos similares em diferentes pontos do código. Abaixo há recomendações de nomes padronizados (snake_case) e mapeamentos/aliases para compatibilidade.
-
-- anular_ataque
-  - Alias/antigo: `freeser`, `constricao` (nome da carta)
-  - O que faz: Reação que nega um ataque declarado pelo oponente. Além de anular o ataque, marca o atacante para não desvirar no próximo início de turno do controlador (o simulador usa uma flag como `_skipNextUntap`).
-  - Campos usados: nenhum extra padrão. Cartas do tipo `truque` devem usar `effect: 'anular_ataque'`.
-
-- tap_enemy
-  - Onde: usado por magias como "Raio de Gelo".
-  - O que faz: Deita (taps) um inimigo alvo (líder ou aliado). O alvo recebe `tapped = true` e pode receber flags temporárias. A carta que ativa o efeito é enviada ao cemitério após resolução.
-
-- agiota
-  - Onde: cartas como "Aranhas Negras, Agiota".
-  - O que faz: Permite pagar vida de um aliado (campo `costHp`) como alternativa ao custo em fragmentos para jogar cartas de custo limite (ex.: <=3). Deve ser controlado por uso por turno. Documente `costHp` quando aplicar.
-
-- ban_on_enter
-  - Onde: triggers ao entrar em campo.
-  - O que faz: Ao entrar em campo, permite banir/retirar uma carta do jogo (ou da mão). Use `effectValue` para indicar quantas cartas ou filtros adicionais.
-
-- destroy_equip_on_enter
-  - Onde: goblin e similares.
-  - O que faz: Ao entrar em campo, destrói um equipamento em jogo (alvo). Similar a `destroy_equip` mas com timing "on enter".
-
-- ally_heal_buff
-  - Onde: "Porco Espinho Furioso".
-  - O que faz: Sempre que um aliado do controlador for curado, esta carta ganha buffs permanentes (ex.: +1 atk, +1 damage, +1 ac, +1 hp). Use `effectValue` ou documentar as propriedades que mudam.
-
-- blood_sacrifice
-  - Onde: magias como "Sacrifício de Sangue".
-  - O que faz: Permite pagar HP de um aliado (campo `costHp`) para causar dano a inimigo. `costHp` deve ser checado antes de resolver o efeito e o pagamento efetuado (com alvo de pagamento escolhido pelo jogador).
-
-- damage_ally_on_enter
-  - Onde: cartas de troca/risco.
-  - O que faz: Ao entrar em campo, opcionalmente causa dano a outro aliado para obter um benefício (ex.: comprar 1 carta). Use `effectValue` para parametrizar a quantidade.
-
-- search_deck
-  - Já documentado acima, mas destacamos que é amplamente usado por cartas/equipamentos com `query` e `max`. Confirme `title`/`max`/`query` ao adicionar novas variações.
-
-- atk_per_marcial_in_play
-  - Alias/antigo: `kornex_buff_per_marcial_in_play`
-  - O que faz: Concede +N ATK (ou `atkBonus`) para a carta por cada outra carta em campo com filiação `Marcial`. Use `effectValue` para indicar N. Preferir este nome padronizado em vez de nomes específicos por carta.
-
-- amizade_floresta
-  - Onde: cartas relacionadas à floresta.
-  - O que faz: Efeitos multi-step (escolher um aliado Animal, causar dano nele e depois curar outro alvo). Documente como o efeito seleciona alvos e em que ordem se resolvem as etapas.
-
-- on_grave_damage_leader
-  - Onde: equipamentos que punem quando vão para o cemitério.
-  - O que faz: Trigger que causa dano ao líder inimigo quando a carta é enviada do campo para o cemitério. Use `effectValue` para parametrizar dano.
-
-- redoma_santa
-  - Observação: embora `redoma_santa` já exista como `effect` em cartas, a documentação detalhada foi adicionada aqui: fornece redução de dano (`damageTakenReduction`), bônus de AC (`acBonus`) e cura ao equipar em aliado ferido.
+- anular_ataque — Reação que anula um ataque declarado; marca o atacante para não desvirar no próximo início do turno (usa flag `_skipNextUntap`).
+- anular_magia_truque — Anula uma magia/truque ativada pelo oponente (contramágica/interrupt).
+- tap_enemy — Deita (tap) um inimigo alvo (`tapped = true`).
+- curar_animal — Cura um aliado do tipo Animal. Ex.: `{ effect:'curar_animal', effectValue:1 }`.
+- atk_per_marcial_in_play — Ganha `effectValue` de ATK/`atkBonus` por cada carta com filiação `Marcial` em campo (padronização para o que antes era `kornex_buff_per_marcial_in_play`).
+- buff_per_filiacao_in_play — Bônus por filiação (use `buffFiliacao` e `buffTargetProp`).
+- search_deck — Busca no deck por `query` (use `max` e `title` para configurar UI).
+- destroy_equip / destroy_equip_on_enter — Destrói equipamento alvo (variant: on enter).
+- damage_ally_on_enter — Ao entrar, causa dano a outro aliado como custo/condição.
+- blood_sacrifice — Permite pagar HP de um aliado (`costHp`) para causar dano ao inimigo.
+- ban_on_enter — Ao entrar, permite banir/retirar cartas (use `effectValue` para quantidade/filters).
+- aura_hp — Aura que concede HP enquanto estiver em campo (use `auraTarget` e `auraScope`).
+- on_grave_damage_leader — Ao ir para o cemitério, causa dano ao líder inimigo (`effectValue`).
+- redoma_santa — Equipamento que reduz dano recebido, dá `acBonus` e cura ao equipar em aliado ferido.
+- dmg_bonus / damageBonus — Usado por equipamentos para aumentar `damage` do alvo (considere `dmgBonus` como padrão simples).
+- heal_or_draw — Spell com escolha entre curar ou comprar (use `escolha1`, `effectA`, `effectB`).
+- buff_on_kill — Ganha bônus permanente ao derrotar inimigos (use `effectValue` como objeto `{ atk:1, ac:1 }`).
+- reflect_damage — Marca alvo para refletir parte do dano de volta (use `reflectValue` se precisar parametrizar).
 
 ---
 
-Se desejar, posso aplicar automaticamente as renomeações no código (substituir `freeser` -> `anular_ataque`, `kornex_buff_per_marcial_in_play` -> `atk_per_marcial_in_play`) e adicionar aliases nos lugares que julgar necessário. Também posso gerar um patch para normalizar nomes em todo o repositório.
-- Tipo: `ally` (trigger ao morrer/ser destruído)
-- O que faz: Quando destruído, invoca um aliado "Cidadão" da mão.
-- Campos usados: nenhum extra padrão; comportamentos dependem de implementação.
+## Estrutura recomendada para efeitos que somam propriedades
 
-### olhar_topo
-- Tipo: `ally` (trigger ao entrar em campo)
-- O que faz: Permite olhar a carta do topo do seu deck e escolher deixá-la no topo ou no fundo.
-- Campos usados: nenhum extra.
+Para efeitos que somam múltiplas propriedades (por ex. `atk` e `damage`), prefira usar campos explícitos e rastrear os bônus temporários com propriedades internas (prefixadas com `_`) para que possam ser removidos/recalculados ao recomputar auras:
 
-### aura_hp
-- Tipo: `ally` (aura)
-- O que faz: Enquanto estiver em campo, concede +N HP a aliados que satisfaçam `auraTarget`.
-- Campos usados: `effectValue` (N), `auraTarget` (objeto com critérios, por ex. `{ classe: 'Cidadão' }`), `auraScope` (ex.: `'allies'`).
-- Exemplo:
-  { effect: 'aura_hp', effectValue: 1, auraTarget: { classe: 'Cidadão' }, auraScope: 'allies' }
+```js
+// Exemplo de card com efeito localizado
+{
+  name: 'Kornex Ronin',
+  kind: 'ally',
+  effect: 'atk_per_marcial_in_play',
+  effectValue: 1,
+  text: 'Ganha +1 de ATK e +1 de DANO para cada Marcial em jogo.'
+}
+```
 
-### dano_2_inimigo (ou dano_X_inimigo)
-- Tipo: `spell`
-- O que faz: Causa 2 de dano a um inimigo alvo (ou X se nomear diferente ou usar `effectValue`).
-- Campos usados: às vezes `effectValue` para generalizar; no projeto atual é `dano_2_inimigo`.
-
-### anular_magia_truque
-- Tipo: `truque`/reactive
-- O que faz: Anula uma magia ou truque ativada pelo oponente (contramágica/interrupt).
-- Campos usados: nenhum extra.
-
-### arcana_draw
-- Tipo: `env` (ambiente)
-- O que faz: Em determinados turnos (ex.: se o escolhido for Arcano), concede compra extra.
-- Campos usados: sem padrão; ambiente implementa a lógica.
-
-### sombra_penalty
-- Tipo: `env`
-- O que faz: Penaliza jogadores não-Sombra (ex.: -1 ação no turno).
-
-### marcial_bonus
-- Tipo: `env`
-- O que faz: Dá bônus para personagens Marciais (ex.: +1 ATK).
-
-### religioso_protecao
-- Tipo: `env`
-- O que faz: Reduz dano recebido de aliados religiosos (ex.: -1 de dano).
-
-### dmg_bonus (ou dmg_bonus / damageBonus)
-- Tipo: `equip` (equipamento)
-- O que faz: Ao equipar, adiciona X de dano ao alvo (incrementa `damage` do alvo).
-- Campos usados: `dmgBonus` (número) — no projeto usamos `dmgBonus: 1` para representações simples.
-- Observação: também aceitamos `damageBonus` como alternativa. Use uma convenção única.
-
-### draw_bonus / orbe related
-- Tipo: `equip` ou `effect`
-- O que faz: Ao equipar, concede compra adicional em certas condições.
-- Campos usados: nenhum extra; implementação específica do simulador pode ler `effect`.
-
-### heal_or_draw
-- Tipo: `spell`
-- O que faz: Dá ao jogador a escolha entre curar ou comprar cartas.
-- Campos usados: `escolha1: true`, `effectA`, `effectB` onde cada `effectX` descreve a opção.
-- Exemplo:
-  { effect: 'heal_or_draw', escolha1: true, effectA: { type: 'heal', value: 3 }, effectB: { type: 'draw', value: 2 } }
-
-### destroy_equip
-- Tipo: `spell`
-- O que faz: Destroi um equipamento em campo (geralmente escolhe alvo entre equipamentos).
-
-### sede_vinganca
-- Tipo: `spell`
-- O que faz: Dá um buff temporário (+N ATK) a um aliado guerrreiro (ou classe similar). Pode ter efeitos condicionais ao derrotar inimigos.
-- Campos usados: `effectValue` (N)
-
-### reflect_damage
-- Tipo: `equip`
-- O que faz: Marca o equipamento/alvo com a propriedade de refletir X de dano de volta ao atacante. A implementação pode checar `effect === 'reflect_damage'` ao calcular danos.
-- Campos usados: nenhuma obrigatória; você pode adicionar `reflectValue: 1` se quiser parametrizar.
-
-### buff_per_name_in_play
-- Tipo: `leader` ou qualquer carta que deseje ganhar bônus dinâmico por nomes em campo
-- O que faz: Concede bônus ao portador para cada carta em campo cujo nome contenha uma substring específica (case-insensitive). Pode contar aliados, equipamentos, ambientes, etc. O efeito é idempotente e recalculado a cada recomputeAuras.
-- Campos usados:
-  - `matchName` (string): substring a ser buscada nos nomes das cartas em campo (ex: 'Aranhas Negras')
-  - `effectValue` (number): valor do bônus por carta encontrada
-  - `targetProp` (string): propriedade(s) a serem aumentadas, separadas por '+', ',' ou espaço (ex: 'atk+damage', 'atk', 'damage')
-- Exemplo:
-  ```js
-  {
-    effect: 'buff_per_name_in_play',
-    matchName: 'Aranhas Negras',
-    effectValue: 1,
-    targetProp: 'atk+damage'
-  }
-  ```
-- Observações:
-  - O efeito soma o bônus para cada carta em campo (aliado, equipamento, ambiente, etc.) cujo nome contenha a substring informada.
-  - Equipamentos só contam se estiverem equipados em algum aliado/líder.
-  - O efeito é recalculado automaticamente ao entrar/sair cartas do campo.
-  - Útil para líderes ou cartas que "comandam" ou se beneficiam de um tipo específico de tropa ou item.
-
-### buff_on_kill
-- Tipo: `ally` (trigger ao derrotar um inimigo)
-- O que faz: Sempre que este aliado derrota um inimigo (reduz o HP a zero em combate), ele ganha +1 de ATK e +1 de AC permanentemente.
-- Campos usados: `effectValue` (objeto, ex: `{ atk: 1, ac: 1 }`)
-- Exemplo:
-  { effect: 'buff_on_kill', effectValue: { atk: 1, ac: 1 } }
-
-### atk_per_marcial_in_play
-- Tipo: `ally` (passivo)
-- O que faz: Este aliado ganha +1 de ATK para cada outra carta de filiação Marcial em campo (inclui líder, aliados, ambientes e equipamentos).
-- Campos usados: `effectValue` (quanto de bônus por carta Marcial)
-- Exemplo:
-  { effect: 'atk_per_marcial_in_play', effectValue: 1 }
-
-### buff_per_filiacao_in_play
-- Tipo: `ally`, `leader`, `equip`, `env` (passivo)
-- O que faz: Esta carta ganha um bônus em uma propriedade (`buffTargetProp`) para cada outra carta em campo com determinada filiação (`buffFiliacao`).
-- Campos usados: `effectValue` (quanto de bônus por carta), `buffTargetProp` (propriedade a ser aumentada, ex: 'atkBonus', 'ac', 'damage'), `buffFiliacao` (filiação alvo, ex: 'Marcial', 'Arcana').
-- Exemplo:
-  { effect: 'buff_per_filiacao_in_play', effectValue: 1, buffTargetProp: 'atkBonus', buffFiliacao: 'Marcial' }
-
----
-
-## Outras chaves/fields relacionados (não são `effect` mas importantes ao criar cartas)
-- `atkBonus`: bônus de ataque (adicionado a `atkBonus` do alvo).
-- `dmgBonus` / `damageBonus`: aumento de `damage` do alvo.
-- `acBonus`: bônus temporário/permanente à AC do alvo.
-- `hpBonus`: bônus de vida (ajusta hp/maxHp conforme lógica do simulador).
-- `keywords`: array de traits (ex.: `['bloquear','provocar']`) usados por diversas lógicas.
-- `effectValue`: número usado por muitos efeitos para parametrizar magnitude.
-- `auraTarget`: objeto que descreve filtro para a aura (ex.: `{ classe: 'Cidadão' }`).
+No código do simulador, ao aplicar tais efeitos, armazene o bônus aplicado em campos como `card._kornexAtkBonus` e `card._kornexDmgBonus` para permitir remoção segura antes de recalcular.
 
 ---
 
 ## Boas práticas ao adicionar novas cartas
-1. Use `effect` com nome em snake_case, curto e descritivo.
-2. Preencha `effectValue` quando o efeito precisar de um número (como cura ou buff em quantidade).
-3. Para equipamentos que dão atributos, prefira usar campos explícitos (`atkBonus`, `dmgBonus`, `acBonus
+
+1. Use `effect` em snake_case, curto e descritivo.
+2. Sempre preencha `effectValue` quando o efeito precisa de uma magnitude.
+3. Para equipamentos e buffs que modificam atributos, prefira campos explícitos: `atkBonus`, `dmgBonus` (ou `damageBonus`), `acBonus`, `hpBonus`.
+4. Se o efeito tiver múltiplas etapas (ex.: escolher alvo A, depois B), documente claramente a ordem e os alvos em `text` e/ou campos auxiliares.
+5. Ao renomear efeitos no código, mantenha aliases temporários ou atualize o motor para entender novos nomes (evitar regressões).
+
+---
+
+## Exemplos práticos
+
+Alvo simples (cura a um Animal):
+
 ```js
 {
   name: 'Cervo de Galhos Brancos',
@@ -237,19 +93,32 @@ Se desejar, posso aplicar automaticamente as renomeações no código (substitui
 }
 ```
 
+Exemplo de `buff_per_name_in_play` (conte bônus por substring no nome):
+
+```js
+{
+  effect: 'buff_per_name_in_play',
+  matchName: 'Aranhas Negras',
+  effectValue: 1,
+  targetProp: 'atk+damage'
+}
+```
+
 ---
 
-Se quiser, eu posso:
-- Gerar este arquivo também como JSON (para uso programático),
-- Inserir templates de cartões prontos (snippets) para adicionar novas cartas rapidamente,
-- Ou verificar `CARD_DEFS` e listar automaticamente todos os efeitos encontrados (atualizarei o arquivo com qualquer efeito novo detectado).
+## Automação e próximos passos
 
-Diga se prefere versão JSON, snippets ou que eu gere automaticamente a lista baseada no código atual (posso atualizar o arquivo com efeitos detectados automaticamente).
+Posso executar automaticamente as seguintes operações se desejar:
+
+1) Gerar este arquivo como JSON para uso programático (IDE/validações).
+2) Inserir templates/snippets para adicionar cartas rapidamente.
+3) Varredura e normalização: substituir aliases antigos pelos nomes padronizados no código e adicionar comentários/aliases quando necessário.
+
+Diga qual opção prefere (1, 2 ou 3) ou peça outra alteração — eu posso aplicar o patch automaticamente ao repositório se autorizar.
 
 ---
 
-### Referência detalhada de efeitos (exemplos e campos)
-
+<!-- Fim do documento -->
 Esta seção dá exemplos práticos e os campos esperados ao usar cada `effect` detectado no código. Use estes exemplos como base ao adicionar novas cartas em `assets/cards/cartas.js`.
 
 #### anular_ataque
