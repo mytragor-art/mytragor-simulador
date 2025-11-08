@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mytragor — Multiplayer</title>
+<link rel="stylesheet" href="./assets/css/main.css" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&display=swap');
+  :root{ --bg:#0b1020; --card:#0f1724; --gold1:#facc15; --gold2:#f59e0b; --muted:#9ca3af }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+  body{background:linear-gradient(180deg,#071025 0%,#04101a 100%);display:flex;align-items:center;justify-content:center;color:#e2e8f0}
+
+  .wrap{width:100%;max-width:980px;padding:28px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center}
+  .brand{font-family:'Cinzel', Georgia, 'Times New Roman', serif;color:var(--gold1);font-weight:900;font-size:36px;letter-spacing:2px;margin:6px 0}
+
+  /* lobby card */
+  .mp-card { width: 420px; max-width: 94vw; background: linear-gradient(180deg, rgba(12,14,18,0.88), rgba(6,7,10,0.66)); border-radius:12px; padding:18px; border:1px solid rgba(250,204,21,0.08); box-shadow:0 18px 48px rgba(2,6,23,0.8);} 
+  .mp-row{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px }
+  label{ font-size:13px; color:var(--muted) }
+  .mp-input { width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background: rgba(0,0,0,0.28); color: #e6eef8; }
+  .mp-input::placeholder{ color: rgba(230,238,248,0.42); }
+
+  .controls{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:8px}
+  .gold-btn{padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800}
+  .gold-btn.primary{background:linear-gradient(180deg,var(--gold1),var(--gold2));color:#111}
+  .gold-btn.secondary{background:transparent;color:var(--gold1);border:1px solid rgba(250,204,21,0.08)}
+
+  #log{ margin-top:10px; background: rgba(0,0,0,0.16); padding:10px; border-radius:8px; height:120px; overflow:auto; font-family:monospace; color:#dfe8f5 }
+  .hidden{ display:none }
+</style>
+</head>
+<body>
+
+<!-- Lobby de conexão -->
+<div class="wrap">
+  <div class="mp-card" id="lobby">
+    <div style="text-align:center;margin-bottom:10px">
+      <div class="brand">Mytragor</div>
+      <div style="color:var(--muted);font-size:13px">Modo Multiplayer</div>
+    </div>
+
+    <div class="mp-row">
+      <label for="room">Código da sala</label>
+      <input id="room" class="mp-input" value="TESTE123" />
+    </div>
+
+    <div class="mp-row">
+      <label for="side">Lado</label>
+      <select id="side" class="mp-input">
+        <option value="p1">p1 (Jogador 1)</option>
+        <option value="p2">p2 (Jogador 2)</option>
+      </select>
+    </div>
+
+    <div class="mp-row">
+      <label for="srv">Servidor WS</label>
+      <input id="srv" class="mp-input" value="ws://localhost:8080" />
+    </div>
+
+    <div class="controls">
+      <button id="connect" class="gold-btn primary">Criar sala (host)</button>
+      <button id="scanRooms" class="gold-btn secondary">Procurar salas</button>
+      <button id="joinSelected" class="gold-btn primary hidden">Entrar na sala selecionada</button>
+      <button id="btnBack" class="gold-btn secondary" onclick="location.href='index.html'">Voltar</button>
+    </div>
+
+    <div id="log"></div>
+    <div id="debugLink" style="margin-top:8px;font-size:13px;color:#94a3b8;display:none">
+      <span>Destino: </span><a id="directOpen" href="#" target="_blank" style="color:#9ae6b4">abrir simulador diretamente</a>
+    </div>
+  </div>
+</div>
+
+<!-- Instead of trying to inline the simulator (assets/js/...), we redirect the user
+     to the real simulator page (`mytragor_simulador.html`) which contains the
+     full game scripts and initialization. This avoids 404s when assets/js/*
+     doesn't exist. -->
+<div id="board" class="hidden">
+  <div id="mytragor-simulador-root"></div>
+</div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const log = (msg) => { const el = $('#log'); const p = document.createElement('div'); p.textContent = msg; el.appendChild(p); el.scrollTop = el.scrollHeight; };
+
+  const roomInput = $('#room');
+  const sideSelect = $('#side');
+  const srvInput  = $('#srv');
+  const btnConnect = $('#connect');
+  const btnJoin = document.getElementById('joinSelected');
+  const lobby = $('#lobby');
+  const board = $('#board');
+
+  // Lobby websocket (to list active rooms)
+  let lobbyWS = null;
+  function connectLobbyWS(serverOverride){
+    // Prefer the explicit server input if present, then passed override, then localStorage, then a sensible default
+    const inputVal = (document.getElementById('srv') && document.getElementById('srv').value) ? document.getElementById('srv').value.trim() : '';
+    const SERVER = inputVal || serverOverride || localStorage.getItem('mpServer') || 'ws://localhost:8080';
+    try{ lobbyWS = new WebSocket(SERVER); }catch(e){ console.warn('lobby ws failed to connect to', SERVER, e); return; }
+    lobbyWS.onopen = ()=>{ console.log('[lobby] ws open, requesting rooms'); try{ lobbyWS.send(JSON.stringify({ type:'list' })); }catch(e){} };
+    lobbyWS.onmessage = (ev)=>{
+      // Debug: always show raw incoming data so we can inspect server replies
+      try{ console.log('[lobby] raw message:', ev.data); }catch(e){}
+      let m=null; try{ m=JSON.parse(ev.data); }catch(e){ console.warn('[lobby] parse failed for incoming message', ev.data); return; }
+      if(m.type === 'rooms' && Array.isArray(m.rooms)) {
+        console.log('[lobby] rooms list received', m.rooms);
+        renderRoomList(m.rooms);
+      }
+    };
+    lobbyWS.onclose = ()=>{ console.log('[lobby] ws close, reconnecting in 2s'); setTimeout(connectLobbyWS,2000); };
+    lobbyWS.onerror = (e)=>{ console.warn('[lobby] ws error', e); };
+  }
+
+  function renderRoomList(list){
+    // remove existing list if any
+    let box = document.getElementById('roomList');
+    if(!box){ box = document.createElement('div'); box.id='roomList'; box.style.marginTop='12px'; }
+    box.innerHTML = '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Salas ativas</div>' + (list.length? list.map(r=>`<div class="roomItem" style="padding:8px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">${r.room}</span><small style="color:var(--muted)">${r.count} jogador(s)</small></div>`).join('') : '<div style="color:var(--muted)">Nenhuma sala ativa</div>');
+    // attach click to items
+    Array.from(box.querySelectorAll('.roomItem')).forEach((el,i)=>{ el.addEventListener('click', ()=>{ const r=list[i].room; roomInput.value=r; sideSelect.value='p2'; log('Sala selecionada: '+r+' (entrando como p2)');
+        // show join button and visually mark selection
+        try{ if(btnJoin) btnJoin.classList.remove('hidden'); Array.from(box.querySelectorAll('.roomItem')).forEach(x=>x.style.boxShadow='none'); el.style.boxShadow='0 0 0 3px rgba(250,204,21,0.06)'; }catch(e){}
+      }); });
+    const existing = document.getElementById('roomList');
+    const container = document.getElementById('log');
+    if(existing) existing.replaceWith(box); else container.parentNode.insertBefore(box, container.nextSibling);
+  }
+
+  // start lobby WS on load
+  setTimeout(connectLobbyWS, 120);
+
+  // scan control
+  const scanBtn = document.getElementById('scanRooms');
+  let _scanInterval = null;
+  function sendRoomListRequest(){
+    console.log('[lobby] sendRoomListRequest — ws readyState=', lobbyWS ? lobbyWS.readyState : 'NO_WS');
+    if(!lobbyWS || lobbyWS.readyState !== WebSocket.OPEN){ try{ connectLobbyWS(/*no override - connect will read #srv input*/); }catch(e){} setTimeout(()=>{ try{ if(lobbyWS && lobbyWS.readyState===WebSocket.OPEN) { console.log('[lobby] sending list after reconnect'); lobbyWS.send(JSON.stringify({ type:'list' })); } }catch(e){} }, 250); return; }
+    try{ lobbyWS.send(JSON.stringify({ type:'list' })); }catch(e){ console.warn('send list failed', e); }
+  }
+  // scan for a short period (5s) polling frequently to discover rooms
+  if(scanBtn) scanBtn.addEventListener('click', ()=>{
+    if(_scanInterval) { clearInterval(_scanInterval); _scanInterval=null; scanBtn.textContent='Procurar salas'; return; }
+    scanBtn.textContent='Procurando...'; sendRoomListRequest();
+    let ticks = 0; _scanInterval = setInterval(()=>{ ticks++; sendRoomListRequest(); if(ticks>=6){ clearInterval(_scanInterval); _scanInterval=null; scanBtn.textContent='Procurar salas'; } }, 800);
+  });
+
+  let MY_SIDE, ROOM;
+
+  // Simpler flow: when the player clicks Connect we save settings and redirect
+  // to the full simulator page which contains the game scripts and net bootstrap.
+  // Create a new room as host (p1)
+  btnConnect.onclick = () => {
+    ROOM = (roomInput.value.trim() || ('ROOM' + Math.floor(Math.random()*9000))).toUpperCase();
+    MY_SIDE = 'p1';
+    const SERVER = srvInput.value.trim();
+
+    localStorage.setItem('mpServer', SERVER);
+    localStorage.setItem('mpRoom', ROOM);
+    localStorage.setItem('mpSide', MY_SIDE);
+
+    const targetUrlMsg = `Abrindo simulador como host — sala ${ROOM}`;
+    log(targetUrlMsg);
+    const url = new URL(location.href);
+    const base = url.pathname.endsWith('/') ? url.pathname : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+    url.pathname = base + 'mytragor_simulador.html';
+    url.searchParams.set('mode', 'mp');
+    url.searchParams.set('room', ROOM);
+    url.searchParams.set('side', MY_SIDE);
+    // show debug link then navigate
+    try{ const dbg = document.getElementById('debugLink'); const a = document.getElementById('directOpen'); a.href = url.toString(); a.textContent = url.toString(); dbg.style.display = 'block'; }catch(e){}
+    setTimeout(()=>{ location.href = url.toString(); }, 200);
+  };
+
+  // Join the room selected in the lobby (acts as p2)
+  if(btnJoin) btnJoin.onclick = () => {
+    ROOM = roomInput.value.trim().toUpperCase();
+    if(!ROOM) return log('Selecione uma sala antes de entrar');
+    MY_SIDE = 'p2';
+    const SERVER = srvInput.value.trim();
+    localStorage.setItem('mpServer', SERVER); localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
+    log(`Entrando na sala ${ROOM} como p2...`);
+    const url = new URL(location.href);
+    const base = url.pathname.endsWith('/') ? url.pathname : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+    url.pathname = base + 'mytragor_simulador.html';
+    url.searchParams.set('mode', 'mp'); url.searchParams.set('room', ROOM); url.searchParams.set('side', MY_SIDE);
+    setTimeout(()=>{ location.href = url.toString(); }, 120);
+  };
+
+  function enviarEstadoInicial() {
+    if (!window.Game?.buildSnapshot) return;
+    const estado = Game.buildSnapshot();
+    ws.send(JSON.stringify({ type: 'state', room: ROOM, from: MY_SIDE, data: estado }));
+    log('📡 Estado inicial enviado.');
+  }
+
+  function iniciarJogoMultiplayer() {
+    if (!window.Game) return;
+
+    const decksSalvos = JSON.parse(localStorage.getItem('decksSalvos') || '{}');
+    const meuDeck = decksSalvos[MY_SIDE] || [];
+
+    if (!meuDeck.length && window.carregarDeckPadrao) {
+      meuDeck.push(...carregarDeckPadrao(MY_SIDE));
+    }
+
+    Game.reset?.();
+    Game.createDeck?.(MY_SIDE, meuDeck);
+    Game.shuffle?.(MY_SIDE);
+    Game.drawStartHand?.(MY_SIDE);
+
+    hookDispatcher();
+  }
+
+  function hookDispatcher() {
+    if (!window.Dispatcher?.apply) return setTimeout(hookDispatcher, 200);
+    const _apply = window.Dispatcher.apply;
+    window.Dispatcher.apply = function(action, opts = {}) {
+      const ret = _apply.call(window.Dispatcher, action, opts);
+      if (!opts.remote && connected) {
+        ws.send(JSON.stringify({ type: 'action', room: ROOM, from: MY_SIDE, action }));
+      }
+      return ret;
+    };
+    log('🔗 Hook do Dispatcher ativado.');
+  }
+
+})();
+</script>
+
+</body>
+</html>

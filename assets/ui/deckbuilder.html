@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Montador de Deck - Simulador Mytragor</title>
+  <style>
+  body { background: #000000; color: #e2e8f0; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 0; min-height: 100vh; }
+    .container {
+      width: 100%;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: linear-gradient(180deg, rgba(14,20,38,0.6), rgba(6,10,20,0.6));
+      padding: 36px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-sizing: border-box;
+      gap: 18px;
+    }
+    h1 { text-align: center; margin-bottom: 6px; color: #facc15; font-family: 'Cinzel', Georgia, serif; font-weight:800; letter-spacing:1px }
+    .deck-builder-wrap { width:100%; max-width:1100px; display:flex; gap:20px; align-items:flex-start }
+    .panel { background: linear-gradient(180deg, rgba(14,26,43,.9), rgba(8,14,26,.72)); border:1px solid rgba(250,204,21,0.06); border-radius:12px; padding:14px; box-shadow: 0 12px 30px rgba(2,6,23,0.7); }
+    .left, .right { box-sizing:border-box }
+  .left { flex: 1 1 auto; min-width: 0; }
+  /* slightly increase panel width so 3 columns fit without clipping */
+  .right { flex: 0 0 360px; width: 360px; }
+  /* make the right deck-list visually match the card-pool: three responsive columns
+     with card tiles that reuse the main .card look (scaled to fit) so the "veil"
+     and background don't get visually clipped. */
+  .right .deck-list { display:grid; grid-template-columns: repeat(3, minmax(96px, 1fr)); gap:8px; padding:8px; min-height: 420px; }
+  .right .deck-list .card { /* preserve main .card aesthetics but scale to grid cell */
+    background: linear-gradient(180deg, rgba(16,32,57,0.6), rgba(8,18,32,0.6));
+    border-radius: 10px;
+    padding: 8px;
+    width: 100%;
+    box-shadow: 0 8px 20px rgba(2,6,23,0.6);
+    min-height: 140px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:6px;
+    text-align:center;
+  }
+  .right .deck-list .card img{ width:72px; height:108px; object-fit:cover; border-radius:4px; }
+  .right .deck-list .card div{ font-size:11px; color: #e6eef8; }
+    .deck-list { display: grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-bottom:8px; min-height: 160px; background: transparent; border-radius: 8px; padding: 8px; }
+    .card-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:12px; margin-bottom: 8px; min-height: 40px; max-width: 100%; justify-items: start; align-items: start; }
+  /* Filter bar */
+  .filterBar { display:flex; gap:8px; align-items:center; margin:6px 0 12px 0; }
+  .filterSearch { padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background: rgba(0,0,0,0.24); color:#e6eef8; font-size:14px; width:320px; }
+  .chip { padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.02); color:#cbd5e1; font-size:13px; cursor:pointer; border:1px solid rgba(255,255,255,0.02); }
+  .chip.selected { background:linear-gradient(180deg,#facc15,#f59e0b); color:#111; border-color:rgba(250,200,60,0.12); }
+  .filterBtn { padding:8px 10px; border-radius:8px; background:transparent; color:#e6eef8; border:1px solid rgba(255,255,255,0.02); cursor:pointer; }
+  .filterPopover { position:absolute; background: linear-gradient(180deg, rgba(8,12,20,0.9), rgba(6,8,14,0.9)); border:1px solid rgba(36,52,70,0.3); box-shadow:0 10px 30px rgba(2,6,23,0.75); padding:12px; border-radius:8px; display:none; z-index:50; }
+  .filterRow { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+    .card {
+      background: linear-gradient(180deg, rgba(16,32,57,0.6), rgba(8,18,32,0.6));
+      border-radius: 10px;
+      padding: 8px;
+      width: 120px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(2,6,23,0.6);
+      min-height: 140px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, border 0.12s ease;
+      font-size: 13px;
+      color: #e6eef8;
+    }
+  .card:hover{ transform: translateY(-6px) scale(1.02); box-shadow: 0 18px 40px rgba(2,6,23,0.8); }
+  .card.selected { border: 2px solid rgba(250,200,60,0.12); box-shadow: 0 18px 36px rgba(250,200,60,0.08) }
+    .card.empty {
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.04);
+      box-shadow: none;
+      cursor: default;
+      min-height: 120px;
+      font-size: 12px;
+      display:flex;align-items:center;justify-content:center;color:#9ca3af;
+    }
+    .card.disabled { opacity: 0.55; filter: grayscale(0.5); cursor: not-allowed; }
+
+    /* simple modal styles used for leader selection */
+    .modalOverlay { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(2,6,23,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .modalBox { background: #0b1220; color: #e2e8f0; padding: 18px; border-radius: 8px; max-width: 700px; width: 92%; box-shadow: 0 8px 40px #0008; }
+    .controls { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; }
+  /* golden primary buttons across the page */
+  button { background: linear-gradient(180deg,#facc15,#f59e0b); color: #111111; border: 1px solid rgba(250,200,60,0.12); border-radius: 6px; padding: 8px 16px; font-size: 16px; cursor: pointer; box-shadow: 0 8px 20px rgba(250,180,20,0.06); }
+    button:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+  /* smaller filter-style buttons use the same gold palette but subtler */
+  .filterBtn { background: linear-gradient(180deg,#facc15,#f59e0b); color:#111; border:1px solid rgba(250,200,60,0.08); }
+    .deck-info { text-align: center; margin-bottom: 16px; }
+  /* card preview tooltip */
+  .card-preview { position: fixed; pointer-events: none; background: linear-gradient(180deg, #071025, #0b1220); border: 1px solid rgba(250,204,21,0.08); padding: 12px; border-radius:12px; width:320px; max-width:40vw; box-shadow: 0 18px 48px rgba(2,6,23,0.85); color:#e6eef8; z-index:20000; display:none; }
+  .card-preview img { width:120px; height:180px; object-fit:cover; border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,0.6); }
+  .card-preview .meta { margin-left:12px; max-height:180px; overflow:auto }
+  </style>
+</head>
+<body>
+  <button id="btnBackMenu" onclick="location.href='../../index.html'" title="Voltar ao menu" style="position:fixed;right:18px;top:18px;z-index:9999;padding:10px 14px;border-radius:10px;background:linear-gradient(180deg,#facc15,#f59e0b);color:#111;border:1px solid rgba(250,200,60,0.12);box-shadow:0 8px 20px rgba(250,180,20,0.06);font-weight:800;">Voltar ao menu</button>
+  <div class="container">
+    <div style="text-align:center;margin-bottom:6px;">
+      <img src="logo.png" alt="Logo Mytragor" style="max-width:220px;width:36vw;filter:drop-shadow(0 6px 22px rgba(0,0,0,0.7));margin-bottom:8px;border-radius:8px;" onerror="this.style.display='none'">
+    </div>
+    <h1>Montador de Deck</h1>
+    <div class="deck-builder-wrap">
+      <div class="panel left">
+        <div class="deck-info" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <h3 style="margin:0 0 6px 0;color:#cbd5e1;font-size:14px">Escolha o líder</h3>
+            <div id="leaderCards" style="display:flex;gap:8px;align-items:center;margin-top:6px;"></div>
+          </div>
+          <div style="text-align:right">
+            <div id="deckSize" style="font-weight:700;color:#facc15">0/40 cartas</div>
+            <div style="font-size:12px;color:#9ca3af">Fragmentos e líder visuais</div>
+          </div>
+        </div>
+        <div class="deck-info" style="margin-bottom:12px;">
+          <h3 style="margin:0 0 6px 0;color:#cbd5e1;font-size:14px">Escolha os Fragmentos (visual)</h3>
+          <div id="fragChooser2" style="display:flex;gap:8px;align-items:center;margin-top:6px;"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <h2 style="font-size:18px;margin:0;color:#e6eef8">Cartas disponíveis</h2>
+          <div style="position:relative;">
+            <button id="btnToggleFilters" class="filterBtn" title="Filtros">Filtros ▾</button>
+            <div id="filterPopover" class="filterPopover" style="right:0;top:36px;">
+              <div class="filterRow">
+                <label style="font-size:13px;color:#cbd5e1;width:72px;">Filiação</label>
+                <select id="filterFiliacao" style="padding:8px;border-radius:8px;background:transparent;color:#e6eef8;border:1px solid rgba(255,255,255,0.03);"></select>
+              </div>
+              <div class="filterRow">
+                <label style="font-size:13px;color:#cbd5e1;width:72px;">Custo</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button class="chip" data-cost="0">0</button>
+                  <button class="chip" data-cost="1">1</button>
+                  <button class="chip" data-cost="2">2</button>
+                  <button class="chip" data-cost="3">3</button>
+                  <button class="chip" data-cost="4">4</button>
+                  <button class="chip" data-cost="5">5+</button>
+                </div>
+              </div>
+              <div class="filterRow">
+                <label style="font-size:13px;color:#cbd5e1;width:72px;">Opções</label>
+                <label style="font-size:13px;color:#cbd5e1;"><input id="filterOnlyAvailable" type="checkbox" style="margin-right:6px;">Só disponíveis</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="filterBar" style="margin-bottom:12px;">
+          <input id="filterSearch" class="filterSearch" placeholder="Buscar carta..." />
+          <div id="kindChips" style="display:flex;gap:6px;">
+            <div class="chip" data-kind="ally">Ally</div>
+            <div class="chip" data-kind="spell">Spell</div>
+            <div class="chip" data-kind="equip">Equip</div>
+            <div class="chip" data-kind="env">Amb</div>
+            <div class="chip" data-kind="truque">Truque</div>
+          </div>
+        </div>
+        <div class="card-pool" id="cardPool"></div>
+      </div>
+      <div class="panel right">
+        <div style="margin-bottom:8px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 style="font-size:18px;margin:0;color:#e6eef8">Seu deck</h2><div style="display:flex;gap:8px"><input id="deckNameInput" type="text" placeholder="Nome do deck (opcional)" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#e6eef8;width:180px;" /><button id="btnSalvar" class="mp-btn primary" disabled>Salvar</button></div></div>
+        <div class="deck-list" id="deckList"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button id="btnLimpar" class="mp-btn">Limpar</button><button id="btnVerDecks" class="mp-btn">Ver decks</button></div>
+      </div>
+    </div>
+  </div>
+  <script src="../cards/cartas.js?v=2"></script>
+  <script>
+    // Usa o array central de cartas do cartas.js
+    const CARD_POOL = (window.CARD_DEFS || []).filter(card => ['ally','spell','equip','env','truque'].includes(card.kind));
+    console.log('Deckbuilder: CARD_POOL count=', CARD_POOL.length, 'contains Sede de Vingança?', !!CARD_POOL.find(c=>c.name && c.name.includes('Sede')));
+
+    let deck = [];
+  const deckList = document.getElementById('deckList');
+  const cardPool = document.getElementById('cardPool');
+  const deckSize = document.getElementById('deckSize');
+  const btnSalvar = document.getElementById('btnSalvar');
+  const btnLimpar = document.getElementById('btnLimpar');
+  const btnVerDecks = document.getElementById('btnVerDecks');
+  const deckNameInput = document.getElementById('deckNameInput');
+  const leaderCards = document.getElementById('leaderCards');
+  const fragChooser = document.getElementById('fragChooser');
+  const fragChooser2 = document.getElementById('fragChooser2');
+  let chosenLeader = null;
+  let chosenFragImg = null;
+
+  const FRAG_OPTIONS = [
+    { label: 'Arcano',   img: '../fragments/fragmentos_arcano.png' },
+    { label: 'Marcial',  img: '../fragments/fragmentos_marcial.png' },
+    { label: 'Religioso',img: '../fragments/fragmentos_religioso.png' },
+    { label: 'Sombras',  img: '../fragments/fragmentos_sombras.png' }
+  ];
+
+    const LEADERS = [
+      { name: 'Valbrak', img: '../chosens/valbrak.png' },
+      { name: 'Katsu', img: '../chosens/katsu.png' },
+      { name: 'Leafae', img: '../chosens/leafae.png' },
+      { name: 'Ademais', img: '../chosens/ademais.png' }
+    ];
+
+    // Map leader name -> filiation (matches simulator's leader data)
+    const LEADER_FILIACAO = {
+      'Valbrak': 'Arcana',
+      'Katsu': 'Marcial',
+      'Leafae': 'Religioso',
+      'Ademais': 'Sombras'
+    };
+
+    function getLeaderForFiliation(filiacao){
+      if(!filiacao) return null;
+      filiacao = String(filiacao).toLowerCase();
+      for(const k of Object.keys(LEADER_FILIACAO)){
+        if(String(LEADER_FILIACAO[k]).toLowerCase() === filiacao) return LEADERS.find(l=>l.name===k) || null;
+      }
+      return null;
+    }
+
+    // Returns whether a card is allowed in the deck given the current chosenLeader.
+    function isCardAllowed(card) {
+      if (!chosenLeader) return true; // nothing blocks when no leader fixed
+      const leaderF = LEADER_FILIACAO[chosenLeader.name] || null;
+      if (!leaderF) return true;
+      const cardF = String(card.filiacao||'').toLowerCase();
+      return cardF === 'neutra' || cardF === String(leaderF).toLowerCase();
+    }
+
+    // Resolve imagens robustamente para páginas dentro e fora de assets/ui — retorna URL absoluto
+    function resolveImg(path) {
+      if (!path) return 'card-back.png';
+      try {
+        // Keep absolute/data URLs
+        if (/^(https?:|data:|file:)/i.test(path)) return path;
+        path = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+        // If path already references assets/, build from project root so we don't get assets/assets
+        if (path.startsWith('assets/')) {
+          const href = window.location && window.location.href || '';
+          const marker = '/assets/ui/';
+          const idx = href.indexOf(marker);
+          if (idx >= 0) {
+            // root ends right before /assets/ui/
+            const root = href.slice(0, idx + 1); // keep trailing '/'
+            return new URL(path, root).href;
+          }
+          // not under assets/ui -> resolve relative to current location
+          return new URL(path, window.location.href).href;
+        }
+        // fallback: keep previous behavior for other relative paths
+        const candidate = (window.location && window.location.pathname || '').includes('/assets/ui/') ? '../' + path : path;
+        return new URL(candidate, window.location.href).href;
+      } catch (e) { return path; }
+    }
+
+    // --- FILTERS: minimal, compact filter state and helpers ---
+    const filterState = {
+      query: '',
+      kinds: new Set(), // empty => all
+      filiation: null,
+      cost: null, // null or number (5 means 5+)
+      keywords: new Set(),
+      onlyAvailable: false
+    };
+
+    function normalizeText(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); }
+
+    function applyFilters(pool) {
+      const q = normalizeText(filterState.query || '');
+      return pool.filter(card => {
+        // NOTE: leader enforcement moved to render layer so we can visually disable cards
+        if (filterState.kinds.size && !filterState.kinds.has((card.kind||'').toLowerCase())) return false;
+  if (filterState.filiation && String(card.filiacao||'').toLowerCase() !== String(filterState.filiation).toLowerCase()) return false;
+        if (filterState.cost != null) {
+          const c = Number(card.cost || 0);
+          if (filterState.cost === 5) { if (c < 5) return false; } else if (c !== filterState.cost) return false;
+        }
+        if (filterState.keywords.size) {
+          const kws = (card.keywords||[]).map(k=>String(k).toLowerCase());
+          for (let kw of filterState.keywords) if (!kws.includes(String(kw).toLowerCase())) return false;
+        }
+        if (q) {
+          const hay = normalizeText((card.name||'') + ' ' + (card.text||'') + ' ' + (card.tipo||'') + ' ' + (card.filiacao||''));
+          if (!hay.includes(q)) return false;
+        }
+        if (filterState.onlyAvailable) {
+          const inDeck = deck.filter(d => d.name === card.name).length;
+          if (inDeck >= 3) return false;
+        }
+        return true;
+      });
+    }
+
+    // wire up filter UI (called once on load)
+    function setupFilters() {
+      const search = document.getElementById('filterSearch');
+      const kindChips = document.getElementById('kindChips');
+      const pop = document.getElementById('filterPopover');
+      const btn = document.getElementById('btnToggleFilters');
+  const classeSel = document.getElementById('filterFiliacao');
+      const costButtons = pop.querySelectorAll('button[data-cost]');
+      const onlyAvail = document.getElementById('filterOnlyAvailable');
+
+  // populate filiação select with values found in CARD_POOL
+  const filias = Array.from(new Set(CARD_POOL.map(c => (c.filiacao||'').toString()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+  classeSel.innerHTML = '<option value="">(todas)</option>' + filias.map(c => `<option value="${c}">${c}</option>`).join('');
+
+      // search debounce
+      let t = null;
+      if (search) search.addEventListener('input', (e) => {
+        clearTimeout(t);
+        t = setTimeout(() => { filterState.query = e.target.value || ''; renderPool(); }, 180);
+      });
+
+      // kind chips toggles
+      kindChips.querySelectorAll('.chip').forEach(ch => {
+        ch.addEventListener('click', () => {
+          const k = ch.dataset.kind && ch.dataset.kind.toLowerCase();
+          if (!k) return;
+          if (filterState.kinds.has(k)) { filterState.kinds.delete(k); ch.classList.remove('selected'); }
+          else { filterState.kinds.add(k); ch.classList.add('selected'); }
+          renderPool();
+        });
+      });
+
+      btn.addEventListener('click', (ev) => { ev.stopPropagation(); pop.style.display = pop.style.display === 'block' ? 'none' : 'block'; });
+      document.addEventListener('click', (ev) => { if (!pop.contains(ev.target) && ev.target !== btn) pop.style.display = 'none'; });
+
+  classeSel.addEventListener('change', (e) => { filterState.filiation = e.target.value || null; renderPool(); });
+      costButtons.forEach(b => {
+        b.addEventListener('click', () => {
+          const v = Number(b.dataset.cost);
+          if (filterState.cost === v) { filterState.cost = null; b.classList.remove('selected'); }
+          else { filterState.cost = v; costButtons.forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }
+          renderPool();
+        });
+      });
+      onlyAvail.addEventListener('change', (e) => { filterState.onlyAvailable = !!e.target.checked; renderPool(); });
+    }
+
+      // --- Card preview (hover) ---
+      const cardPreview = (function(){
+        const d = document.createElement('div'); d.className = 'card-preview'; d.style.display = 'none'; document.body.appendChild(d); return d;
+      })();
+
+      function showPreviewCard(card, x, y){
+        if(!card) return hidePreviewCard();
+        const img = resolveImg(card.img);
+        const name = card.name || '';
+        const fil = card.filiacao || '';
+        const cost = (typeof card.cost !== 'undefined') ? String(card.cost) : '';
+        const text = String(card.text || card.description || card.tipo || '').replace(/\n/g,'<br>');
+        cardPreview.innerHTML = `<div style="display:flex;align-items:flex-start;"><img src="${img}" alt="${name}"><div class="meta"><div style="font-weight:800;color:#facc15;margin-bottom:6px">${name}</div><div style="color:#9ca3af;font-size:13px;margin-bottom:8px">${fil} ${cost ? '• Custo ' + cost : ''}</div><div style="font-size:13px;color:#e6eef8;line-height:1.3">${text}</div></div></div>`;
+        cardPreview.style.display = 'block';
+        positionPreview(x,y);
+      }
+
+      function positionPreview(x,y){
+        const pad = 12;
+        const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+        const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+        const w = Math.min(320, vw * 0.4);
+        const h = cardPreview.offsetHeight || 220;
+        let left = x + 18;
+        let top = y + 18;
+        if(left + w + pad > vw) left = Math.max(pad, x - w - 18);
+        if(top + h + pad > vh) top = Math.max(pad, y - h - 18);
+        cardPreview.style.left = left + 'px'; cardPreview.style.top = top + 'px';
+      }
+
+      function hidePreviewCard(){ cardPreview.style.display = 'none'; }
+
+      function attachPreviewHandlers(el, card){
+        if(!el || !card) return;
+        let moved = false;
+        const onEnter = (ev)=>{ moved=false; showPreviewCard(card, ev.clientX, ev.clientY); };
+        const onMove = (ev)=>{ moved=true; positionPreview(ev.clientX, ev.clientY); };
+        const onLeave = ()=>{ hidePreviewCard(); };
+        el.addEventListener('mouseenter', onEnter);
+        el.addEventListener('mousemove', onMove);
+        el.addEventListener('mouseleave', onLeave);
+        // touch fallback: show on touchstart briefly
+        el.addEventListener('touchstart', (e)=>{ const t = e.touches && e.touches[0]; if(t) showPreviewCard(card, t.clientX, t.clientY); setTimeout(hidePreviewCard, 2500); }, {passive:true});
+      }
+
+    function renderLeaders() {
+      leaderCards.innerHTML = '';
+      LEADERS.forEach(leader => {
+        const el = document.createElement('div');
+        el.className = 'card' + (chosenLeader && chosenLeader.name === leader.name ? ' selected' : '');
+        const im = document.createElement('img');
+        im.src = resolveImg(leader.img);
+        im.alt = leader.name;
+          im.style = 'width:40px;height:60px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
+        im.onerror = function() { this.src = 'card-back.png'; };
+        el.appendChild(im);
+        const nm = document.createElement('div');
+          nm.textContent = leader.name;
+          nm.style = 'font-size:8px;margin-top:2px;font-weight:bold;';
+        el.appendChild(nm);
+        el.onclick = () => {
+          chosenLeader = leader;
+          renderLeaders();
+          renderDeck();
+        };
+        try{ attachPreviewHandlers(el, leader); }catch(e){}
+        leaderCards.appendChild(el);
+      });
+      // If a leader is selected, offer a small control to clear/change it
+      if (chosenLeader) {
+        const clr = document.createElement('div');
+        clr.className = 'card';
+        clr.style = 'display:flex;flex-direction:column;align-items:center;justify-content:center;';
+        clr.innerHTML = '<div style="font-size:10px;font-weight:bold;color:#f8fafc;">Mudar líder</div><div style="font-size:10px;color:#cbd5e1;margin-top:6px;">(limpar)</div>';
+        clr.onclick = () => {
+          if (confirm('Deseja remover a seleção de líder e permitir qualquer filiação? Isso não removerá as cartas já adicionadas.')) {
+            chosenLeader = null;
+            renderLeaders(); renderDeck(); renderPool();
+          }
+        };
+        leaderCards.appendChild(clr);
+      }
+    }
+
+    function renderFragChooser() {
+      function mountInto(target) {
+        if (!target) return;
+        target.innerHTML = '';
+        FRAG_OPTIONS.forEach(opt => {
+          const el = document.createElement('div');
+          el.className = 'card' + (chosenFragImg === opt.img ? ' selected' : '');
+          const im = document.createElement('img');
+          im.src = resolveImg(opt.img);
+          im.alt = opt.label; im.style = 'width:40px;height:60px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
+          im.onerror = function(){ this.src = 'card-back.png'; };
+          el.appendChild(im);
+          const nm = document.createElement('div'); nm.textContent = opt.label; nm.style = 'font-size:8px;margin-top:2px;';
+          el.appendChild(nm);
+          el.onclick = () => { chosenFragImg = opt.img; renderFragChooser(); };
+          try{ attachPreviewHandlers(el, { name: opt.label, img: opt.img, text: '' }); }catch(e){}
+          target.appendChild(el);
+        });
+      }
+      mountInto(fragChooser); mountInto(fragChooser2);
+    }
+
+    function renderPool() {
+      cardPool.innerHTML = '';
+      const filtered = applyFilters(CARD_POOL);
+      // If chosenLeader is set, show hint at top
+      if (chosenLeader) {
+        const hint = document.createElement('div');
+        hint.style.color = '#9ca3af';
+        hint.style.fontSize = '12px';
+        hint.style.margin = '6px 0';
+        hint.textContent = `Deck restrito a: ${LEADER_FILIACAO[chosenLeader.name]} + Neutra`;
+        cardPool.appendChild(hint);
+      }
+      if (!filtered.length) {
+        cardPool.innerHTML = '<div style="color:#9ca3af;padding:8px;font-size:13px;">Nenhuma carta encontrada. Ajuste os filtros ou limpe a busca.</div>';
+        return;
+      }
+      // Sort by filiação (filiacao) first, then by card name (both alphabetical)
+      filtered.sort((a, b) => {
+        const fa = String(a.filiacao || '').toLowerCase();
+        const fb = String(b.filiacao || '').toLowerCase();
+        if (fa !== fb) return fa.localeCompare(fb, 'pt');
+        return String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase(), 'pt');
+      });
+      filtered.forEach(card => {
+        const el = document.createElement('div');
+        // determine allowed status and render accordingly
+        const allowed = isCardAllowed(card);
+        el.className = 'card' + (allowed ? '' : ' disabled');
+        const im = document.createElement('img');
+        im.src = resolveImg(card.img);
+        im.alt = card.name;
+          im.style = 'width:40px;height:60px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
+        im.onerror = function() { this.src = 'card-back.png'; };
+        el.appendChild(im);
+        const nm = document.createElement('div');
+          nm.textContent = card.name;
+          nm.style = 'font-size:8px;margin-top:2px;';
+        el.appendChild(nm);
+        if (allowed) {
+          el.onclick = () => addToDeck(card);
+        } else {
+          // visually disabled — explain why when clicked
+          el.onclick = () => {
+            if (chosenLeader) {
+              const lf = LEADER_FILIACAO[chosenLeader.name] || '?';
+              alert(`Este deck está fixado para a filiação ${lf}. Só são permitidas cartas ${lf} ou Neutras.`);
+            }
+          };
+        }
+        // attach hover preview
+        try{ attachPreviewHandlers(el, card); }catch(e){}
+        cardPool.appendChild(el);
+      });
+    }
+
+    function renderDeck() {
+      deckList.innerHTML = '';
+      // Deck em ordem alfabética
+      const sortedDeck = [...deck].sort((a, b) => a.name.localeCompare(b.name));
+      // 40 espaços fixos
+      for (let i = 0; i < 40; i++) {
+        if (sortedDeck[i]) {
+          const card = sortedDeck[i];
+          const tile = document.createElement('div');
+          tile.className = 'card selected';
+          const im = document.createElement('img');
+          im.src = resolveImg(card.img);
+          im.alt = card.name;
+          im.style = 'width:40px;height:60px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
+          im.onerror = function() { this.src = 'card-back.png'; };
+          tile.appendChild(im);
+          const nm = document.createElement('div');
+          nm.textContent = card.name;
+          nm.style = 'font-size:8px;margin-top:2px;';
+          tile.appendChild(nm);
+          tile.onclick = () => removeFromDeck(deck.indexOf(card));
+          try{ attachPreviewHandlers(tile, card); }catch(e){}
+          deckList.appendChild(tile);
+        } else {
+          const el = document.createElement('div');
+          el.className = 'card empty';
+          el.innerHTML = '<span style="color:#555;font-size:8px;">Vazio</span>';
+          deckList.appendChild(el);
+        }
+      }
+      deckSize.textContent = `${deck.length}/40 cartas${chosenLeader ? ' + 1 líder' : ''}`;
+      btnSalvar.disabled = !(chosenLeader && deck.length === 40);
+    }
+
+    function openLeaderPickModal(requestedCard) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modalOverlay';
+      const box = document.createElement('div');
+      box.className = 'modalBox';
+      box.innerHTML = `<h3 style="margin-top:0">Escolha o líder para este deck</h3>
+        <p>Para adicionar <strong>${requestedCard.name}</strong> é preciso escolher um líder com a mesma filiação ou cancelar.</p>
+        <div id="leaderPickRow" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;"></div>
+        <div style="text-align:right;margin-top:12px;"><button id="lpCancel">Cancelar</button></div>`;
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      const row = box.querySelector('#leaderPickRow');
+      LEADERS.forEach(leader => {
+        const tile = document.createElement('div');
+        tile.className = 'card';
+        tile.style = 'display:flex;flex-direction:column;align-items:center;justify-content:center;';
+        const im = document.createElement('img'); im.src = resolveImg(leader.img); im.style='width:40px;height:60px;object-fit:cover;border-radius:4px;'; im.onerror=function(){this.src='card-back.png';};
+        tile.appendChild(im);
+        const nm = document.createElement('div'); nm.textContent = leader.name; nm.style='font-size:10px;margin-top:6px;';
+        tile.appendChild(nm);
+        tile.onclick = () => {
+          chosenLeader = leader;
+          // add requested card now that leader is chosen
+          deck.push(requestedCard);
+          renderLeaders(); renderDeck(); renderPool();
+          document.body.removeChild(overlay);
+          try { alert(`Líder definido como ${chosenLeader.name} para corresponder à filiação ${requestedCard.filiacao}.`); } catch(e){}
+        };
+        row.appendChild(tile);
+      });
+      box.querySelector('#lpCancel').onclick = () => { document.body.removeChild(overlay); };
+    }
+
+    function addToDeck(card) {
+      if (deck.length >= 40) return;
+      // Limite de 3 cópias por carta
+      const count = deck.filter(c => c.name === card.name).length;
+      if (count >= 3) return;
+      // Enforce filiation rule: if chosenLeader exists, card must be Neutra or same filiation
+      if (chosenLeader) {
+        const leaderF = LEADER_FILIACAO[chosenLeader.name] || null;
+        const cardF = String(card.filiacao||'').toLowerCase();
+        if (leaderF && cardF !== 'neutra' && cardF !== String(leaderF).toLowerCase()) {
+          alert(`Este deck foi fixado para a filiação ${leaderF}. Só são permitidas cartas ${leaderF} ou Neutras.`);
+          return;
+        }
+      } else {
+        // no leader chosen: if card is non-Neutral, require the user to pick a leader first
+        const cf = String(card.filiacao||'').toLowerCase();
+        if (cf !== 'neutra') {
+          // open a modal forcing leader selection; when leader picked the requested card will be added
+          openLeaderPickModal(card);
+          return;
+        }
+      }
+      deck.push(card);
+      renderDeck(); renderPool();
+    }
+
+    function removeFromDeck(idx) {
+      deck.splice(idx, 1);
+      renderDeck();
+    }
+
+    btnLimpar.onclick = function() {
+      deck = [];
+      renderDeck();
+    };
+
+    // Helpers to persist saved decks under the `mytragor_decks` key (array)
+    function getSavedDecksLocal() {
+      const raw = localStorage.getItem('mytragor_decks');
+      if (!raw) return [];
+      try { return JSON.parse(raw); } catch { return []; }
+    }
+    function saveSavedDecksLocal(arr){ localStorage.setItem('mytragor_decks', JSON.stringify(arr)); }
+
+    btnSalvar.onclick = function() {
+      if (!chosenLeader || deck.length !== 40) return;
+      const deckName = (deckNameInput && String(deckNameInput.value || '').trim()) || '';
+      // derive leaderKey from leader name (lowercase, remove accents/spaces)
+      function leaderKeyFrom(name){ return (name||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''); }
+      const leaderKey = leaderKeyFrom(chosenLeader.name);
+      const deckData = {
+        deckName: deckName,
+        leader: chosenLeader.name,
+        leaderName: chosenLeader.name,
+        leaderKey: leaderKey,
+        leaderImg: chosenLeader.img,
+        cards: deck.map(c => c.name),
+        fragImg: chosenFragImg || null
+      };
+      // migrate old single-deck key if present
+      const all = getSavedDecksLocal();
+      const oldRaw = localStorage.getItem('mytragor_deck');
+      if (oldRaw) {
+        try {
+          const oldObj = JSON.parse(oldRaw);
+          // try to create a compatible saved deck entry
+          if (oldObj && oldObj.leader && Array.isArray(oldObj.cards)) {
+            const migrated = {
+              deckName: '',
+              leader: oldObj.leader,
+              leaderName: oldObj.leader,
+              leaderKey: (oldObj.leader||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''),
+              leaderImg: oldObj.leaderImg || oldObj.leaderImg || null,
+              cards: oldObj.cards
+            };
+            all.push(migrated);
+          }
+        } catch(e) { /* ignore */ }
+        localStorage.removeItem('mytragor_deck');
+      }
+      all.push(deckData);
+      saveSavedDecksLocal(all);
+      alert(`Deck salvo: ${deckData.deckName || deckData.leaderName}!`);
+      // Optionally redirect to decks salvos page
+      // leave on page by default; if user wants, they can click 'Ver decks salvos'
+    };
+
+    if (btnVerDecks) {
+      btnVerDecks.onclick = function() {
+        location.href = 'decks_salvos.html';
+      };
+    }
+
+  // initialize filters and render
+  try { setupFilters(); } catch(e) { /* ignore if setup missing */ }
+  renderLeaders();
+  renderFragChooser();
+  renderPool();
+  renderDeck();
+  </script>
+</body>
+</html>

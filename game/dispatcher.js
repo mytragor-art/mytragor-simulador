@@ -1,0 +1,1 @@
+window.Dispatcher={apply(action){return Game.applyAction(action);}};

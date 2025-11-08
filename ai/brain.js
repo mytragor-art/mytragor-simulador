@@ -1,0 +1,1 @@
+window.AIBrain={next(state){return null;}};

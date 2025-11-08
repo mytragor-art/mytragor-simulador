@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor — Início</title>
+  <style>
+    /* Fantasy font (fallback to serif if unavailable) */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&display=swap');
+    :root{ --bg:#0b1020; --card:#0f1724; --gold1:#facc15; --gold2:#f59e0b; --muted:#9ca3af }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{background:linear-gradient(180deg,#071025 0%,#04101a 100%);display:flex;align-items:center;justify-content:center;color:#e2e8f0}
+    .wrap{width:100%;max-width:980px;padding:40px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center}
+  header{width:100%;display:flex;align-items:center;gap:12px;position:relative;padding:6px 0}
+  /* Brand centered in the header using absolute positioning so login stays at the right */
+  .brandWrap{position:absolute;left:50%;transform:translateX(-50%);top:18px;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  .brand{font-family:'Cinzel', Georgia, 'Times New Roman', serif;color:var(--gold1);font-weight:900;font-size:42px;letter-spacing:2px;text-shadow:0 2px 0 rgba(0,0,0,.6), 0 6px 18px rgba(250,204,21,.12);margin:2px 0}
+    /* shimmer-ready wrappers */
+  .brand, .subtitle{position:relative;overflow:visible}
+    .subtitle{font-family: Georgia, 'Times New Roman', serif;color:var(--gold1);font-size:14px;letter-spacing:1px;text-transform:uppercase;margin-top:6px;pointer-events:auto;text-shadow:0 1px 0 rgba(0,0,0,.45)}
+
+    /* Subtle shimmer effect (soft moving highlight) */
+    /* Instead of a rectangular streak, apply a text-clipped golden sheen so the highlight follows glyph shapes */
+    .brand span, .subtitle span{
+      display:inline-block;
+      background: linear-gradient(90deg, rgba(255,235,160,0.06) 0%, rgba(255,250,200,0.95) 45%, rgba(255,230,140,0.95) 52%, rgba(255,215,90,0.6) 58%, rgba(255,235,160,0.06) 100%);
+      background-size: 220% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: textShimmer 3.2s linear infinite;
+    }
+
+    /* golden outline / glow via layered text-shadow and -webkit-text-stroke when available */
+    .brand{
+      -webkit-text-stroke: 0.6px rgba(255,215,120,0.7);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.6), 0 4px 18px rgba(250,180,40,0.22), 0 0 10px rgba(255,215,120,0.12);
+    }
+    .subtitle{ text-shadow: 0 1px 0 rgba(0,0,0,0.45), 0 3px 10px rgba(250,190,60,0.14); }
+
+    /* subtle magical sparks that FOLLOW the shimmer highlight.
+       Implemented with a synchronized animation (same duration/timing
+       as the text shimmer) so sparks travel with the bright band.
+    */
+    .brand .spark, .subtitle .spark{
+      position:absolute;top:50%;left:0;width:9px;height:9px;border-radius:50%;pointer-events:none;
+      background: radial-gradient(circle at 30% 30%, #fff 0%, #fff9d6 30%, rgba(255,210,80,0.98) 50%, rgba(255,210,80,0.22) 70%, transparent 85%);
+      box-shadow:0 0 10px rgba(255,230,140,0.98),0 0 20px rgba(255,200,70,0.45);opacity:0;transform:translateY(-50%) scale(.6);
+      mix-blend-mode: screen; animation: sparkFollow 3.2s linear infinite;
+    }
+
+    /* Spark follows same general timing as textShimmer (3.2s) so they appear to ride the gold sheen.
+       We'll stagger multiple sparks with small delays (set below via nth-of-type).
+    */
+    @keyframes sparkFollow{
+      0%   { left:-20%; opacity:0; transform:translateY(-50%) scale(.6); }
+      12%  { left:12%;  opacity:1; transform:translateY(-50%) scale(.95); }
+      35%  { left:45%;  opacity:0.95; transform:translateY(-50%) scale(1.05); }
+      55%  { left:55%;  opacity:0.6; transform:translateY(-50%) scale(.95); }
+      78%  { left:88%;  opacity:0.15; transform:translateY(-50%) scale(.8); }
+      100% { left:120%; opacity:0; transform:translateY(-50%) scale(.6); }
+    }
+
+    /* small staggered delays per spark to create a natural trail */
+    .brand .spark:nth-of-type(1){ animation-delay: 0s }
+    .brand .spark:nth-of-type(2){ animation-delay: 0.12s }
+    .brand .spark:nth-of-type(3){ animation-delay: 0.28s }
+
+    .subtitle .spark{ width:7px; height:7px; box-shadow:0 0 8px rgba(255,230,140,0.9); }
+    .subtitle .spark:nth-of-type(1){ animation-delay: 0.06s }
+    .subtitle .spark:nth-of-type(2){ animation-delay: 0.18s }
+    .subtitle .spark:nth-of-type(3){ animation-delay: 0.36s }
+
+    @keyframes textShimmer{
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+  .loginBtn{background:transparent;border:1px solid rgba(250,204,21,0.12);color:var(--gold1);padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;margin-left:auto}
+  .hero{width:100%;text-align:center;margin-top:84px}
+  h1{display:none}
+  p.lead{color:var(--muted);margin:20px 0 26px}
+
+    .menu{width:320px;display:flex;flex-direction:column;gap:16px;margin:18px auto}
+    .gold-btn{position:relative;display:block;text-decoration:none;text-align:center;padding:18px 20px;border-radius:12px;font-size:18px;font-weight:800;color:#111;box-shadow:0 6px 20px rgba(0,0,0,.45);border:0;cursor:pointer}
+    .gold-btn.primary{background:linear-gradient(180deg,var(--gold1),var(--gold2));}
+    .gold-btn.secondary{background:linear-gradient(180deg,rgba(250,204,21,0.2),rgba(250,204,21,0.07));color:var(--gold1);border:1px solid rgba(250,204,21,0.08)}
+    .gold-btn:active{transform:translateY(1px)}
+
+    /* ribbon/tarja "Em breve" */
+    .gold-btn .ribbon{position:absolute;right:-10px;top:8px;background:#111;color:var(--gold1);font-weight:700;padding:6px 10px;border-radius:4px;transform:rotate(10deg);box-shadow:0 4px 18px rgba(0,0,0,.45);font-size:12px}
+    .gold-btn.disabled{opacity:.9;pointer-events:none}
+
+    /* make the button stack slightly larger on wide screens */
+  @media(min-width:980px){ .menu{width:360px} .gold-btn{font-size:20px;padding:20px 24px} }
+  @media(max-width:520px){ .brand{font-size:28px} .hero{margin-top:56px} }
+
+    footer{margin-top:26px;color:var(--muted);font-size:13px}
+    /* Medieval-style golden footer used on landing page */
+    .footer-medieval{
+      margin-top:26px;
+      font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+      color: var(--gold1);
+      font-weight: 800;
+      font-size:14px;
+      letter-spacing:0.6px;
+      text-shadow: 0 1px 0 rgba(0,0,0,0.6), 0 6px 18px rgba(250,204,21,0.12);
+      text-align:center;
+    }
+  </style>
+  <!-- Inline modal styles (polished, accessible) -->
+  <style>
+    /* Overlay */
+    .mp-modal {
+      position: fixed;
+      inset: 0;
+      display: none; /* toggled inline by JS (keeps behavior) */
+      align-items: center;
+      justify-content: center;
+      background: rgba(2,6,23,0.62);
+      z-index: 10000;
+      padding: 20px;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      backdrop-filter: blur(6px) saturate(1.03);
+    }
+
+    /* Card: translucent 'glass' with subtle golden frame and glow */
+    .mp-card.mp-modal-card {
+      width: 360px;
+      max-width: 92vw;
+      background: linear-gradient(180deg, rgba(12,14,18,0.82), rgba(6,7,10,0.66));
+      border-radius: 14px;
+      border: 1px solid rgba(250,204,21,0.14);
+      box-shadow: 0 20px 48px rgba(2,6,23,0.88), 0 0 34px rgba(250,204,21,0.06);
+      overflow: hidden;
+      transition: transform .18s cubic-bezier(.2,.9,.25,1), box-shadow .18s ease, opacity .12s ease;
+      transform-origin: center;
+    }
+
+    /* Slight lift when opened for perception of depth */
+    .mp-modal[aria-hidden="false"] .mp-card.mp-modal-card,
+    .mp-modal[style*="display:flex"] .mp-card.mp-modal-card {
+      transform: translateY(-6px) scale(1.01);
+    }
+
+    /* Header */
+    #mpLoginModal .mp-header { 
+      display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.03); 
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0));
+    }
+    #mpLoginModal .mp-title{font-weight:800;color:var(--gold1,#facc15);letter-spacing:.6px}
+
+    /* Body */
+    #mpLoginModal .mp-body { padding:18px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06)); }
+
+    /* Inputs */
+    .mp-input { width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background: rgba(0,0,0,0.28); color: #e6eef8; }
+    .mp-input::placeholder{ color: rgba(230,238,248,0.42); }
+    .mp-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(250,204,21,0.10); border-color: rgba(250,204,21,0.28); }
+
+    /* Buttons */
+    .mp-btn { padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02); background: rgba(12,18,30,0.6); color:#e6eef8; font-weight:700; }
+    .mp-btn.ghost{ background: transparent; color: rgba(230,230,230,0.78); border:1px solid rgba(255,255,255,0.03); }
+    .mp-btn.primary{ background: linear-gradient(180deg, rgba(250,204,21,0.95), rgba(245,158,11,0.95)); color:#111; border: 1px solid rgba(250,170,25,0.95); box-shadow: 0 8px 22px rgba(250,180,40,0.08); }
+    .mp-btn.primary:hover{ transform: translateY(-2px); }
+    .mp-btn:focus{ box-shadow: 0 0 0 4px rgba(250,204,21,0.12); }
+
+    /* Small layout helpers */
+    .mp-actions .mp-btn{ padding:8px 10px }
+    #mpLoginModal .mp-row{ margin-bottom:8px }
+
+    /* Accessible focus ring for keyboard users */
+    .mp-card:focus { outline: none; box-shadow: 0 0 0 6px rgba(250,204,21,0.06); }
+
+    /* Close button visual tweak */
+    #mpCloseBtn{ background: transparent; border: none; color: rgba(230,230,230,0.8); font-weight:700; padding:6px 8px; border-radius:8px }
+    #mpCloseBtn:hover{ background: rgba(255,255,255,0.02) }
+
+    /* Ensure the small registration inline modal inherits these styles too */
+    .mp-card { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brandWrap" aria-hidden="false">
+        <div class="brand"><span>Mytragor</span>
+            <i class="spark" aria-hidden="true"></i>
+            <i class="spark" aria-hidden="true"></i>
+            <i class="spark" aria-hidden="true"></i>
+        </div>
+          <div class="subtitle"><span>Trading card game</span>
+            <i class="spark" aria-hidden="true"></i>
+            <i class="spark" aria-hidden="true"></i>
+            <i class="spark" aria-hidden="true"></i>
+          </div>
+  </div>
+    </header>
+
+    <main class="hero">
+      <h1>Mytragor — Simulador</h1>
+      <p class="lead">Escolha uma opção para começar</p>
+
+      <nav class="menu" aria-label="Menu principal">
+  <a class="gold-btn primary disabled" href="#" id="btnMultiplayer" aria-disabled="true" title="Multiplayer (desabilitado)">Multiplayer <span class="ribbon">Em breve</span></a>
+        <a class="gold-btn primary" id="btnVsAI" href="mytragor_simulador.html">VS IA</a>
+        <a class="gold-btn primary" id="btnDeckBuilder" href="assets/ui/deckbuilder.html">Montar Deck</a>
+        <a class="gold-btn primary disabled" href="#" aria-disabled="true">Galeria <span class="ribbon">Em breve</span></a>
+      </nav>
+      <!-- Quick test buttons: open simulator as p1 or p2 in room 123 -->
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+     <footer class="footer-medieval">do RPG de mesa para o Tranding Card Game. Rola o D20.</footer>
+    </main>
+  </div>
+
+  <!-- Multiplayer Login Modal -->
+  <div id="mpLoginModal" class="mp-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="mpLoginTitle" aria-describedby="mpLoginDesc">
+    <div class="mp-card mp-modal-card" role="document" aria-labelledby="mpLoginTitle" tabindex="0">
+      <div class="mp-header mp-draggable">
+        <div class="mp-title" id="mpLoginTitle">Login Multiplayer</div>
+        <div class="mp-actions"><button id="mpCloseBtn" class="mp-btn ghost" type="button" aria-label="Fechar" title="Fechar diálogo">Sair</button></div>
+      </div>
+      <div class="mp-body">
+        <div id="mpLoginDesc" class="mp-tip" style="margin-bottom:6px;color:var(--mp-ink-dim);font-size:13px">Configurar conexão multiplayer e entrar na sala.</div>
+        <div class="mp-row">
+          <label class="mp-label" for="mpServer">Servidor WS</label>
+          <input id="mpServer" class="mp-input" type="text" placeholder="ws://localhost:8080" value="" />
+        </div>
+        <div class="mp-row">
+          <label class="mp-label" for="mpRoom">Código da sala</label>
+          <input id="mpRoom" class="mp-input" type="text" placeholder="TESTE123" value="TESTE123" />
+        </div>
+        <div class="mp-row">
+          <label class="mp-label" for="mpSide">Lado</label>
+          <select id="mpSide" class="mp-input">
+            <option value="p1">p1 (Jogador 1)</option>
+            <option value="p2">p2 (Jogador 2)</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:space-between;margin-top:8px;">
+          <button id="mpRegisterBtn" class="mp-btn">Cadastre-se</button>
+          <div style="flex:1"></div>
+          <button id="mpLoginSubmit" class="mp-btn primary">Entrar na Sala</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Show the multiplayer login modal (accessible): toggle aria-hidden, trap focus lightly
+    function showMpLogin(){
+      const m = document.getElementById('mpLoginModal');
+      if(!m) return;
+      m.style.display = 'flex';
+      m.setAttribute('aria-hidden','false');
+      // prevent background scroll while modal open
+      document.body.style.overflow = 'hidden';
+      // focus the card then the first field for better a11y
+      const card = m.querySelector('.mp-card'); if(card) card.focus();
+      setTimeout(()=>{ const u = document.getElementById('mpUser'); if(u) u.focus(); }, 80);
+    }
+    function hideMpLogin(){
+      const m = document.getElementById('mpLoginModal'); if(!m) return;
+      m.style.display = 'none';
+      m.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+    }
+    
+    // Note: login button removed from header to avoid duplicate prompts.
+    document.getElementById('mpCloseBtn').addEventListener('click', hideMpLogin);
+    document.getElementById('mpRegisterBtn').addEventListener('click', ()=>{
+      // Create a proper modal wrapper so it inherits the same styles as the login modal
+      const regWrap = document.createElement('div');
+      regWrap.id = 'mpRegisterModal';
+      regWrap.className = 'mp-modal';
+      regWrap.setAttribute('role','dialog');
+      regWrap.setAttribute('aria-modal','true');
+      regWrap.setAttribute('aria-labelledby','regTitle');
+      regWrap.style.zIndex = '11000';
+
+      regWrap.innerHTML = `
+        <div class="mp-card mp-modal-card" role="document" tabindex="0">
+          <div class="mp-header"><div class="mp-title" id="regTitle">Cadastre-se</div><div class="mp-actions"><button id="regClose" class="mp-btn ghost" aria-label="Fechar">Sair</button></div></div>
+          <div class="mp-body">
+            <div class="mp-row"><label class="mp-label" for="regUser">Usuário</label><input id="regUser" class="mp-input" type="text" placeholder="Nome de usuário"></div>
+            <div class="mp-row"><label class="mp-label" for="regPass">Senha</label><input id="regPass" class="mp-input" type="password" placeholder="Senha"></div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;"><button id="regSubmit" class="mp-btn primary">Registrar</button></div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(regWrap);
+      // show (it'll match modal visuals via .mp-modal)
+      regWrap.style.display = 'flex';
+      regWrap.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+      // focus first field
+      setTimeout(()=>{ const u = document.getElementById('regUser'); if(u) u.focus(); }, 60);
+
+      // Wire the close and submit handlers for this dynamically created modal
+  document.getElementById('regClose').addEventListener('click', ()=>{ regWrap.remove(); document.body.style.overflow = ''; const el=document.getElementById('mpServer'); if(el) el.focus(); });
+      document.getElementById('regSubmit').addEventListener('click', ()=>{
+        const u = document.getElementById('regUser').value.trim();
+        const p = document.getElementById('regPass').value;
+        if(!u){ alert('Informe um nome de usuário.'); return; }
+        // Stub: accept registration, close modal and prefill login
+        alert('Registrado (simulado): ' + u);
+        regWrap.remove();
+        document.body.style.overflow = '';
+        const loginUser = document.getElementById('mpUser'); if(loginUser) loginUser.value = u;
+      });
+    });
+
+    document.getElementById('mpLoginSubmit').addEventListener('click', ()=>{
+      // gather values from the modal and navigate to the simulator in MP mode
+      const server = (document.getElementById('mpServer').value || localStorage.getItem('mpServer') || 'ws://localhost:8080').trim();
+      const sala = (document.getElementById('mpRoom').value || 'TESTE123').trim();
+      const lado = (document.getElementById('mpSide').value === 'p2') ? 'p2' : 'p1';
+      localStorage.setItem('mpServer', server);
+      hideMpLogin();
+      const url = new URL(location.href);
+      const base = url.pathname.endsWith('/')
+        ? url.pathname
+        : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+      url.pathname = base + 'mytragor_simulador.html';
+      url.searchParams.set('mode','mp');
+      url.searchParams.set('room', sala);
+      url.searchParams.set('side', lado);
+      location.href = url.toString();
+    });
+
+    // Extra: keyboard shortcuts
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === '1') location.href = 'mytragor_simulador.html';
+      if(e.key === '2') location.href = 'assets/ui/deckbuilder.html';
+    });
+  </script>
+
+  <!-- Multiplayer client -->
+  <script src="net/net.js"></script>
+  <script>
+    async function abrirMultiplayer() {
+      // 1) configurar servidor (guarda uma vez)
+      let server = localStorage.getItem('mpServer') || 'ws://localhost:8080';
+      server = prompt('Servidor WS:', server) || server;
+      localStorage.setItem('mpServer', server);
+
+      // 2) escolher sala e lado
+      const sala = prompt('Código da sala:', 'TESTE123') || 'TESTE123';
+      const lado = prompt('Lado (p1 ou p2):', 'p1') === 'p2' ? 'p2' : 'p1';
+
+    // 3) abrir a página do simulador com a querystring
+    const url = new URL(location.href);
+    const base = url.pathname.endsWith('/')
+      ? url.pathname
+      : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+    url.pathname = base + 'mytragor_simulador.html';
+    url.searchParams.set('mode', 'mp');
+    url.searchParams.set('room', sala);
+    url.searchParams.set('side', lado);
+    location.href = url.toString();
+    }
+
+  // ligar o botão Multiplayer -> abrir modal de configuração
+  const mpBtn = document.getElementById('btnMultiplayer');
+  if (mpBtn) {
+    // Do not attach multiplayer navigation while feature is not ready
+    const isDisabled = mpBtn.classList.contains('disabled') || mpBtn.getAttribute('aria-disabled') === 'true';
+    if (!isDisabled) {
+      mpBtn.addEventListener('click', (e) => { e.preventDefault(); location.href = 'multiplayer.html'; });
+    } else {
+      // ensure it doesn't navigate if clicked programmatically
+      mpBtn.addEventListener('click', (e) => { e.preventDefault(); });
+      mpBtn.style.cursor = 'default';
+    }
+  }
+  // quick debug buttons to open simulator directly as p1/p2 in room 123
+  const btnP1 = document.getElementById('btnP1');
+  const btnP2 = document.getElementById('btnP2');
+  if(btnP1) btnP1.onclick = () => { location.search = '?mode=mp&room=123&side=p1'; };
+  if(btnP2) btnP2.onclick = () => { location.search = '?mode=mp&room=123&side=p2'; };
+
+    // boot automático do cliente quando a página está com ?mode=mp
+    (function autoStartMP() {
+      const u = new URL(location.href);
+      if (u.searchParams.get('mode') === 'mp') {
+        if (!window.Net) { console.error('net.js não carregado'); return; }
+        window.Net.start();
+        // opcional: esconder o lado adversário ou refletir o tabuleiro
+        document.body.classList.add('is-mp');
+      }
+    })();
+  </script>
+</body>
+</html>
