@@ -12,7 +12,7 @@
 	.deckCard { background: linear-gradient(180deg, rgba(8,12,20,0.85), rgba(6,8,14,0.9)); border-radius: 16px; box-shadow: 0 6px 24px rgba(0,0,0,0.7); padding: 18px 18px 16px 18px; display: flex; flex-direction: column; align-items: center; position: relative; border: 1px solid rgba(250,200,60,0.04); }
 	.deckLeader { width: 80px; height: 112px; border-radius: 10px; box-shadow: 0 4px 18px rgba(250,180,20,0.12); margin-bottom: 10px; object-fit: cover; border: 2px solid #facc15; background: #071025; }
 		.deckTitle { font-size: 18px; font-weight: bold; color: #facc15; margin-bottom: 8px; text-align: center; }
-		.miniGrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 10px; }
+		.miniGrid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-bottom: 10px; }
 		.miniCard { width: 38px; height: 54px; border-radius: 6px; box-shadow: 0 1px 6px #0006; object-fit: cover; background: #0e1a2b; border: 1px solid #2a3b55; }
 		.deckActions { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
 	.btn { background: linear-gradient(180deg,#facc15,#f59e0b); color: #111; border: 1px solid rgba(250,200,60,0.12); border-radius: 8px; padding: 8px 18px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 6px 20px rgba(250,180,20,0.06); transition: filter 0.12s, transform 0.12s; }
@@ -107,6 +107,8 @@
 						const miniGrid = document.createElement('div');
 						miniGrid.className = 'miniGrid';
 						(deck.cards || []).slice(0, 32).forEach(cardName => {
+						// show up to 40 cards (4 rows x 10 columns)
+						(deck.cards || []).slice(0, 40).forEach(cardName => {
 										const mini = document.createElement('img');
 										mini.className = 'miniCard';
 										let imgSrc = getCardImg(cardName);
