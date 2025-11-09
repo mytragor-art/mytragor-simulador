@@ -14,7 +14,7 @@ const CARD_DEFS = [
     maxHp: 20,
     damage: 2,
     atkBonus: 2,
-    text: 'Valbrak, o Arcano. Um Escolhido com afinidade Arcana.'
+    text: 'Uma vez por Turno, quando um aliado “cidadão” for chamado para o campo, compre uma carta.'
   },
   {
     name: 'Katsu, o Vingador',
@@ -27,7 +27,7 @@ const CARD_DEFS = [
     maxHp: 20,
     damage: 4,
     atkBonus: 4,
-    text: 'Katsu, o Marcial. Um Escolhido focado em combate corpo-a-corpo.'
+    text: 'Seus outros aliados, “guerreiro”, podem atacar inimigos, mesmo que estes inimigos estejam em pé.'
   },
   {
     name: 'Leafae, Guardião da Floresta',
@@ -41,7 +41,7 @@ const CARD_DEFS = [
     damage: 1,
     atkBonus: 2,
     effect: 'leafae',
-    text: 'Leafae: sempre que outro aliado for curado, Leafae ganha permanentemente +1 ATK, +1 Dano e +1 AC.'
+    text: 'Sempre que um aliado for curado, este escolhido ganha +1 de bônus de ataque, +1 de AC e +1 de dano.'
   },
   {
     name: 'Ademais, Aranha Negra',
@@ -54,7 +54,7 @@ const CARD_DEFS = [
     maxHp: 20,
     damage: 2,
     atkBonus: 2,
-    text: 'Ademais — líder associado às Aranhas Negras; ganha bônus por cartas "Aranhas" em campo.'
+    text: 'Este escolhido ganha +1 de bônus de ataque e +1 de ac para cada carta "Aranhas Negras" no campo.'
   },
     // Nota: recebeu stats padrão para ser alvo de ataques/efeitos.
   // Exemplos de outras cartas (adicione todas as cartas reais aqui)

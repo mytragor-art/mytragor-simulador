@@ -35,9 +35,9 @@
     background: linear-gradient(180deg, rgba(16,32,57,0.6), rgba(8,18,32,0.6));
     border-radius: 10px;
     padding: 8px;
-    width: 100%;
+      width: 100%;
     box-shadow: 0 8px 20px rgba(2,6,23,0.6);
-    min-height: 140px;
+  min-height: 120px;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -45,10 +45,11 @@
     gap:6px;
     text-align:center;
   }
-  .right .deck-list .card img{ width:72px; height:108px; object-fit:cover; border-radius:4px; }
+  /* make the cards shown in the chosen-deck list smaller to reduce visual weight */
+  .right .deck-list .card img{ width:40px; height:60px; object-fit:cover; border-radius:4px; }
   .right .deck-list .card div{ font-size:11px; color: #e6eef8; }
-    .deck-list { display: grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-bottom:8px; min-height: 160px; background: transparent; border-radius: 8px; padding: 8px; }
-    .card-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:12px; margin-bottom: 8px; min-height: 40px; max-width: 100%; justify-items: start; align-items: start; }
+  .deck-list { display: grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:8px; min-height: 120px; background: transparent; border-radius: 8px; padding: 8px; }
+  .card-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap:12px; margin-bottom: 8px; min-height: 40px; max-width: 100%; justify-items: start; align-items: start; }
   /* Filter bar */
   .filterBar { display:flex; gap:8px; align-items:center; margin:6px 0 12px 0; }
   .filterSearch { padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background: rgba(0,0,0,0.24); color:#e6eef8; font-size:14px; width:320px; }
@@ -61,11 +62,11 @@
       background: linear-gradient(180deg, rgba(16,32,57,0.6), rgba(8,18,32,0.6));
       border-radius: 10px;
       padding: 8px;
-      width: 120px;
+  width: 160px;
       text-align: center;
       cursor: pointer;
       box-shadow: 0 8px 20px rgba(2,6,23,0.6);
-      min-height: 140px;
+  min-height: 160px;
       transition: transform 0.12s ease, box-shadow 0.12s ease, border 0.12s ease;
       font-size: 13px;
       color: #e6eef8;
@@ -85,7 +86,7 @@
 
     /* simple modal styles used for leader selection */
     .modalOverlay { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(2,6,23,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-    .modalBox { background: #0b1220; color: #e2e8f0; padding: 18px; border-radius: 8px; max-width: 700px; width: 92%; box-shadow: 0 8px 40px #0008; }
+  .modalBox { background: #0b1220; color: #e2e8f0; padding: 18px; border-radius: 8px; max-width: 1000px; width: 96%; box-shadow: 0 8px 40px #0008; }
     .controls { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; }
   /* golden primary buttons across the page */
   button { background: linear-gradient(180deg,#facc15,#f59e0b); color: #111111; border: 1px solid rgba(250,200,60,0.12); border-radius: 6px; padding: 8px 16px; font-size: 16px; cursor: pointer; box-shadow: 0 8px 20px rgba(250,180,20,0.06); }
@@ -94,9 +95,10 @@
   .filterBtn { background: linear-gradient(180deg,#facc15,#f59e0b); color:#111; border:1px solid rgba(250,200,60,0.08); }
     .deck-info { text-align: center; margin-bottom: 16px; }
   /* card preview tooltip */
-  .card-preview { position: fixed; pointer-events: none; background: linear-gradient(180deg, #071025, #0b1220); border: 1px solid rgba(250,204,21,0.08); padding: 12px; border-radius:12px; width:320px; max-width:40vw; box-shadow: 0 18px 48px rgba(2,6,23,0.85); color:#e6eef8; z-index:20000; display:none; }
-  .card-preview img { width:120px; height:180px; object-fit:cover; border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,0.6); }
-  .card-preview .meta { margin-left:12px; max-height:180px; overflow:auto }
+  .card-preview { position: fixed; pointer-events: none; background: linear-gradient(180deg, #071025, #0b1220); border: 1px solid rgba(250,204,21,0.08); padding: 12px; border-radius:12px; width:440px; max-width:50vw; box-shadow: 0 18px 48px rgba(2,6,23,0.85); color:#e6eef8; z-index:20000; display:none; }
+  /* larger hover/modal preview so card text is easier to read */
+  .card-preview img { width:200px; height:300px; object-fit:cover; border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,0.6); }
+  .card-preview .meta { margin-left:12px; max-height:260px; overflow:auto }
   </style>
   <script>
     (function(){
@@ -211,26 +213,29 @@
     { label: 'Sombras',  img: '../fragments/fragmentos_sombras.png' }
   ];
 
-    const LEADERS = [
-      { name: 'Valbrak', img: '../chosens/valbrak.png' },
-      { name: 'Katsu', img: '../chosens/katsu.png' },
-      { name: 'Leafae', img: '../chosens/leafae.png' },
-      { name: 'Ademais', img: '../chosens/ademais.png' }
-    ];
+    // Prefer leader definitions from the central `CARD_DEFS` (cartas.js).
+    // Fallback to the small local list if CARD_DEFS isn't loaded.
+    let LEADERS = [];
+    if (window && Array.isArray(window.CARD_DEFS) && window.CARD_DEFS.length) {
+      LEADERS = window.CARD_DEFS.filter(c => c.kind === 'leader').map(c => c);
+    } else {
+      LEADERS = [
+        { name: 'Valbrak', img: '../chosens/valbrak.png' },
+        { name: 'Katsu', img: '../chosens/katsu.png' },
+        { name: 'Leafae', img: '../chosens/leafae.png' },
+        { name: 'Ademais', img: '../chosens/ademais.png' }
+      ];
+    }
 
-    // Map leader name -> filiation (matches simulator's leader data)
-    const LEADER_FILIACAO = {
-      'Valbrak': 'Arcana',
-      'Katsu': 'Marcial',
-      'Leafae': 'Religioso',
-      'Ademais': 'Sombras'
-    };
+    // Build mapping from leader name -> filiation from the leader objects
+    const LEADER_FILIACAO = {};
+    LEADERS.forEach(l => { if(l && l.name) LEADER_FILIACAO[l.name] = l.filiacao || (l.filiation||''); });
 
     function getLeaderForFiliation(filiacao){
       if(!filiacao) return null;
       filiacao = String(filiacao).toLowerCase();
       for(const k of Object.keys(LEADER_FILIACAO)){
-        if(String(LEADER_FILIACAO[k]).toLowerCase() === filiacao) return LEADERS.find(l=>l.name===k) || null;
+        if(String(LEADER_FILIACAO[k] || '').toLowerCase() === filiacao) return LEADERS.find(l=>l.name===k) || null;
       }
       return null;
     }
@@ -376,7 +381,7 @@
         const pad = 12;
         const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
         const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-        const w = Math.min(320, vw * 0.4);
+  const w = Math.min(440, vw * 0.45);
         const h = cardPreview.offsetHeight || 220;
         let left = x + 18;
         let top = y + 18;
@@ -408,7 +413,7 @@
         const im = document.createElement('img');
         im.src = resolveImg(leader.img);
         im.alt = leader.name;
-          im.style = 'width:40px;height:60px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
+          im.style = 'width:72px;height:108px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
         im.onerror = function() { this.src = 'card-back.png'; };
         el.appendChild(im);
         const nm = document.createElement('div');
@@ -448,7 +453,7 @@
           el.className = 'card' + (chosenFragImg === opt.img ? ' selected' : '');
           const im = document.createElement('img');
           im.src = resolveImg(opt.img);
-          im.alt = opt.label; im.style = 'width:40px;height:60px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
+          im.alt = opt.label; im.style = 'width:72px;height:108px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
           im.onerror = function(){ this.src = 'card-back.png'; };
           el.appendChild(im);
           const nm = document.createElement('div'); nm.textContent = opt.label; nm.style = 'font-size:8px;margin-top:2px;';
@@ -492,7 +497,7 @@
         const im = document.createElement('img');
         im.src = resolveImg(card.img);
         im.alt = card.name;
-          im.style = 'width:40px;height:60px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
+          im.style = 'width:120px;height:180px;object-fit:cover;display:block;margin:0 auto 2px auto;border-radius:4px;box-shadow:0 1px 4px #0007;';
         im.onerror = function() { this.src = 'card-back.png'; };
         el.appendChild(im);
         const nm = document.createElement('div');
@@ -566,7 +571,7 @@
         const tile = document.createElement('div');
         tile.className = 'card';
         tile.style = 'display:flex;flex-direction:column;align-items:center;justify-content:center;';
-        const im = document.createElement('img'); im.src = resolveImg(leader.img); im.style='width:40px;height:60px;object-fit:cover;border-radius:4px;'; im.onerror=function(){this.src='card-back.png';};
+  const im = document.createElement('img'); im.src = resolveImg(leader.img); im.style='width:160px;height:240px;object-fit:cover;border-radius:4px;'; im.onerror=function(){this.src='card-back.png';};
         tile.appendChild(im);
         const nm = document.createElement('div'); nm.textContent = leader.name; nm.style='font-size:10px;margin-top:6px;';
         tile.appendChild(nm);

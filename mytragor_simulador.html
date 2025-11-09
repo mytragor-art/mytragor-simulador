@@ -105,6 +105,28 @@
   @keyframes brandSpark{0%{left:-20%;opacity:0}12%{left:12%;opacity:1}35%{left:45%;opacity:0.95}55%{left:55%;opacity:0.6}78%{left:88%;opacity:0.15}100%{left:120%;opacity:0}}
   .btn{background:#13223a;border:1px solid var(--line);color:#c9d4e7;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:14px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.2);margin:4px 4px 4px 0;transition:all 0.2s ease;min-width:80px;text-align:center;}
   .btn:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.3);opacity:0.9;}
+  /* Estilo dourado padrão para botões melhorados */
+  .gold-btn{
+    background: linear-gradient(180deg,#ffd66b 0%, #e6a600 60%);
+    color: #2b1600;
+    border: 1px solid rgba(179,123,0,0.9);
+    border-radius: 10px;
+    box-shadow: 0 6px 14px rgba(166,122,24,0.18), inset 0 1px 0 rgba(255,255,255,0.25);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.12);
+    transition: transform .08s ease, box-shadow .18s ease, filter .12s ease;
+    font-weight:700;
+    min-width:84px;
+  }
+  .gold-btn:active{ transform: translateY(1px); filter:brightness(.98); }
+
+  /* Três efeitos de brilho diferentes (cada clique cicla entre eles) */
+  @keyframes glowA{ 0%{ box-shadow:0 0 0 rgba(250,204,21,0)} 50%{ box-shadow:0 0 22px 6px rgba(250,204,21,0.45) } 100%{ box-shadow:0 0 0 rgba(250,204,21,0) } }
+  @keyframes glowB{ 0%{ box-shadow:0 0 0 rgba(255,240,180,0)} 40%{ box-shadow:0 0 30px 8px rgba(255,240,180,0.34) } 100%{ box-shadow:0 0 0 rgba(255,240,180,0) } }
+  @keyframes glowC{ 0%{ box-shadow:0 0 0 rgba(255,200,80,0)} 50%{ box-shadow:0 0 14px 4px rgba(255,200,80,0.5) } 100%{ box-shadow:0 0 0 rgba(255,200,80,0) } }
+
+  .glow-0{ animation: glowA 700ms ease; }
+  .glow-1{ animation: glowB 820ms cubic-bezier(.2,.9,.3,1.2); }
+  .glow-2{ animation: glowC 640ms cubic-bezier(.35,.85,.45,1.05); }
   .btn-coin{background:linear-gradient(135deg,#facc15 0%,#fde68a 100%);color:#7c2d12;font-weight:600;}
   .btn-start{background:linear-gradient(135deg,#38bdf8 0%,#0ea5e9 100%);color:#fff;font-weight:600;}
   .btn-choose{background:linear-gradient(135deg,#a3e635 0%,#65a30d 100%);color:#1a2e05;font-weight:600;}
@@ -172,12 +194,38 @@
   .pill{background:rgba(14,26,43,.75);border:1px solid #2b3b5c;border-radius:999px;padding:6px 12px;font-size:13px;color:#b7c3da}
 
   /* Barra de fases (Início, Principal, Combate, Final) */
-  .phaseBar{display:flex;align-items:center;gap:8px;background:#0e1a2b;border:1px solid #2b3b5c;border-radius:999px;padding:6px 10px}
-  .phaseItem{display:flex;align-items:center;gap:6px;color:#b7c3da;font-size:13px;opacity:.6}
-  .phaseItem .dot{width:10px;height:10px;border-radius:50%;border:2px solid #64748b;background:#0e1a2b;box-sizing:border-box}
+  /* Slim variant used between arenas: smaller padding/font so it's less visually heavy */
+  .phaseBar{display:flex;align-items:center;gap:8px;background:#0e1a2b;border:1px solid #2b3b5c;border-radius:999px;padding:4px 8px;margin:8px auto;font-size:12px;max-width:520px;justify-content:center}
+  .phaseItem{display:flex;align-items:center;gap:6px;color:#b7c3da;font-size:12px;opacity:.7}
+  .phaseItem .dot{width:8px;height:8px;border-radius:50%;border:2px solid #64748b;background:#0e1a2b;box-sizing:border-box}
   .phaseItem.active{opacity:1;color:#facc15}
   .phaseItem.active .dot{border-color:#facc15;background:#facc15;box-shadow:0 0 0 4px rgba(250,204,21,.18)}
   .phaseSep{width:22px;height:2px;background:#2a3b55;opacity:.6;border-radius:2px}
+
+  /* Tour overlay (zero-deps) */
+  .tour-overlay{ position: fixed; inset:0; background: rgba(2,6,23,0.78); z-index:12000; display:none; align-items:flex-start; justify-content:flex-start; }
+  .tour-highlight{ position:absolute; border-radius:12px; box-shadow:0 0 0 6px rgba(250,204,21,0.18); pointer-events:none; transition: all 240ms cubic-bezier(.2,.9,.2,1); }
+  .tour-tooltip{ position:absolute; max-width:780px; width: min(96%,780px); background: linear-gradient(180deg,#071523,#0c1622); color:#e6eef8; border:1px solid rgba(250,204,21,0.16); padding:20px;border-radius:12px; box-shadow:0 22px 80px rgba(0,0,0,0.75); z-index:12010; }
+  .tour-tooltip .tour-body{ font-size:18px; line-height:1.6; color:#e6eef8; max-height:68vh; overflow:auto; }
+  .tour-tooltip h4{ margin:0 0 10px 0; color:#facc15; font-size:20px }
+  .tour-tooltip .tour-controls button{ padding:10px 12px; font-size:15px; border-radius:6px; }
+  .tour-controls{ display:flex; gap:8px; justify-content:flex-end; margin-top:8px }
+  .tour-controls button{ padding:6px 8px; border-radius:8px; background:linear-gradient(180deg,#facc15,#f59e0b); border: none; font-weight:700; cursor:pointer }
+
+  /* Attack animation visuals */
+  .attack-line{ position:absolute; height:6px; border-radius:6px; background: linear-gradient(90deg, rgba(255,220,100,0.95), rgba(255,140,40,0.95)); box-shadow:0 6px 18px rgba(255,160,40,0.18); transform-origin:left center; pointer-events:none; z-index:13000; transition: transform 420ms cubic-bezier(.2,.9,.2,1); }
+  .attack-swing{ animation: attackSwing 420ms ease; }
+  @keyframes attackSwing{ 0%{ transform: translateY(0) rotate(0) } 50%{ transform: translateY(-6px) rotate(-4deg) } 100%{ transform: translateY(0) rotate(0) } }
+  .hit-flash{ box-shadow: 0 0 0 6px rgba(255,100,40,0.14), 0 8px 24px rgba(255,120,40,0.12); transition: box-shadow 320ms ease; }
+  .damage-pop{ position:absolute; color:#fff7df; font-weight:900; font-size:18px; text-shadow:0 2px 6px rgba(0,0,0,0.6); transform:translateY(0); opacity:1; transition: transform 700ms ease, opacity 700ms ease; z-index:14000 }
+
+  /* Pointer for guided lesson: arrow + label */
+  .tour-pointer{ position:absolute; pointer-events:none; z-index:13050; display:flex; flex-direction:column; align-items:center; gap:6px }
+  .tour-pointer .arrow{ width:36px; height:36px; background: radial-gradient(circle at 30% 30%, #fff 0%, rgba(255,240,180,0.9) 30%, rgba(255,200,80,0.95) 60%); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-weight:900; color:#7c2d12 }
+  .tour-pointer .label{ background:rgba(8,12,20,0.95); color:#fcefc2; padding:6px 10px; border-radius:8px; border:1px solid rgba(250,204,21,0.06); font-size:13px; max-width:220px; text-align:center }
+
+  /* Slide image inside tooltip */
+  .slide-img{ width:100%; height:auto; max-height:160px; object-fit:cover; border-radius:6px; margin-bottom:8px; box-shadow: 0 8px 20px rgba(0,0,0,0.6) }
 
   /* Layout principal */
   .app{display:grid;grid-template-columns:224px 1fr 336px;gap:10px;padding:10px;min-height:100vh}
@@ -516,19 +564,12 @@
   <span class="pill" id="whoActive">Ativo —</span>
   <span class="pill" id="phasePill">Fase: —</span>
   <span class="pill" id="fragPill">Frags: 0/10 (turno)</span>
-  <div class="phaseBar" id="phaseBar" aria-label="Barra de fases">
-    <div class="phaseItem" data-phase="start"><span class="dot" aria-hidden="true"></span><span>Início</span></div>
-    <div class="phaseSep" aria-hidden="true"></div>
-    <div class="phaseItem" data-phase="main"><span class="dot" aria-hidden="true"></span><span>Principal</span></div>
-    <div class="phaseSep" aria-hidden="true"></div>
-    <div class="phaseItem" data-phase="battle"><span class="dot" aria-hidden="true"></span><span>Combate</span></div>
-    <div class="phaseSep" aria-hidden="true"></div>
-    <div class="phaseItem" data-phase="end"><span class="dot" aria-hidden="true"></span><span>Final</span></div>
-  </div>
+  <!-- phaseBar moved down between arenas to make it more visible and less crowded in the topbar -->
   <label class="pill" style="display:flex;align-items:center;gap:6px">
     Zoom <input id="zoomRange" type="range" min="0.9" max="1.35" step="0.01" value="1.12" style="width:140px">
   </label>
   <button id="btnBackMenu" class="btn btn-coin" title="Voltar ao menu" style="margin-left:8px;background:linear-gradient(135deg,#facc15 0%,#f59e0b 100%);color:#111;font-weight:700;">Voltar ao menu</button>
+  <button id="btnTutorial" class="btn" title="Abrir tutorial" style="margin-left:6px;background:linear-gradient(135deg,#facc15 0%,#e6a600 100%);color:#111;font-weight:700;">Tutorial</button>
   <div class="brandWrap" aria-hidden="true">
     <div class="brand"><span>Mytragor</span>
       <i class="spark" aria-hidden="true"></i>
@@ -554,11 +595,7 @@
   <div class="col">
     <h3>Log</h3>
     <div class="logControls" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
-      <button class="btn btn-start" id="btnStart">Iniciar</button>
       <button class="btn btn-choose" id="btnChoose">Escolher Baralho</button>
-  <!-- IA deck button removed per request -->
-      <button class="btn btn-next" id="btnNext">Próxima Fase</button>
-      <button class="btn btn-end" id="btnEnd">Encerrar Turno</button>
       <button class="btn" id="btnRestart" title="Reiniciar o simulador">Reiniciar</button>
     </div>
     <div class="log" id="log"></div>
@@ -591,6 +628,22 @@
               <div class="slot" id="ai-deck"><span class="slotLabel">Deck</span><span class="slotCount" id="ai-deck-count">0</span></div>
             </div>
           </div>
+        </div>
+        
+        <!-- thin phase bar placed between arenas -->
+        <div class="phaseBar" id="phaseBar" aria-label="Barra de fases">
+          <div class="phaseItem" data-phase="start"><span class="dot" aria-hidden="true"></span><span>Início</span></div>
+          <div class="phaseSep" aria-hidden="true"></div>
+          <div class="phaseItem" data-phase="main"><span class="dot" aria-hidden="true"></span><span>Principal</span></div>
+          <div class="phaseSep" aria-hidden="true"></div>
+          <div class="phaseItem" data-phase="battle"><span class="dot" aria-hidden="true"></span><span>Combate</span></div>
+          <div class="phaseSep" aria-hidden="true"></div>
+          <div class="phaseItem" data-phase="end"><span class="dot" aria-hidden="true"></span><span>Final</span></div>
+        </div>
+
+        <!-- single action button that mirrors Start / Next / End actions -->
+        <div style="display:flex;align-items:center;justify-content:center;margin:6px 0 12px 0;">
+          <button id="phaseActionBtn" class="btn btn-start" style="min-width:120px;">Iniciar</button>
         </div>
 
         <!-- Você -->
@@ -1092,6 +1145,9 @@ const STATE = {
   ai:{  leader:null, env:null, allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[], tokens:[] }
 };
 
+// Track whether a match has been started via UI (used to change the phase action button)
+window.__MATCH_STARTED = false;
+
 // Minimal Game API used by NetController: load a full snapshot and apply to local STATE
 window.Game = window.Game || {};
 window.Game.loadSnapshot = function(snapshot){
@@ -1290,6 +1346,55 @@ function cleanupEquipsOf(side, targetObj){
 // they should NOT be placed in the grave. To avoid editing many push sites,
 // we filter pushes into the grave arrays here.
 (function(){
+  // simulate an attack visually between two elements (selectors) without changing game state
+  function simulateAttackDemo(attSelector, defSelector, dmg){
+    try{
+      const att = document.querySelector(attSelector);
+      const def = document.querySelector(defSelector);
+      if(!att || !def) return;
+      const aRect = att.getBoundingClientRect();
+      const dRect = def.getBoundingClientRect();
+      const ax = aRect.left + aRect.width/2;
+      const ay = aRect.top + aRect.height/2;
+      const dx = dRect.left + dRect.width/2;
+      const dy = dRect.top + dRect.height/2;
+      const minX = Math.min(ax, dx);
+      const minY = Math.min(ay, dy) - 6; // small vertical offset
+      const dist = Math.hypot(dx-ax, dy-ay);
+      const angle = Math.atan2(dy-ay, dx-ax) * 180 / Math.PI;
+
+      // create line
+      const line = document.createElement('div'); line.className = 'attack-line';
+      line.style.left = (minX) + 'px';
+      line.style.top = (minY) + 'px';
+      line.style.width = dist + 'px';
+      line.style.transform = `rotate(${angle}deg) scaleX(0)`;
+      document.body.appendChild(line);
+
+      // add swing to attacker and flash to defender
+      att.classList.add('attack-swing');
+      def.classList.add('hit-flash');
+
+      // animate line after short delay
+      requestAnimationFrame(()=>{ setTimeout(()=>{ line.style.transform = `rotate(${angle}deg) scaleX(1)`; }, 40); });
+
+      // after reach, show damage popup and cleanup
+      setTimeout(()=>{
+        // damage popup
+        const pop = document.createElement('div'); pop.className = 'damage-pop'; pop.textContent = '-' + (dmg||1);
+        pop.style.left = (dx - 12) + 'px'; pop.style.top = (dy - 18) + 'px';
+        document.body.appendChild(pop);
+        // animate popup
+        requestAnimationFrame(()=>{ pop.style.transform = 'translateY(-28px)'; pop.style.opacity = '0'; });
+        // cleanup visual classes and elements later
+        setTimeout(()=>{ pop.remove(); line.remove(); try{ att.classList.remove('attack-swing'); def.classList.remove('hit-flash'); }catch(e){} }, 900);
+      }, 520);
+    }catch(e){ console.warn('simulateAttackDemo error', e); }
+  }
+
+    // expose for tutorial/demo scripts
+    try{ window.simulateAttackDemo = simulateAttackDemo; }catch(e){}
+
   try{
     const origPush = Array.prototype.push;
     Array.prototype.push = function(...items){
@@ -1713,6 +1818,31 @@ function renderHUD(){
         if (i === idx) it.classList.add('active'); else it.classList.remove('active');
       });
     }
+    // Update the single phase action button (mirror Start / Next / End)
+    try{
+      const btn = document.getElementById('phaseActionBtn');
+      if(btn){
+        // Decide state based on whether a match has been started and current phase
+        if(!window.__MATCH_STARTED){
+          btn.textContent = 'Iniciar';
+          btn.className = 'btn btn-start';
+          btn.onclick = startMatch;
+          btn.disabled = false;
+        } else if (STATE.phase === 'main'){
+          btn.textContent = 'Próxima Fase';
+          btn.className = 'btn btn-next';
+          btn.onclick = nextPhase;
+          // disable if it's not the active side (optional UX) — keep enabled to match old behavior
+          btn.disabled = false;
+        } else {
+          // battle or final -> offer 'Encerrar Turno'
+          btn.textContent = 'Encerrar Turno';
+          btn.className = 'btn btn-end';
+          btn.onclick = endTurn;
+          btn.disabled = false;
+        }
+      }
+    }catch(e){}
   } catch {}
 }
 
@@ -2674,6 +2804,7 @@ function selectAiSavedDeck(deck){
 /* ============== Fluxo / FRAGMENTOS ============== */
 function coin(){ STATE.first=(Math.random()<0.5)?'you':'ai'; STATE.active=STATE.first; STATE.turnCount.you=STATE.turnCount.ai=0; STATE.maxPool.you=STATE.maxPool.ai=0; STATE.pool.you=STATE.pool.ai=0; log(`${STATE.first==='you'?'Você':'IA'} começa!`); renderHUD(); }
 function startMatch(){
+  try{ window.__MATCH_STARTED = true; }catch(e){}
   // Offline / VS IA: behave as before
   if(!IS_MP){
     try{
@@ -5182,11 +5313,10 @@ try {
     if (banSlot) banSlot.onclick = () => showPile(side, 'ban', 'Banidas');
   });
   document.getElementById('btnCoin')?.addEventListener('click', coin);
-  document.getElementById('btnStart')?.addEventListener('click', startMatch);
+  // startMatch now triggered via phase action button; remove direct Start button listener from log
   document.getElementById('btnChoose')?.addEventListener('click', chooseLeader);
   // btnChooseAI removed from UI — no listener attached
-  document.getElementById('btnNext')?.addEventListener('click', nextPhase);
-  document.getElementById('btnEnd')?.addEventListener('click', endTurn);
+  // nextPhase/endTurn listeners removed from log controls (buttons were removed from UI)
   document.getElementById('btnRestart')?.addEventListener('click', () => { try { location.reload(); } catch(e) { window.location.href = window.location.href; } });
   // Voltar ao menu (index.html)
   try{ const _b = document.getElementById('btnBackMenu'); if(_b) _b.addEventListener('click', ()=>{ location.href = 'index.html'; }); }catch(e){}
@@ -5446,6 +5576,411 @@ try {
   // btnChooseAI removed; previously hidden in MP mode
   render();
 } catch(e) { console.warn('Render inicial falhou', e); }
+</script>
+
+<script>
+// Melhora visual dos botões: dourado + brilho cíclico por clique
+(function(){
+  function enhanceButtons(){
+    const btns = document.querySelectorAll('button');
+    if(!btns || btns.length===0) return;
+    btns.forEach(btn=>{
+      // permitir opt-out adicionando a classe `no-gold`
+      if(btn.classList.contains('no-gold')) return;
+      // adicionar classe dourada base (preserva classes existentes como btn-start etc.)
+      btn.classList.add('gold-btn');
+
+      // ciclo local por botão (0..2)
+      btn.dataset._goldGlowIdx = btn.dataset._goldGlowIdx || '-1';
+      btn.addEventListener('click', function(e){
+        const idx = (Number(btn.dataset._goldGlowIdx || -1) + 1) % 3;
+        btn.dataset._goldGlowIdx = String(idx);
+        // remover classes anteriores e forçar reflow para reiniciar animação
+        btn.classList.remove('glow-0','glow-1','glow-2');
+        void btn.offsetWidth;
+        btn.classList.add('glow-' + idx);
+      });
+
+      // limpar classe de brilho quando a animação acabar para manter DOM limpo
+      btn.addEventListener('animationend', function(ev){
+        if(!ev || !ev.animationName) return;
+        if(ev.animationName.indexOf('glow') === 0 || ev.animationName.indexOf('glow')>-1){
+          btn.classList.remove('glow-0','glow-1','glow-2');
+        }
+      });
+    });
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhanceButtons);
+  else enhanceButtons();
+})();
+</script>
+
+<script>
+// Tour simples (zero-deps) — pt-BR steps. Opens only ao clicar em #btnTutorial.
+(function(){
+  const steps = [
+    { el: null, title: 'O que é o jogo e como vencer', text: '<strong>Objetivo:</strong> reduzir o HP do líder adversário a 0. <br><br><strong>Regras básicas:</strong><br> - Turnos divididos em fases: Início, Principal, Combate e Final.<br> - Na Fase Principal você pode jogar cartas da mão pagando o custo; aliados vão para sua área de jogo.<br> - Na Fase de Combate você declara atacantes (aliados ou líder) e escolhe alvos; cartas com <em>Provocar</em> devem ser atacadas primeiro.<br> - Ao atacar, a carta vira (fica deitada) enquanto resolve o combate; cartas deitadas não podem atacar novamente até serem levantadas no próximo turno.<br> - Quando uma carta tem HP ≤ 0, ela vai para o cemitério. Truques ativam no turno do oponente; Ambiente aplica efeitos enquanto ativo.<br> - Algumas condições de derrota/vitória específicas dependem do modo (ex.: regras relacionadas a deck vazio).', },
+    { el: '#phaseBar', title: 'Barra de Fases', text: 'Mostra as fases do turno: Início, Principal, Combate e Final. Use o botão de ação ao lado para avançar.' },
+    { el: '#opArena', title: 'Arena do Oponente', text: 'Aqui ficam as cartas e fragmentos do oponente.' },
+    { el: '#youArena', title: 'Sua Arena', text: 'Sua zona de jogo: aliados, magias e seu líder aparecem aqui.' },
+    { el: '#phaseActionBtn', title: 'Botão de Ação', text: 'Este botão inicia a partida ou avança/encerra fases dependendo do estado.' },
+    { el: '.logControls', title: 'Controles', text: 'Use estes botões para iniciar, avançar fases, encerrar turno ou reiniciar.' },
+    { el: '#youHand', title: 'Suas cartas na mão', text: 'Cada carta mostra custo, classe e texto. Clique na carta para jogá-la. Passe o mouse para ver a prévia detalhada.',
+      onShow: function(){
+        try{
+          // Always inject a demo "film" state for the tutorial (backup existing state first)
+          if(window.STATE){
+            window.__tour_sampleBackup = window.__tour_sampleBackup || {
+              leader: JSON.parse(JSON.stringify(window.STATE.you?.leader || null)),
+              hand: JSON.parse(JSON.stringify(window.STATE.you?.hand || [])),
+              env: JSON.parse(JSON.stringify(window.STATE.you?.env || null))
+            };
+
+            // sample leader (Valbrak)
+            const sampleLeader = { name: 'Valbrak', kind: 'leader', key: 'valbrak', img: 'assets/chosens/valbrak.png', hp: 16, classe: 'Arcana' };
+            // sample cards: ally, spell, truque, ally, spell
+            const sampleCards = [
+              { name: 'Guerreiro Novato', kind: 'ally', img: 'assets/cards/sample_ally.png', cost: 2, classe: 'Marcial', hp: 3, damage: 1, keywords: [], text: 'Aliado básico: posiciona-se em campo.' },
+              { name: 'Bola de Fogo', kind: 'spell', img: 'assets/cards/sample_spell.png', cost: 3, text: 'Cause 3 de dano a um alvo.' },
+              { name: 'Armadilha de Vento', kind: 'truque', img: 'assets/cards/sample_trick.png', cost: 1, text: 'Truque: ativado apenas no turno do oponente. Ex.: interrompe uma jogada.', keywords: ['truque'] },
+              { name: 'Sentinela', kind: 'ally', img: 'assets/cards/sample_ally2.png', cost: 1, classe: 'Arcana', hp: 2, damage: 1, text: 'Aliado rápido.' },
+              { name: 'Proteção', kind: 'spell', img: 'assets/cards/sample_spell2.png', cost: 2, text: 'Concede +2 HP temporário a um aliado.' }
+            ];
+
+            // sample environment card
+            const sampleEnv = { name: 'Floresta Encantada', kind: 'env', img: 'assets/cards/sample_env.png', text: 'Carta de Ambiente: enquanto ativa, altera regras de campo (ex.: +1 HP para aliados)', cost: 0 };
+
+            // Inject demo state
+            window.STATE.you = window.STATE.you || {};
+            window.STATE.you._prevInjected = true;
+            window.STATE.you.leader = sampleLeader;
+            window.STATE.you.hand = sampleCards;
+            window.STATE.you.env = sampleEnv;
+
+            // re-render player's side to reflect sample cards
+            try{ renderSide && typeof renderSide === 'function' && renderSide('you'); }catch(e){}
+          }
+        }catch(e){ console.warn('tour sample onShow error', e); }
+        // simulate hover on first card to show preview if present
+        try{ const hand = document.querySelector('#youHand'); if(hand && hand.firstElementChild){ const c = hand.firstElementChild; if(typeof c.onmouseenter === 'function') try{ c.onmouseenter({clientX: c.getBoundingClientRect().left+10, clientY: c.getBoundingClientRect().top+10}); }catch(e){} else c.dispatchEvent(new Event('mouseenter')); } }catch(e){}
+      },
+      onHide: function(){
+        try{
+          // restore previous state if we injected samples
+          if(window.__tour_sampleBackup && window.STATE){
+            try{ window.STATE.you.leader = window.__tour_sampleBackup.leader; window.STATE.you.hand = window.__tour_sampleBackup.hand || []; window.STATE.you.env = window.__tour_sampleBackup.env || null; }catch(e){}
+            try{ renderSide && typeof renderSide === 'function' && renderSide('you'); }catch(e){}
+            delete window.__tour_sampleBackup;
+            if(window.STATE.you) delete window.STATE.you._prevInjected;
+          }
+          if(window.inspect) window.inspect(null);
+        }catch(e){ console.warn('tour onHide restore error', e); }
+      }
+    },
+    { el: '.inspector', title: 'Prévia da carta', text: 'A prévia mostra nome, atributos (HP/AC/Dano) e o texto da carta. Use-a para confirmar efeitos antes de jogar.' },
+    { el: '#you-allies', title: 'Onde colocar aliados', text: 'Se for um aliado, clique na carta na sua mão e escolha um slot livre nesta área para posicioná-lo em campo.' },
+    { el: '#you-env', title: 'Carta de Ambiente', text: 'A carta de Ambiente fica ao lado do líder e aplica efeitos globais enquanto estiver em jogo. Exemplos: buff em aliados ou penalidades ao oponente.' }
+  ];
+
+  // Additional combat & zones steps appended dynamically
+  steps.push(
+    { el: '.phaseItem[data-phase="battle"]', title: 'Fase de Combate', text: 'Na Fase de Combate você declara atacantes e escolhe alvos. Clique no seu aliado ou líder para selecioná-lo como atacante e depois clique no alvo (aliado inimigo ou líder). Se um inimigo tiver "Provocar", ele deve ser priorizado como alvo. Ao resolver, atacante e alvo trocam dano; cartas com HP ≤ 0 vão para o cemitério. Alguns efeitos (ex.: bloquear/provocar) alteram as opções de alvo.' ,
+      onShow: function(){
+        try{
+              // backup current battlefield state (safe with optional chaining)
+              window.__tour_battleBackup = window.__tour_battleBackup || {
+                you_allies: JSON.parse(JSON.stringify(window.STATE?.you?.allies || [])),
+                ai_allies: JSON.parse(JSON.stringify(window.STATE?.ai?.allies || [])),
+                you_deck: JSON.parse(JSON.stringify(window.STATE?.you?.deck || [])),
+                ai_deck: JSON.parse(JSON.stringify(window.STATE?.ai?.deck || [])),
+                you_grave: JSON.parse(JSON.stringify(window.STATE?.you?.grave || [])),
+                ai_grave: JSON.parse(JSON.stringify(window.STATE?.ai?.grave || [])),
+                you_ban: JSON.parse(JSON.stringify(window.STATE?.you?.ban || [])),
+                ai_ban: JSON.parse(JSON.stringify(window.STATE?.ai?.ban || []))
+              };
+
+              // Ensure STATE structure exists before injecting
+              window.STATE = window.STATE || {};
+              window.STATE.you = window.STATE.you || {};
+              window.STATE.ai = window.STATE.ai || {};
+
+              // Inject simple battlefield examples (two allies each side, one with provoke)
+          const allyA1 = { name: 'Guardião Antigo', kind:'ally', img:'assets/cards/sample_ally.png', cost:2, classe:'Arcana', hp:5, damage:2, keywords:['provocar'], text:'Provocar: força adversários a atacarem este.' };
+          const allyA2 = { name: 'Vanguarda', kind:'ally', img:'assets/cards/sample_ally2.png', cost:1, classe:'Marcial', hp:3, damage:1, text:'Aliado de linha.' };
+          const allyB1 = { name: 'Saqueador', kind:'ally', img:'assets/cards/sample_ally.png', cost:2, classe:'Sombras', hp:4, damage:2, text:'Ataca com força.' };
+          const allyB2 = { name: 'Batedor', kind:'ally', img:'assets/cards/sample_ally2.png', cost:1, classe:'Arcana', hp:2, damage:1, text:'Rápido.' };
+
+          window.STATE.you.allies = [allyA1, allyA2, null, null, null];
+          window.STATE.ai.allies = [allyB1, allyB2, null, null, null];
+
+          // set example deck/grave/ban arrays so counts show
+          window.STATE.you.deck = (window.STATE.you.deck && window.STATE.you.deck.length>0) ? window.STATE.you.deck : new Array(18).fill({});
+          window.STATE.ai.deck = (window.STATE.ai.deck && window.STATE.ai.deck.length>0) ? window.STATE.ai.deck : new Array(22).fill({});
+          window.STATE.you.grave = (window.STATE.you.grave && window.STATE.you.grave.length>0) ? window.STATE.you.grave : [{ name:'Cadáver Antigo', img:'assets/cards/sample_ally.png' }];
+          window.STATE.ai.grave = (window.STATE.ai.grave && window.STATE.ai.grave.length>0) ? window.STATE.ai.grave : [{ name:'Fragmento Quebrado', img:'assets/cards/sample_spell.png' }];
+          window.STATE.you.ban = (window.STATE.you.ban && window.STATE.you.ban.length>0) ? window.STATE.you.ban : [{ name:'Banido', img:'assets/cards/sample_trick.png' }];
+          window.STATE.ai.ban = (window.STATE.ai.ban && window.STATE.ai.ban.length>0) ? window.STATE.ai.ban : [];
+
+          // render board to reflect injections
+          try{ render && typeof render === 'function' ? render() : (renderSide && renderSide('you'), renderSide && renderSide('ai')); }catch(e){ console.warn('render error in tour battle onShow', e); }
+          // after a short delay, run a visual attack demo (first ally attacks first enemy)
+          try{ setTimeout(()=>{ simulateAttackDemo('#you-allies .card','#ai-allies .card',2); }, 700); }catch(e){}
+        }catch(e){ console.warn('tour battle onShow error', e); }
+      },
+      onHide: function(){
+        try{
+          if(window.__tour_battleBackup && window.STATE){
+            window.STATE.you.allies = window.__tour_battleBackup.you_allies || [];
+            window.STATE.ai.allies = window.__tour_battleBackup.ai_allies || [];
+            window.STATE.you.deck = window.__tour_battleBackup.you_deck || [];
+            window.STATE.ai.deck = window.__tour_battleBackup.ai_deck || [];
+            window.STATE.you.grave = window.__tour_battleBackup.you_grave || [];
+            window.STATE.ai.grave = window.__tour_battleBackup.ai_grave || [];
+            window.STATE.you.ban = window.__tour_battleBackup.you_ban || [];
+            window.STATE.ai.ban = window.__tour_battleBackup.ai_ban || [];
+            try{ render && typeof render === 'function' ? render() : (renderSide && renderSide('you'), renderSide && renderSide('ai')); }catch(e){}
+            delete window.__tour_battleBackup;
+          }
+        }catch(e){ console.warn('tour battle onHide error', e); }
+      }
+    },
+    { el: '#you-deck', title: 'Deck (Seu)', text: 'O Deck contém as cartas que você ainda não comprou. O número indicado mostra quantas cartas restam. Quando um jogador precisa comprar e o deck estiver vazio, regras de derrota podem ocorrer (dependendo do modo).'},
+    { el: '#you-grave', title: 'Cemitério (Seu)', text: 'O Cemitério guarda cartas usadas ou destruídas. A maioria dos efeitos busca ou interage com o cemitério.' },
+    { el: '#you-ban', title: 'Banidas (Seu)', text: 'Cartas banidas são removidas permanentemente do jogo, fora do deck e do cemitério.' },
+    { el: '#ai-deck', title: 'Deck (Oponente)', text: 'Deck do oponente — funciona igual ao seu.' },
+    { el: '#ai-grave', title: 'Cemitério (Oponente)', text: 'Cemitério do oponente — muitos efeitos podem interagir com este local.' },
+    { el: '#ai-ban', title: 'Banidas (Oponente)', text: 'Cartas banidas do oponente: usadas para certas mecânicas e contadores.' }
+  );
+
+  // find demo step index (if any) for quick navigation
+  const DEMO_IDX = (function(){ try{ return steps.findIndex(st=> st && st.title && String(st.title).toLowerCase().includes('demonstração')); }catch(e){ return -1; } })();
+
+  // final glossary slide explaining common keywords
+  steps.push({ el: null, title: 'Glossário rápido', text: '<strong>Precisão:</strong> ao declarar um ataque, role 2d20 e use o maior dos dois resultados; some esse valor com seu bônus de ataque para comparar com a defesa (AC) do alvo — o maior dos dois d20 é usado.<br><strong>Atropelar:</strong> quando um atacante causa dano que excede o HP do bloqueador, o excesso pode atingir o líder inimigo (depende das regras locais).<br><strong>Bloquear:</strong> um aliado pode interceptar um ataque dirigindo-se ao atacante, protegendo outro alvo; bloqueadores trocam dano com atacantes.<br><strong>Provocar:</strong> (taunt) habilidade que força os atacantes a escolherem esse alvo antes de outros alvos livres.<br><strong>Descartar:</strong> remover uma carta da mão para o cemitério, seja como custo ou como efeito de carta.<br><strong>Banir:</strong> remover uma carta permanentemente do jogo (zona de banidas); normalmente não pode ser retornada sem um efeito especial.' });
+
+  // animated demo: inject a small playable-looking example and animate a short exchange
+  steps.push({ el: null, title: 'Demonstração rápida (animada)', text: 'Veja uma pequena partida demonstrativa: aliados atacam, recebem dano e o líder também pode sofrer — tudo visual e não alterará seu jogo atual.<br><div style="margin-top:8px"><button id="tourDemoPlayInline" onclick="(window.__tour_startDemo && window.__tour_startDemo())" style="padding:8px 12px;border-radius:6px;background:linear-gradient(180deg,#facc15,#e6a600);border:none;cursor:pointer">▶ Reproduzir demonstração</button></div>',
+    onShow: function(){
+      try{
+        // clear any previous demo timers
+        try{ if(window.__tour_demoTimers && window.__tour_demoTimers.length){ window.__tour_demoTimers.forEach(id=>clearTimeout(id)); window.__tour_demoTimers = []; } }catch(e){}
+
+        // backup relevant parts of STATE
+        window.__tour_demoBackup = {
+          you: JSON.parse(JSON.stringify(window.STATE?.you || {})),
+          ai: JSON.parse(JSON.stringify(window.STATE?.ai || {})),
+          turn: window.STATE?.turn || null,
+          phase: window.STATE?.phase || null
+        };
+
+        // helper to clear demo timers
+        window.__tour_demoTimers = [];
+
+        function clearDemoTimers(){ try{ if(window.__tour_demoTimers){ window.__tour_demoTimers.forEach(id=>clearTimeout(id)); window.__tour_demoTimers = []; } }catch(e){} }
+
+        // Build simple demo pieces
+        const yLeader = { name: 'Valbrak', kind: 'leader', key: 'valbrak', img: 'assets/chosens/valbrak.png', hp: 14, ac: 13 };
+        const aLeader = { name: 'Katsu', kind: 'leader', key: 'katsu', img: 'assets/chosens/katsu.png', hp: 12, ac: 13 };
+        const yAlly = { name: 'Guerreiro Novato', kind: 'ally', img: 'assets/cards/sample_ally.png', cost:2, classe:'Marcial', hp:4, damage:2, text:'Aliado de demonstração' };
+        const aAlly = { name: 'Saqueador', kind: 'ally', img: 'assets/cards/sample_ally2.png', cost:2, classe:'Sombras', hp:3, damage:1, text:'Inimigo agressivo' };
+
+        // inject demo state (temporary)
+        window.STATE = window.STATE || {};
+        window.STATE.you = window.STATE.you || {};
+        window.STATE.ai = window.STATE.ai || {};
+        window.STATE.you.leader = JSON.parse(JSON.stringify(yLeader));
+        window.STATE.ai.leader = JSON.parse(JSON.stringify(aLeader));
+        window.STATE.you.allies = [JSON.parse(JSON.stringify(yAlly)), null, null, null, null];
+        window.STATE.ai.allies = [JSON.parse(JSON.stringify(aAlly)), null, null, null, null];
+        window.STATE.you.hand = [];
+        window.STATE.ai.hand = [];
+        window.STATE.you.deck = new Array(6).fill({});
+        window.STATE.ai.deck = new Array(6).fill({});
+        window.STATE.you.grave = [];
+        window.STATE.ai.grave = [];
+        // ensure UI shows demo
+        try{ render && typeof render === 'function' ? render() : (renderSide && renderSide('you'), renderSide && renderSide('ai')); }catch(e){ console.warn('render error demo', e); }
+
+        // define the animated sequence as a function so we can repeat it
+        function startDemo(){
+          clearDemoTimers();
+          // 1) your ally attacks enemy ally
+          const t1 = setTimeout(()=>{
+            try{ simulateAttackDemo('#you-allies .card','#ai-allies .card',2); }catch(e){}
+            const t1b = setTimeout(()=>{
+              try{
+                if(window.STATE && window.STATE.ai && window.STATE.ai.allies && window.STATE.ai.allies[0]){
+                  window.STATE.ai.allies[0].hp = Math.max(0, (window.STATE.ai.allies[0].hp||0) - 2);
+                  if(window.STATE.ai.allies[0].hp <= 0){ window.STATE.ai.grave = window.STATE.ai.grave || []; window.STATE.ai.grave.push(window.STATE.ai.allies[0]); window.STATE.ai.allies[0] = null; }
+                  try{ renderSide && typeof renderSide === 'function' && (renderSide('ai'), renderSide('you')); }catch(e){}
+                }
+              }catch(e){}
+            },700);
+            window.__tour_demoTimers.push(t1b);
+          },200);
+          window.__tour_demoTimers.push(t1);
+
+          // 2) AI ally counterattacks your leader
+          const t2 = setTimeout(()=>{
+            try{ simulateAttackDemo('#ai-allies .card','#you-leader',1); }catch(e){}
+            const t2b = setTimeout(()=>{
+              try{ if(window.STATE && window.STATE.you && window.STATE.you.leader){ window.STATE.you.leader.hp = Math.max(0, (window.STATE.you.leader.hp||0) - 1); try{ renderSide && typeof renderSide === 'function' && (renderSide('you'), renderSide('ai')); }catch(e){} } }catch(e){}
+            },700);
+            window.__tour_demoTimers.push(t2b);
+          },1200);
+          window.__tour_demoTimers.push(t2);
+
+          // 3) Your leader attacks enemy leader
+          const t3 = setTimeout(()=>{
+            try{ simulateAttackDemo('#you-leader','#ai-leader',3); }catch(e){}
+            const t3b = setTimeout(()=>{
+              try{ if(window.STATE && window.STATE.ai && window.STATE.ai.leader){ window.STATE.ai.leader.hp = Math.max(0, (window.STATE.ai.leader.hp||0) - 3); try{ render && typeof render === 'function' ? render() : (renderSide && renderSide('you'), renderSide && renderSide('ai')); }catch(e){} if(window.STATE.ai.leader && window.STATE.ai.leader.hp===0){ try{ showVictory && showVictory('Você', 'you'); }catch(e){} } } }catch(e){}
+            },700);
+            window.__tour_demoTimers.push(t3b);
+          },2600);
+          window.__tour_demoTimers.push(t3);
+        }
+
+        // auto-start demo once the step appears
+        try{ startDemo(); }catch(e){ console.warn('startDemo err', e); }
+
+        // wire inline play button for manual replay
+        try{
+          const btn = document.getElementById('tourDemoPlayInline');
+          if(btn){ btn.onclick = function(){ try{ startDemo(); }catch(e){ console.warn('inline play err', e); } } }
+        }catch(e){}
+
+      }catch(e){ console.warn('tour demo onShow error', e); }
+    },
+    onHide: function(){
+      try{
+        // clear timers
+        try{ if(window.__tour_demoTimers){ window.__tour_demoTimers.forEach(id=>clearTimeout(id)); window.__tour_demoTimers = []; } }catch(e){}
+        if(window.__tour_demoBackup && window.STATE){
+          try{ window.STATE.you = window.__tour_demoBackup.you || window.STATE.you; window.STATE.ai = window.__tour_demoBackup.ai || window.STATE.ai; window.STATE.turn = window.__tour_demoBackup.turn; window.STATE.phase = window.__tour_demoBackup.phase; }catch(e){}
+          try{ render && typeof render === 'function' ? render() : (renderSide && renderSide('you'), renderSide && renderSide('ai')); }catch(e){}
+          delete window.__tour_demoBackup;
+        }
+      }catch(e){ console.warn('tour demo onHide error', e); }
+    }
+  });
+
+  let idx = 0;
+  let overlay, highlight, tooltip;
+
+  function createOverlay(){
+    overlay = document.createElement('div'); overlay.className = 'tour-overlay'; overlay.style.display='none'; document.body.appendChild(overlay);
+    highlight = document.createElement('div'); highlight.className = 'tour-highlight'; overlay.appendChild(highlight);
+    tooltip = document.createElement('div'); tooltip.className = 'tour-tooltip'; tooltip.innerHTML = '<div class="tour-body"></div><div class="tour-controls"><button id="tourPrev">◀ Anterior</button><button id="tourNext">Próximo ▶</button><button id="tourClose" style="background:transparent;border:1px solid rgba(255,255,255,0.06);color:#e6eef8;">Fechar</button></div>'; overlay.appendChild(tooltip);
+
+    tooltip.querySelector('#tourPrev').addEventListener('click', ()=>showStep(idx-1));
+    tooltip.querySelector('#tourNext').addEventListener('click', ()=>showStep(idx+1));
+    tooltip.querySelector('#tourClose').addEventListener('click', hideTour);
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) hideTour(); });
+  }
+
+  function showTour(){ if(!overlay) createOverlay(); idx = 0; showStep(0); overlay.style.display='block'; document.body.style.overflow='hidden'; }
+  function hideTour(){ if(overlay) overlay.style.display='none'; document.body.style.overflow=''; }
+
+  let _prevOnHide = null;
+  function showStep(i){
+    if(i < 0) i = 0; if(i >= steps.length) { hideTour(); return; }
+    // call previous step's onHide if any
+    try{ if(typeof _prevOnHide === 'function') _prevOnHide(); }catch(e){}
+    idx = i;
+    const s = steps[idx];
+    const el = document.querySelector(s.el);
+    const body = tooltip.querySelector('.tour-body');
+    body.innerHTML = `<h4>${s.title}</h4><div style="font-size:13px;color:#d9e6ff">${s.text}</div>`;
+
+    // position highlight and tooltip near element
+    if(el){
+      const r = el.getBoundingClientRect();
+      highlight.style.left = (r.left - 8) + 'px';
+      highlight.style.top = (r.top - 8) + 'px';
+      highlight.style.width = (r.width + 16) + 'px';
+      highlight.style.height = (r.height + 16) + 'px';
+
+      // prefer side placement for inspector/hand to keep tooltip next to preview
+      const preferSide = (s.el && (s.el.indexOf('.inspector')>-1 || s.el.indexOf('youHand')>-1 || s.el.indexOf('#youHand')>-1));
+      // reset any inline width so offsetWidth is measured correctly
+      tooltip.style.width = '';
+      // ensure browser computes sizes
+      const ttW = tooltip.offsetWidth || 360;
+      const spaceRight = window.innerWidth - r.right;
+      const spaceLeft = r.left;
+      let ttLeft, ttTop;
+      if(preferSide && spaceRight > ttW + 32){
+        // place to the right
+        tooltip.style.width = Math.min(480, Math.max(320, ttW)) + 'px';
+        ttLeft = r.right + 12;
+        ttTop = r.top;
+      } else if(preferSide && spaceLeft > ttW + 32){
+        // place to the left
+        tooltip.style.width = Math.min(480, Math.max(320, ttW)) + 'px';
+        ttLeft = Math.max(12, r.left - (tooltip.offsetWidth || 360) - 12);
+        ttTop = r.top;
+      } else {
+        // default: position above (or below if not enough space)
+        const preferredLeft = Math.max(12, r.left + (r.width/2) - (tooltip.offsetWidth/2 || 180));
+        ttLeft = preferredLeft;
+        ttTop = r.top - 12 - tooltip.offsetHeight;
+        if(ttTop < 12) ttTop = r.bottom + 12;
+      }
+
+      // clamp vertically to viewport
+      if(ttTop + tooltip.offsetHeight > window.innerHeight - 12) ttTop = Math.max(12, window.innerHeight - tooltip.offsetHeight - 12);
+      tooltip.style.left = ttLeft + 'px';
+      tooltip.style.top = ttTop + 'px';
+      tooltip.style.transform = '';
+    } else {
+      // center tooltip
+      highlight.style.left = '-9999px'; highlight.style.top='-9999px';
+      tooltip.style.left = '50%'; tooltip.style.top = '20%'; tooltip.style.transform = 'translateX(-50%)';
+    }
+
+    // run onShow for this step if provided
+    try{ if(s.onShow) s.onShow(); }catch(e){ console.warn('tour onShow error', e); }
+    _prevOnHide = (typeof s.onHide === 'function') ? s.onHide : null;
+
+    // update control button text and handlers
+    const prev = tooltip.querySelector('#tourPrev');
+    const next = tooltip.querySelector('#tourNext');
+    prev.disabled = (idx === 0);
+    // default handlers
+    prev.onclick = ()=> showStep(idx-1);
+    next.onclick = ()=> showStep(idx+1);
+    // If the current step is the glossary, offer to run the demo (if present)
+    if(typeof s.title === 'string' && s.title.toLowerCase().includes('glossário') && typeof DEMO_IDX === 'number' && DEMO_IDX !== -1){
+      next.textContent = 'Ver Demonstração ▶';
+      next.onclick = ()=> showStep(DEMO_IDX);
+    } else if(typeof s.title === 'string' && s.title.toLowerCase().includes('demonstração')){
+      // On demo step: allow repeating the demo
+      next.textContent = 'Repetir ▶';
+      next.onclick = ()=> { try{ if(typeof s.onShow === 'function') s.onShow(); }catch(e){ console.warn('repeat demo err', e); } };
+      // also change prev to go back normally
+    } else {
+      if(idx === steps.length -1) { next.textContent = 'Finalizar ▶'; next.onclick = hideTour; } else { next.textContent = 'Próximo ▶'; }
+    }
+  }
+
+  // wire button
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const tbtn = document.getElementById('btnTutorial');
+    if(tbtn){ tbtn.addEventListener('click', (e)=>{ e.preventDefault(); showTour(); }); }
+  });
+
+  // expose for debugging and reuse from lesson/slideshow
+  window.__tour = { show: showTour, hide: hideTour, steps: steps, showStep: showStep };
+})();
+</script>
+
+<script>
+// Global helper: start the demo step if present. This is a safe-entry point for inline onclick handlers.
+window.__tour_startDemo = function(){ try{
+  const t = window.__tour; if(!t || !t.steps) return; const demo = (t.steps || []).find(s=> s && s.title && String(s.title).toLowerCase().includes('demonstração')); if(demo && typeof demo.onShow === 'function') demo.onShow();
+}catch(e){ try{ console.warn('__tour_startDemo error', e);}catch(_){} } };
 </script>
 
 <!-- Controllers / AI / Networking scaffold -->
