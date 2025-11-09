@@ -748,8 +748,19 @@ Dica: na Fase de Combate, clique no seu aliado/líder e depois no alvo (líder i
     </div>
 
 <!-- Script principal -->
-<script src="assets/cards/cartas.js"></script>
+<!-- Add a version query to force cache-bust when deploying edits -->
+<script src="assets/cards/cartas.js?v=2"></script>
 <script src="assets/cards/effects.js"></script>
+<!-- Debug helper (temporary): log whether CARD_DEFS is loaded and show the leader entry for 'leafae' -->
+<script>
+  try {
+    console.log('DEBUG: CARD_DEFS loaded?', !!window.CARD_DEFS);
+    if (window.CARD_DEFS) {
+      const l = window.CARD_DEFS.find(c => c.key === 'leafae' || (c.name && c.name.toLowerCase().includes('leafae')));
+      console.log('DEBUG: leafae entry from CARD_DEFS:', l || 'NOT FOUND');
+    }
+  } catch (e) { console.log('DEBUG: error checking CARD_DEFS', e); }
+</script>
 <script>
 /* =================== Util / Base =================== */
 
