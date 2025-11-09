@@ -14,6 +14,7 @@ const CARD_DEFS = [
     maxHp: 20,
     damage: 2,
     atkBonus: 2,
+    effect: 'valbrak',
     text: 'Uma vez por Turno, quando um aliado “cidadão” for chamado para o campo, compre uma carta.'
   },
   {
@@ -27,6 +28,7 @@ const CARD_DEFS = [
     maxHp: 20,
     damage: 4,
     atkBonus: 4,
+    effect: 'katsu',
     text: 'Seus outros aliados, “guerreiro”, podem atacar inimigos, mesmo que estes inimigos estejam em pé.'
   },
   {
@@ -54,6 +56,7 @@ const CARD_DEFS = [
     maxHp: 20,
     damage: 2,
     atkBonus: 2,
+    effect: 'ademais',
     text: 'Este escolhido ganha +1 de bônus de ataque e +1 de ac para cada carta "Aranhas Negras" no campo.'
   },
     // Nota: recebeu stats padrão para ser alvo de ataques/efeitos.
