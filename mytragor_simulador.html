@@ -2273,7 +2273,33 @@ function buildDeck(side){
   
   // Usar deck personalizado se disponível (para jogador ou IA)
   if (STATE[side] && STATE[side].customDeck && Array.isArray(STATE[side].customDeck)) {
-    STATE[side].customDeck.forEach(cardName => {
+    // If this is AI, enforce filiation rules on the saved/custom deck: only leader's filiation + neutras
+    let custom = STATE[side].customDeck.slice();
+    if (side === 'ai') {
+      try{
+        let leaderF = (STATE && STATE[side] && STATE[side].leader && STATE[side].leader.filiacao) || null;
+        if(!leaderF && STATE && STATE[side] && STATE[side].leader){
+          const lk = STATE[side].leader.key || STATE[side].leader.name || null;
+          if(lk && window.CARD_DEFS){
+            const ld = CARD_DEFS.find(x => (x.key && x.key === lk) || (x.name && x.name === lk));
+            if(ld) leaderF = ld.filiacao || leaderF;
+          }
+        }
+        if(leaderF){
+          const norm = s => String(s||'').toLowerCase().trim();
+          const leaderNorm = norm(leaderF);
+          const allowed = custom.filter(n => {
+            const def = (window.CARD_DEFS||[]).find(c => c.name === n);
+            if(!def) return true; // keep unknowns to avoid data loss
+            const cf = norm(def.filiacao);
+            return cf === leaderNorm || cf === 'neutra' || cf === '' || !def.filiacao;
+          });
+          if(allowed.length !== custom.length){ console.log('AI customDeck filtered to respect leader filiation:', {before: custom.length, after: allowed.length}); }
+          custom = allowed;
+        }
+      }catch(e){ console.warn('buildDeck: failed to filter AI customDeck by filiation', e); }
+    }
+    custom.forEach(cardName => {
       const card = createCardFromName(cardName);
       if (card) d.push(card);
     });
@@ -2308,17 +2334,65 @@ function buildDeck(side){
       if (card) d.push(card);
       else console.warn('buildDeck: carta não encontrada em CARD_DEFS:', name);
     });
-    d.push(TEMPLATES.env_catedral_ensolarada());
-    d.push(TEMPLATES.env_campos_ensanguentados());
-    d.push(TEMPLATES.env_tempestade_arcana());
-      // Adiciona a carta de teste de precisão para facilitar o teste
-      d.push(TEMPLATES.ally_teste_precisao());
-    // Completa até 40 cartas
-    const extras = [TEMPLATES.ally_agressor, TEMPLATES.ally_blocker, TEMPLATES.ally_defensor, TEMPLATES.equip_espada_longavida];
-    let idx = 0;
+
+    // Prefer canonical env cards from CARD_DEFS when available
+    const envs = [
+      createCardFromName('Catedral Ensolarada'),
+      createCardFromName('Campos Ensanguentados'),
+      createCardFromName('Tempestade Arcana')
+    ].filter(Boolean);
+    envs.forEach(e=>d.push(e));
+
+    // Adiciona um card de teste de precisão: prefira versão em CARD_DEFS se existir,
+    // senão caia para o template legacy
+    const precisionTest = createCardFromName('Testador de Precisão') || TEMPLATES.ally_teste_precisao();
+    if (precisionTest) d.push(precisionTest);
+
+    // Completa até 40 cartas usando o pool canônico de CARD_DEFS (aliados/equip/spell/env/truque)
+    // Para IA, aplicar regra: apenas cartas da mesma filiação do escolhido + cartas neutras
+    const allowedKinds = ['ally','equip','spell','env','truque'];
+    let poolCards = (window.CARD_DEFS || []).filter(c => allowedKinds.includes(c.kind));
+
+    if (side === 'ai') {
+      try{
+        // tentar obter filiação do líder da IA
+        let leaderF = (STATE && STATE[side] && STATE[side].leader && STATE[side].leader.filiacao) || null;
+        // se líder estiver apenas como key/name, tente buscar em CARD_DEFS
+        if(!leaderF && STATE && STATE[side] && STATE[side].leader){
+          const lk = STATE[side].leader.key || STATE[side].leader.name || null;
+          if(lk && window.CARD_DEFS){
+            const ld = CARD_DEFS.find(x => (x.key && x.key === lk) || (x.name && x.name === lk));
+            if(ld) leaderF = ld.filiacao || leaderF;
+          }
+        }
+        const norm = s => String(s||'').toLowerCase().trim();
+        if(leaderF){
+          const leaderNorm = norm(leaderF);
+          poolCards = poolCards.filter(c => {
+            const cf = norm(c.filiacao);
+            return cf === leaderNorm || cf === 'neutra' || cf === '' || !c.filiacao;
+          });
+        } else {
+          // sem líder definido: prefer manter só neutras e todos para segurança
+          poolCards = poolCards.filter(c => { const cf = String(c.filiacao||'').toLowerCase(); return cf === 'neutra' || !c.filiacao || cf===''; });
+        }
+      }catch(e){ console.warn('buildDeck: filtro de filiação da IA falhou', e); }
+    }
+
+    const pool = poolCards.map(c => c.name);
+    let safeIdx = 0;
     while (d.length < 40) {
-      d.push(extras[idx % extras.length]());
-      idx++;
+      // escolher aleatoriamente do pool para variar decks da IA
+      const name = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+      if (!name) break;
+      const card = createCardFromName(name);
+      if (card) d.push(card);
+      else {
+        // fallback para templates legacy se algo falhar
+        const tmpl = [TEMPLATES.ally_agressor, TEMPLATES.ally_blocker, TEMPLATES.ally_defensor, TEMPLATES.equip_espada_longavida][safeIdx % 4];
+        if (tmpl) d.push(tmpl());
+      }
+      safeIdx++;
     }
   }
   
@@ -2326,6 +2400,15 @@ function buildDeck(side){
   d.forEach(c=>{ try{ ensureCardId(c); }catch(e){} });
   for(let i=d.length-1;i>0;i--){ const j=rnd(i+1); [d[i],d[j]]=[d[j],d[i]]; }
   STATE[side].deck = d;
+  // Diagnostic log to help verify AI deck building rules in the browser console
+  try{
+    if(side === 'ai'){
+      const leaderF = (STATE && STATE.ai && STATE.ai.leader && STATE.ai.leader.filiacao) || null;
+      console.log('buildDeck: AI deck built. leader.filiacao=', leaderF, 'deckCount=', (STATE.ai.deck||[]).length);
+      const counts = (STATE.ai.deck||[]).reduce((m,c)=>{ const f = (c && c.filiacao) ? c.filiacao : '??'; m[f]=(m[f]||0)+1; return m; },{});
+      console.log('buildDeck: AI deck filiation counts:', counts);
+    }
+  }catch(e){ console.warn('buildDeck: diagnostic log failed', e); }
   // O líder é definido separadamente (STATE[side].leader)
 }
 
@@ -5680,7 +5763,8 @@ try {
     },
     { el: '.inspector', title: 'Prévia da carta', text: 'A prévia mostra nome, atributos (HP/AC/Dano) e o texto da carta. Use-a para confirmar efeitos antes de jogar.' },
     { el: '#you-allies', title: 'Onde colocar aliados', text: 'Se for um aliado, clique na carta na sua mão e escolha um slot livre nesta área para posicioná-lo em campo.' },
-    { el: '#you-env', title: 'Carta de Ambiente', text: 'A carta de Ambiente fica ao lado do líder e aplica efeitos globais enquanto estiver em jogo. Exemplos: buff em aliados ou penalidades ao oponente.' }
+  { el: '#you-env', title: 'Carta de Ambiente', text: 'A carta de Ambiente fica ao lado do líder e aplica efeitos globais enquanto estiver em jogo. Exemplos: buff em aliados ou penalidades ao oponente.' },
+  { el: null, title: 'Fragmentos', text: '<strong>O que são:</strong> Fragmentos são a sua energia mágica e vital no mundo de Mytragor.<br><br><strong>Em jogo:</strong> As cartas possuem um custo mostrado por um número no canto superior esquerdo; esse número representa a quantidade de fragmentos que serão consumidos para convocar ou ativar a carta.<br><br><strong>Renovação e aumento:</strong> Os fragmentos se renovam a cada turno do jogador (ou seja, ao começar o seu turno você recupera fragmentos) e a quantidade máxima disponível sobe progressivamente de 2 em 2.<br><br><strong>Contagem inicial e evolução:</strong> O Jogador 1 começa com 1 fragmento e o Jogador 2 começa com 2 fragmentos. A cada novo ciclo os máximos sobem de 2 em 2: por exemplo, no segundo turno o Jogador 1 terá 3 fragmentos e o Jogador 2 terá 4; no terceiro turno P1 terá 5 e P2 terá 6, e assim por diante.<br><br><strong>Exemplo prático:</strong> Turno 1 → P1=1, P2=2; Turno 2 → P1=3, P2=4; Turno 3 → P1=5, P2=6.<br><br><strong>Dica:</strong> Planeje suas jogadas considerando o crescimento de fragmentos — cartas de custo alto tornam-se viáveis em turnos posteriores quando seu total de fragmentos aumenta.' }
   ];
 
   // Additional combat & zones steps appended dynamically

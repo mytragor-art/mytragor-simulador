@@ -99,6 +99,37 @@
   /* larger hover/modal preview so card text is easier to read */
   .card-preview img { width:200px; height:300px; object-fit:cover; border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,0.6); }
   .card-preview .meta { margin-left:12px; max-height:260px; overflow:auto }
+  /* floating small hint shown when leader selected (right side modal-like) */
+  .floatingHint {
+    position: fixed;
+    right: 28px;
+    top: 140px;
+    background: rgba(11,18,28,0.95);
+    border: 1px solid rgba(250,200,60,0.06);
+    color: #cbd5e1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    box-shadow: 0 12px 30px rgba(2,6,23,0.6);
+    z-index: 20010;
+    max-width: 220px;
+    text-align: center;
+  }
+  .deckInfoFloating {
+    position: fixed;
+    right: 28px;
+    top: 200px;
+    background: rgba(6,10,18,0.96);
+    border: 1px solid rgba(255,255,255,0.03);
+    color: #e6eef8;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    box-shadow: 0 10px 26px rgba(2,6,23,0.6);
+    z-index: 20005;
+    text-align: center;
+    min-width: 140px;
+  }
   </style>
   <script>
     (function(){
@@ -133,38 +164,41 @@
           </div>
           <div style="text-align:right">
             <div id="deckSize" style="font-weight:700;color:#facc15">0/40 cartas</div>
-            <div style="font-size:12px;color:#9ca3af">Fragmentos e líder visuais</div>
+            <div id="deckMeta" style="font-size:12px;color:#9ca3af">Fragmentos e líder visuais</div>
           </div>
         </div>
         <div class="deck-info" style="margin-bottom:12px;">
           <h3 style="margin:0 0 6px 0;color:#cbd5e1;font-size:14px">Escolha os Fragmentos (visual)</h3>
           <div id="fragChooser2" style="display:flex;gap:8px;align-items:center;margin-top:6px;"></div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;">
           <h2 style="font-size:18px;margin:0;color:#e6eef8">Cartas disponíveis</h2>
-          <div style="position:relative;">
-            <button id="btnToggleFilters" class="filterBtn" title="Filtros">Filtros ▾</button>
-            <div id="filterPopover" class="filterPopover" style="right:0;top:36px;">
-              <div class="filterRow">
-                <label style="font-size:13px;color:#cbd5e1;width:72px;">Filiação</label>
-                <select id="filterFiliacao" style="padding:8px;border-radius:8px;background:transparent;color:#e6eef8;border:1px solid rgba(255,255,255,0.03);"></select>
-              </div>
-              <div class="filterRow">
-                <label style="font-size:13px;color:#cbd5e1;width:72px;">Custo</label>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                  <button class="chip" data-cost="0">0</button>
-                  <button class="chip" data-cost="1">1</button>
-                  <button class="chip" data-cost="2">2</button>
-                  <button class="chip" data-cost="3">3</button>
-                  <button class="chip" data-cost="4">4</button>
-                  <button class="chip" data-cost="5">5+</button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="position:relative;">
+              <button id="btnToggleFilters" class="filterBtn" title="Filtros" aria-expanded="false">Filtros ▾</button>
+              <div id="filterPopover" class="filterPopover" style="right:0;top:36px;">
+                <div class="filterRow">
+                  <label style="font-size:13px;color:#cbd5e1;width:72px;">Filiação</label>
+                  <div id="filiationChips" style="display:flex;gap:6px;flex-wrap:wrap;max-width:260px;"></div>
+                </div>
+                <div class="filterRow">
+                  <label style="font-size:13px;color:#cbd5e1;width:72px;">Custo</label>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="chip" data-cost="0">0</button>
+                    <button class="chip" data-cost="1">1</button>
+                    <button class="chip" data-cost="2">2</button>
+                    <button class="chip" data-cost="3">3</button>
+                    <button class="chip" data-cost="4">4</button>
+                    <button class="chip" data-cost="5">5+</button>
+                  </div>
+                </div>
+                
+                <div style="text-align:right;margin-top:8px;display:flex;gap:8px;justify-content:flex-end;">
+                  <button id="btnClearFilters" class="filterBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 10px;">Limpar filtros</button>
                 </div>
               </div>
-              <div class="filterRow">
-                <label style="font-size:13px;color:#cbd5e1;width:72px;">Opções</label>
-                <label style="font-size:13px;color:#cbd5e1;"><input id="filterOnlyAvailable" type="checkbox" style="margin-right:6px;">Só disponíveis</label>
-              </div>
             </div>
+            <div id="filterSummary" style="font-size:13px;color:#cbd5e1;min-width:180px;text-align:right"></div>
           </div>
         </div>
         <div class="filterBar" style="margin-bottom:12px;">
@@ -205,6 +239,22 @@
   const fragChooser2 = document.getElementById('fragChooser2');
   let chosenLeader = null;
   let chosenFragImg = null;
+  // Create floating deck info element and hide original small inline info
+  (function(){
+    try{
+      const existing = document.getElementById('deckInfoFloating');
+      if(!existing){
+        const box = document.createElement('div');
+        box.id = 'deckInfoFloating';
+        box.className = 'deckInfoFloating';
+        box.style.display = 'none';
+        document.body.appendChild(box);
+      }
+      // hide original inline elements to avoid duplication
+      if (deckSize) deckSize.style.display = 'none';
+      const dm = document.getElementById('deckMeta'); if(dm) dm.style.display = 'none';
+    }catch(e){ console.warn('init floating deck info failed', e); }
+  })();
 
   const FRAG_OPTIONS = [
     { label: 'Arcano',   img: '../fragments/fragmentos_arcano.png' },
@@ -281,8 +331,7 @@
       kinds: new Set(), // empty => all
       filiation: null,
       cost: null, // null or number (5 means 5+)
-      keywords: new Set(),
-      onlyAvailable: false
+      keywords: new Set()
     };
 
     function normalizeText(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); }
@@ -305,10 +354,7 @@
           const hay = normalizeText((card.name||'') + ' ' + (card.text||'') + ' ' + (card.tipo||'') + ' ' + (card.filiacao||''));
           if (!hay.includes(q)) return false;
         }
-        if (filterState.onlyAvailable) {
-          const inDeck = deck.filter(d => d.name === card.name).length;
-          if (inDeck >= 3) return false;
-        }
+        
         return true;
       });
     }
@@ -319,20 +365,42 @@
       const kindChips = document.getElementById('kindChips');
       const pop = document.getElementById('filterPopover');
       const btn = document.getElementById('btnToggleFilters');
-  const classeSel = document.getElementById('filterFiliacao');
-      const costButtons = pop.querySelectorAll('button[data-cost]');
-      const onlyAvail = document.getElementById('filterOnlyAvailable');
+      const filiationChips = document.getElementById('filiationChips');
+      const filterSummary = document.getElementById('filterSummary');
+  const costButtons = pop.querySelectorAll('button[data-cost]');
 
-  // populate filiação select with values found in CARD_POOL
-  const filias = Array.from(new Set(CARD_POOL.map(c => (c.filiacao||'').toString()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
-  classeSel.innerHTML = '<option value="">(todas)</option>' + filias.map(c => `<option value="${c}">${c}</option>`).join('');
+      // populate filiação chips with values found in CARD_POOL
+      const filias = Array.from(new Set(CARD_POOL.map(c => (c.filiacao||'').toString()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+      try{
+        if(filiationChips){
+          filiationChips.innerHTML = '';
+          const allChip = document.createElement('div'); allChip.className='chip'; allChip.textContent='(todas)'; allChip.dataset.filiacao='';
+          allChip.addEventListener('click', ()=>{
+            filterState.filiation = null; Array.from(filiationChips.querySelectorAll('.chip')).forEach(c=>c.classList.remove('selected')); allChip.classList.add('selected'); renderPool(); updateFilterSummary();
+          });
+          filiationChips.appendChild(allChip);
+          filias.forEach(f => {
+            const ch = document.createElement('div'); ch.className='chip'; ch.textContent = f; ch.dataset.filiacao = f; ch.style.padding='6px 8px';
+            ch.addEventListener('click', ()=>{
+              if(filterState.filiation === f) { filterState.filiation = null; ch.classList.remove('selected'); }
+              else { filterState.filiation = f; Array.from(filiationChips.querySelectorAll('.chip')).forEach(c=>c.classList.remove('selected')); ch.classList.add('selected'); }
+              renderPool(); updateFilterSummary();
+            });
+            filiationChips.appendChild(ch);
+          });
+          allChip.classList.add('selected');
+        }
+      }catch(e){ console.warn('populate filiation chips failed', e); }
 
-      // search debounce
+      // search debounce + Enter handling
       let t = null;
-      if (search) search.addEventListener('input', (e) => {
-        clearTimeout(t);
-        t = setTimeout(() => { filterState.query = e.target.value || ''; renderPool(); }, 180);
-      });
+      if (search) {
+        search.addEventListener('input', (e) => {
+          clearTimeout(t);
+          t = setTimeout(() => { filterState.query = e.target.value || ''; renderPool(); updateFilterSummary(); }, 180);
+        });
+        search.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ filterState.query = search.value || ''; renderPool(); updateFilterSummary(); } });
+      }
 
       // kind chips toggles
       kindChips.querySelectorAll('.chip').forEach(ch => {
@@ -341,23 +409,50 @@
           if (!k) return;
           if (filterState.kinds.has(k)) { filterState.kinds.delete(k); ch.classList.remove('selected'); }
           else { filterState.kinds.add(k); ch.classList.add('selected'); }
-          renderPool();
+          renderPool(); updateFilterSummary();
         });
       });
 
-      btn.addEventListener('click', (ev) => { ev.stopPropagation(); pop.style.display = pop.style.display === 'block' ? 'none' : 'block'; });
+      btn.addEventListener('click', (ev) => { ev.stopPropagation(); pop.style.display = pop.style.display === 'block' ? 'none' : 'block'; btn.setAttribute('aria-expanded', pop.style.display === 'block'); });
       document.addEventListener('click', (ev) => { if (!pop.contains(ev.target) && ev.target !== btn) pop.style.display = 'none'; });
 
-  classeSel.addEventListener('change', (e) => { filterState.filiation = e.target.value || null; renderPool(); });
+      // clear filters button
+      const btnClear = document.getElementById('btnClearFilters');
+      if(btnClear) btnClear.addEventListener('click', ()=>{
+        filterState.query = '';
+        filterState.kinds = new Set();
+        filterState.filiation = null;
+        filterState.cost = null;
+        // clear UI markers
+        if(document.getElementById('filterSearch')) document.getElementById('filterSearch').value = '';
+        document.querySelectorAll('#filiationChips .chip').forEach(c=>c.classList.remove('selected'));
+        const allChip = document.querySelector('#filiationChips .chip'); if(allChip) allChip.classList.add('selected');
+        document.querySelectorAll('#kindChips .chip').forEach(c=>c.classList.remove('selected'));
+        document.querySelectorAll('[data-cost]').forEach(c=>c.classList.remove('selected'));
+        renderPool(); updateFilterSummary();
+      });
+
       costButtons.forEach(b => {
         b.addEventListener('click', () => {
           const v = Number(b.dataset.cost);
           if (filterState.cost === v) { filterState.cost = null; b.classList.remove('selected'); }
           else { filterState.cost = v; costButtons.forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }
-          renderPool();
+          renderPool(); updateFilterSummary();
         });
       });
-      onlyAvail.addEventListener('change', (e) => { filterState.onlyAvailable = !!e.target.checked; renderPool(); });
+  // NOTE: "Só disponíveis" filter removed as it was not useful; no listener required.
+
+      // update summary helper
+      function updateFilterSummary(){
+        if(!filterSummary) return;
+        const parts = [];
+        if(filterState.filiation) parts.push(filterState.filiation);
+        if(filterState.cost != null) parts.push('Custo: ' + (filterState.cost===5? '5+': filterState.cost));
+  if(filterState.query) parts.push('Busca');
+        filterSummary.textContent = parts.length ? parts.join(' • ') : 'Nenhum filtro ativo';
+      }
+      // initialize summary
+      try{ updateFilterSummary(); }catch(e){}
     }
 
       // --- Card preview (hover) ---
@@ -469,15 +564,25 @@
     function renderPool() {
       cardPool.innerHTML = '';
       const filtered = applyFilters(CARD_POOL);
-      // If chosenLeader is set, show hint at top
-      if (chosenLeader) {
-        const hint = document.createElement('div');
-        hint.style.color = '#9ca3af';
-        hint.style.fontSize = '12px';
-        hint.style.margin = '6px 0';
-        hint.textContent = `Deck restrito a: ${LEADER_FILIACAO[chosenLeader.name]} + Neutra`;
-        cardPool.appendChild(hint);
-      }
+      // If chosenLeader is set, show a small floating hint on the right side instead of in the pool
+      (function(){
+        const existing = document.getElementById('deckHintFloating');
+        if (chosenLeader) {
+          const txt = `Deck restrito a: ${LEADER_FILIACAO[chosenLeader.name] || '?'} + Neutra`;
+          if (existing) {
+            existing.textContent = txt;
+            existing.style.display = 'block';
+          } else {
+            const el = document.createElement('div');
+            el.id = 'deckHintFloating';
+            el.className = 'floatingHint';
+            el.textContent = txt;
+            document.body.appendChild(el);
+          }
+        } else {
+          if (existing) existing.style.display = 'none';
+        }
+      })();
       if (!filtered.length) {
         cardPool.innerHTML = '<div style="color:#9ca3af;padding:8px;font-size:13px;">Nenhuma carta encontrada. Ajuste os filtros ou limpe a busca.</div>';
         return;
@@ -553,6 +658,15 @@
       }
       deckSize.textContent = `${deck.length}/40 cartas${chosenLeader ? ' + 1 líder' : ''}`;
       btnSalvar.disabled = !(chosenLeader && deck.length === 40);
+      // update floating deck info (small modal on right)
+      try{
+        const f = document.getElementById('deckInfoFloating');
+        if(f){
+          f.style.display = 'block';
+          const leaderText = chosenLeader ? (`• Líder: ${chosenLeader.name}`) : '';
+          f.innerHTML = `<div style="font-weight:800;color:#facc15;margin-bottom:4px">${deck.length}/40 cartas</div><div style="font-size:11px;color:#9ca3af">Fragmentos e líder visuais ${leaderText}</div>`;
+        }
+      }catch(e){console.warn('update floating deck info failed', e);}
     }
 
     function openLeaderPickModal(requestedCard) {

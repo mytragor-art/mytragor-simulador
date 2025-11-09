@@ -210,7 +210,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: 'assets/allies/tamandua_guardiao
       text: 'Ativação — Quando um personagem do oponente declarar um ataque: o atacante recebe −3 de bônus de ataque até o fim da batalha. Se você controlar um aliado com "Aranhas Negras" no nome, compre 1 carta.'
     },
   {
-    name: 'Conversa Fiada', kind: 'truque', img: 'assets/trick/conversa_fiada.png', cost: 1, classe: '', tipo: 'Truque', filiacao: 'Arcana', effect: 'anular_magia_truque', text: 'Quando o oponente ativa uma magia ou truque, anule o efeito.'
+    name: 'Conversa Fiada', kind: 'truque', img: 'assets/trick/conversa_fiada.png', cost: 2, classe: '', tipo: 'Truque', filiacao: 'Arcana', effect: 'anular_magia_truque', text: 'Quando o oponente ativa uma magia ou truque, anule o efeito.'
   },
     {
       name: 'Bem Treinado',
@@ -271,7 +271,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: 'assets/allies/tamandua_guardiao
     text: 'O personagem equipado com esta carta ganha +1 de bônus de ataque. Se esta carta for enviada do campo para o cemitério, o Escolhido inimigo recebe 2 de dano.'
   },
   {
-    name: 'Tônico Revigorante', kind: 'spell', img: 'assets/spell/tonico_revigorante.png', cost: 1, classe: '', tipo: 'Magia', filiacao: 'Arcana',
+    name: 'Tônico Revigorante', kind: 'spell', img: 'assets/spell/tonico_revigorante.png', cost: 2, classe: '', tipo: 'Magia', filiacao: 'Arcana',
      escolha1: true, effectA: { type: 'heal', value: 3 }, effectB: { type: 'draw', value: 1 }, text: 'Escolha: Cure 3 de vida ou Compre 1 carta.'
   },
    {
