@@ -556,7 +556,7 @@
     <div class="logControls" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
       <button class="btn btn-start" id="btnStart">Iniciar</button>
       <button class="btn btn-choose" id="btnChoose">Escolher Baralho</button>
-      <button class="btn btn-choose" id="btnChooseAI">IA: Deck</button>
+  <!-- IA deck button removed per request -->
       <button class="btn btn-next" id="btnNext">Próxima Fase</button>
       <button class="btn btn-end" id="btnEnd">Encerrar Turno</button>
       <button class="btn" id="btnRestart" title="Reiniciar o simulador">Reiniciar</button>
@@ -5182,7 +5182,7 @@ try {
   document.getElementById('btnCoin')?.addEventListener('click', coin);
   document.getElementById('btnStart')?.addEventListener('click', startMatch);
   document.getElementById('btnChoose')?.addEventListener('click', chooseLeader);
-  document.getElementById('btnChooseAI')?.addEventListener('click', configureAIDeck);
+  // btnChooseAI removed from UI — no listener attached
   document.getElementById('btnNext')?.addEventListener('click', nextPhase);
   document.getElementById('btnEnd')?.addEventListener('click', endTurn);
   document.getElementById('btnRestart')?.addEventListener('click', () => { try { location.reload(); } catch(e) { window.location.href = window.location.href; } });
@@ -5441,7 +5441,7 @@ function aiMain(){
 // Render inicial
 try {
   // Em MP, esconder controles específicos da IA
-  if(__IS_MP){ const btnAI=document.getElementById('btnChooseAI'); if(btnAI) btnAI.style.display='none'; }
+  // btnChooseAI removed; previously hidden in MP mode
   render();
 } catch(e) { console.warn('Render inicial falhou', e); }
 </script>
