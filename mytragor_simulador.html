@@ -2388,8 +2388,10 @@ function showDeckSelect(decks) {
     leaderInfo.style.textAlign = 'center';
     leaderInfo.style.marginBottom = '8px';
     
-    const cardCount = document.createElement('div');
-    cardCount.textContent = `${deck.cards ? deck.cards.length : 0} cartas`;
+  const cardCount = document.createElement('div');
+  // Show total including the leader card (decks saved in deckbuilder store 40 cards + 1 leader = 41)
+  const totalCards = (deck.cards ? deck.cards.length : 0) + (deck.leader ? 1 : 0);
+  cardCount.textContent = `${totalCards} cartas${deck.leader ? ' (inclui líder)' : ''}`;
     cardCount.style.color = '#94a3b8';
     cardCount.style.fontSize = '12px';
     cardCount.style.textAlign = 'center';
