@@ -557,6 +557,17 @@
 
 </head>
 
+<script>
+// Modal queue helpers: defer modal displays during sensitive UI refreshes (e.g., fragment renewal)
+// Usage: enqueueModal(function(done){ show modal UI; when modal closes call done(); })
+try{
+  window.__modalQueue = window.__modalQueue || [];
+  window.__modalShowing = !!window.__modalShowing;
+  window.enqueueModal = function(showFn){ if(typeof showFn!=='function') return; window.__modalQueue.push(showFn); if(window.processModalQueue) window.processModalQueue(); };
+  window.processModalQueue = function(){ if(window.__modalShowing) return; if(window.__BEGIN_TURN_IN_PROGRESS) return; const fn = window.__modalQueue.shift(); if(!fn) return; window.__modalShowing = true; try{ fn(function(){ window.__modalShowing = false; setTimeout(window.processModalQueue, 20); }); }catch(e){ console.error('modalQueue error', e); window.__modalShowing=false; setTimeout(window.processModalQueue,20); } };
+}catch(e){ console.warn('modal queue init failed', e); }
+</script>
+
 <body>
 
 <!-- Topbar -->
@@ -2978,6 +2989,8 @@ const start = startMatch;
 let valbrakComprouTurno = { you: false, ai: false };
 function beginTurn(){
   const side=STATE.active; STATE.phase='main'; STATE.turnCount[side]++;
+  // mark beginTurn in progress so we can defer UI modals until the refresh finishes
+  try{ window.__BEGIN_TURN_IN_PROGRESS = true; }catch(e){}
   valbrakComprouTurno[side] = false;
   STATE.maxPool[side] = (STATE.turnCount[side]===1)?((side===STATE.first)?1:2):clamp(STATE.maxPool[side]+2,0,10);
   STATE.pool[side]=STATE.maxPool[side];
@@ -2998,6 +3011,9 @@ function beginTurn(){
   // Resetar usos por turno (ex: Agiota)
   STATE[side].allies.forEach(a => { if(a) a._agiotaUsed = false; });
   log(`${side==='you'?'Seu':'IA'} turno começou. Fragmentos: ${STATE.pool[side]}/${STATE.maxPool[side]}.`); render();
+  // allow any deferred modals to run after the turn refresh completes
+  try{ window.__BEGIN_TURN_IN_PROGRESS = false; }catch(e){}
+  try{ setTimeout(function(){ if(window.processModalQueue) window.processModalQueue(); }, 60); }catch(e){}
   // Em MP, não rodar IA localmente — o oponente humano joga via NetController
   if(side==='ai' && !__IS_MP) setTimeout(()=>{ try{ aiMain(); }catch(e){ console.error(e); log('⚠️ IA (beginTurn): '+(e?.message||e)); } }, 300);
 }
@@ -3227,49 +3243,54 @@ function playFromHand(side, index) {
       const idxFiada = STATE['you'].hand.findIndex(card => card && card.name === 'Conversa Fiada');
       if (idxFiada !== -1 && !c._fiadaCheck) {
         let modal = document.getElementById('conversaFiadaModal');
-        if (modal) {
-          // Signal AI loop to pause while player responds to modal
+        if (modal && window.enqueueModal) {
+          // enqueue modal display so it won't collide with other modals (e.g., during fragment renewal)
+          enqueueModal(function(done){
+            try{ window.__WAITING_FOR_MODAL = true; }catch(e){}
+            modal.style.display = 'flex';
+            var custo = 0;
+            if (STATE['you'].hand[idxFiada] && STATE['you'].hand[idxFiada].cost) {
+              custo = STATE['you'].hand[idxFiada].cost;
+            }
+            var cfCusto = document.getElementById('cfCusto');
+            if (cfCusto) cfCusto.textContent = custo;
+            try {
+              var cfImg = document.getElementById('cfTargetImg');
+              var cfName = document.getElementById('cfTargetName');
+              var cfSubtitle = document.getElementById('cfTargetSubtitle');
+              if (cfImg) cfImg.src = c.img || 'assets/ui/card-back.png';
+              if (cfName) cfName.textContent = c.name || 'Carta do oponente';
+              if (cfSubtitle) cfSubtitle.textContent = (c.kind ? (c.kind + ' — ' + (c.filiacao || '')) : '') || 'Magia/Truque do oponente';
+            } catch(e) { console.warn('cf preview set error', e); }
+            var btnSim = document.getElementById('btnConversaSim');
+            var btnNao = document.getElementById('btnConversaNao');
+            btnSim.onclick = null;
+            btnNao.onclick = null;
+            btnSim.onclick = function () {
+              try{ window.__WAITING_FOR_MODAL = false; }catch(e){}
+              modal.style.display = 'none';
+              const fiada = STATE['you'].hand[idxFiada];
+              STATE['you'].grave.push(fiada);
+              STATE['you'].hand.splice(idxFiada, 1);
+              log('Você ativou Conversa Fiada e anulou a magia/truque do oponente!');
+              render();
+              c._fiadaCheck = true;
+              STATE[side].grave.push(c);
+              STATE[side].hand.splice(index, 1);
+              render();
+              done();
+            };
+            btnNao.onclick = function () {
+              try{ window.__WAITING_FOR_MODAL = false; }catch(e){}
+              modal.style.display = 'none';
+              c._fiadaCheck = true;
+              setTimeout(function(){ playFromHand(side, index); done(); }, 10);
+            };
+          });
+        } else if (modal) {
+          // fallback: show immediately
           window.__WAITING_FOR_MODAL = true;
           modal.style.display = 'flex';
-          var custo = 0;
-          if (STATE['you'].hand[idxFiada] && STATE['you'].hand[idxFiada].cost) {
-            custo = STATE['you'].hand[idxFiada].cost;
-          }
-          var cfCusto = document.getElementById('cfCusto');
-          if (cfCusto) cfCusto.textContent = custo;
-          try {
-            var cfImg = document.getElementById('cfTargetImg');
-            var cfName = document.getElementById('cfTargetName');
-            var cfSubtitle = document.getElementById('cfTargetSubtitle');
-            if (cfImg) cfImg.src = c.img || 'assets/ui/card-back.png';
-            if (cfName) cfName.textContent = c.name || 'Carta do oponente';
-            if (cfSubtitle) cfSubtitle.textContent = (c.kind ? (c.kind + ' — ' + (c.filiacao || '')) : '') || 'Magia/Truque do oponente';
-          } catch(e) { console.warn('cf preview set error', e); }
-          var btnSim = document.getElementById('btnConversaSim');
-          var btnNao = document.getElementById('btnConversaNao');
-          btnSim.onclick = null;
-          btnNao.onclick = null;
-          btnSim.onclick = function () {
-            // clear pause flag before resolving
-            window.__WAITING_FOR_MODAL = false;
-            modal.style.display = 'none';
-            const fiada = STATE['you'].hand[idxFiada];
-            STATE['you'].grave.push(fiada);
-            STATE['you'].hand.splice(idxFiada, 1);
-            log('Você ativou Conversa Fiada e anulou a magia/truque do oponente!');
-            render();
-            c._fiadaCheck = true;
-            STATE[side].grave.push(c);
-            STATE[side].hand.splice(index, 1);
-            render();
-          };
-          btnNao.onclick = function () {
-            // clear pause flag before continuing
-            window.__WAITING_FOR_MODAL = false;
-            modal.style.display = 'none';
-            c._fiadaCheck = true;
-            setTimeout(function(){ playFromHand(side, index); }, 10);
-          };
         }
         return;
       }
@@ -4342,160 +4363,166 @@ function playFromHand(side, index) {
 
 // Ajusta o layout do modal de escolha visual
 function showCardChoice(options, onChoose, title='Escolha uma carta') {
-  // Generic modal to show a list of option objects (each should have .img and .name or .card)
-  let modal = document.getElementById('showCardChoiceModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'showCardChoiceModal';
-    modal.className = 'modal';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.zIndex = '300';
-    document.body.appendChild(modal);
-  }
-  // Debug log: list option card names for diagnostics
-  try { log(`showCardChoice: ${title} — options: ${options.map(o => (o.card&&o.card.name) || o.name || '').join(', ')}`); } catch(e){ console.warn('log error', e); }
-  // build content
-  const wrap = document.createElement('div');
-  wrap.className = 'modalBox';
-  wrap.style.padding = '18px';
-  wrap.style.minWidth = '360px';
-  wrap.style.maxWidth = '820px';
-  wrap.style.display = 'flex';
-  wrap.style.flexDirection = 'row';
-  wrap.style.gap = '12px';
-
-  const h = document.createElement('div');
-  h.style.fontSize = '18px';
-  h.style.fontWeight = 'bold';
-  h.style.color = '#facc15';
-  h.textContent = title;
-  wrap.appendChild(h);
-
-  const grid = document.createElement('div');
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(90px, 1fr))';
-  grid.style.gap = '10px';
-  grid.style.flex = '1 1 360px';
-
-  // Preview pane on the right for a larger preview of the hovered/selected option
-  const previewPane = document.createElement('div');
-  previewPane.style.width = '320px';
-  previewPane.style.minWidth = '220px';
-  previewPane.style.display = 'flex';
-  previewPane.style.flexDirection = 'column';
-  previewPane.style.alignItems = 'stretch';
-  previewPane.style.gap = '8px';
-  previewPane.style.paddingLeft = '8px';
-  previewPane.style.borderLeft = '1px solid rgba(255,255,255,0.04)';
-  previewPane.style.boxSizing = 'border-box';
-  // preview contents
-  const prevImg = document.createElement('img');
-  prevImg.src = '';
-  prevImg.style.width = '100%';
-  prevImg.style.height = '360px';
-  prevImg.style.objectFit = 'cover';
-  prevImg.style.borderRadius = '8px';
-  prevImg.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
-  const prevTitle = document.createElement('div');
-  prevTitle.style.fontSize = '16px'; prevTitle.style.fontWeight = '700'; prevTitle.style.color = '#f8fafc';
-  const prevMeta = document.createElement('div'); prevMeta.style.fontSize = '13px'; prevMeta.style.color = '#cbd5e1'; prevMeta.style.whiteSpace = 'pre-wrap';
-  previewPane.appendChild(prevImg); previewPane.appendChild(prevTitle); previewPane.appendChild(prevMeta);
-
-  options.forEach((opt, i) => {
-    const cardBtn = document.createElement('div');
-    cardBtn.style.width = '90px';
-    cardBtn.style.height = '120px';
-    cardBtn.style.border = '1.5px solid #2b3b5c';
-    cardBtn.style.borderRadius = '8px';
-    cardBtn.style.background = '#101f36';
-    cardBtn.style.overflow = 'hidden';
-    cardBtn.style.display = 'flex';
-    cardBtn.style.alignItems = 'center';
-    cardBtn.style.justifyContent = 'center';
-    cardBtn.style.cursor = 'pointer';
-    cardBtn.style.position = 'relative';
-  // If option marked as disabled, show it greyed out and prevent selection
-    if (opt.disabled) {
-      cardBtn.style.opacity = '0.5';
-      cardBtn.style.cursor = 'default';
-      // show a small overlay with reason if provided
-      if (opt.disabledReason) {
-        const ol = document.createElement('div');
-        ol.style.position = 'absolute';
-        ol.style.bottom = '4px';
-        ol.style.left = '4px';
-        ol.style.right = '4px';
-        ol.style.fontSize = '11px';
-        ol.style.color = '#ffeead';
-        ol.style.background = 'rgba(0,0,0,0.45)';
-        ol.style.padding = '4px 6px';
-        ol.style.borderRadius = '6px';
-        ol.style.textAlign = 'center';
-        ol.textContent = opt.disabledReason;
-        cardBtn.appendChild(ol);
-      }
-      // clicking disabled just flashes a small message
-      cardBtn.onclick = () => {
-        try { const prev = cardBtn.style.boxShadow; cardBtn.style.boxShadow = '0 0 0 4px rgba(255,255,255,0.06) inset'; setTimeout(()=>cardBtn.style.boxShadow = prev, 220); } catch(e){}
-      };
-    } else {
-      cardBtn.onclick = () => {
-        modal.style.display = 'none';
-        onChoose(opt, i);
-      };
+  // Build a renderer function and enqueue it so card-choice modals don't burst after fragment renewal
+  const renderChoice = function(done){
+    // Generic modal to show a list of option objects (each should have .img and .name or .card)
+    let modal = document.getElementById('showCardChoiceModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'showCardChoiceModal';
+      modal.className = 'modal';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = '300';
+      document.body.appendChild(modal);
     }
-    const im = document.createElement('img');
-    im.src = (opt.card ? opt.card.img : opt.img) || 'assets/ui/card-back.png';
-    im.alt = (opt.card ? opt.card.name : opt.name) || '';
-    im.style.width = '100%';
-    im.style.height = '100%';
-    im.style.objectFit = 'cover';
-    // hover/focus to update preview pane
-    cardBtn.onmouseenter = cardBtn.onfocus = () => {
-      try {
-        const c = opt.card || {};
-        prevImg.src = c.img || opt.img || 'assets/ui/card-back.png';
-        prevTitle.textContent = c.name || opt.name || '';
-        let meta = '';
-        if (c.classe) meta += `Classe: ${c.classe}\n`;
-        if (c.tipo) meta += `Tipo: ${c.tipo}\n`;
-        if (c.hp!=null) meta += `HP: ${c.hp}/${c.maxHp || c.hp}\n`;
-        if (c.damage!=null) meta += `Dano: ${c.damage}\n`;
-        if (c.text) meta += `\n${c.text}`;
-        prevMeta.textContent = meta;
-      } catch (e) { console.warn('preview update error', e); }
-    };
-    cardBtn.appendChild(im);
-    grid.appendChild(cardBtn);
-  });
+    // Debug log: list option card names for diagnostics
+    try { log(`showCardChoice: ${title} — options: ${options.map(o => (o.card&&o.card.name) || o.name || '').join(', ')}`); } catch(e){ console.warn('log error', e); }
+    // build content
+    const wrap = document.createElement('div');
+    wrap.className = 'modalBox';
+    wrap.style.padding = '18px';
+    wrap.style.minWidth = '360px';
+    wrap.style.maxWidth = '820px';
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'row';
+    wrap.style.gap = '12px';
 
-  // Default preview: first option
-  setTimeout(() => { try { const o0 = options[0]; if(o0){ prevImg.src = (o0.card?o0.card.img:o0.img) || 'assets/ui/card-back.png'; prevTitle.textContent = (o0.card?o0.card.name:o0.name)||''; prevMeta.textContent = ((o0.card&&o0.card.text)||''); } } catch(e){} }, 10);
+    const h = document.createElement('div');
+    h.style.fontSize = '18px';
+    h.style.fontWeight = 'bold';
+    h.style.color = '#facc15';
+    h.textContent = title;
+    wrap.appendChild(h);
 
-  wrap.appendChild(grid);
-  wrap.appendChild(previewPane);
-  // Close/cancel button
-  const footer = document.createElement('div');
-  footer.style.display = 'flex';
-  footer.style.justifyContent = 'center';
-  footer.style.marginTop = '8px';
-  const btnClose = document.createElement('button');
-  btnClose.textContent = 'Fechar';
-  btnClose.style.background = '#334155';
-  btnClose.style.color = '#f8fafc';
-  btnClose.style.border = 'none';
-  btnClose.style.padding = '10px 18px';
-  btnClose.style.borderRadius = '8px';
-  btnClose.style.cursor = 'pointer';
-  btnClose.onclick = () => { modal.style.display = 'none'; try { onChoose(null, null); } catch(e){} };
-  footer.appendChild(btnClose);
-  wrap.appendChild(footer);
-  // set modal content and show
-  modal.innerHTML = '';
-  modal.appendChild(wrap);
-  modal.style.display = 'flex';
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(90px, 1fr))';
+    grid.style.gap = '10px';
+    grid.style.flex = '1 1 360px';
+
+    // Preview pane on the right for a larger preview of the hovered/selected option
+    const previewPane = document.createElement('div');
+    previewPane.style.width = '320px';
+    previewPane.style.minWidth = '220px';
+    previewPane.style.display = 'flex';
+    previewPane.style.flexDirection = 'column';
+    previewPane.style.alignItems = 'stretch';
+    previewPane.style.gap = '8px';
+    previewPane.style.paddingLeft = '8px';
+    previewPane.style.borderLeft = '1px solid rgba(255,255,255,0.04)';
+    previewPane.style.boxSizing = 'border-box';
+    // preview contents
+    const prevImg = document.createElement('img');
+    prevImg.src = '';
+    prevImg.style.width = '100%';
+    prevImg.style.height = '360px';
+    prevImg.style.objectFit = 'cover';
+    prevImg.style.borderRadius = '8px';
+    prevImg.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
+    const prevTitle = document.createElement('div');
+    prevTitle.style.fontSize = '16px'; prevTitle.style.fontWeight = '700'; prevTitle.style.color = '#f8fafc';
+    const prevMeta = document.createElement('div'); prevMeta.style.fontSize = '13px'; prevMeta.style.color = '#cbd5e1'; prevMeta.style.whiteSpace = 'pre-wrap';
+    previewPane.appendChild(prevImg); previewPane.appendChild(prevTitle); previewPane.appendChild(prevMeta);
+
+    options.forEach((opt, i) => {
+      const cardBtn = document.createElement('div');
+      cardBtn.style.width = '90px';
+      cardBtn.style.height = '120px';
+      cardBtn.style.border = '1.5px solid #2b3b5c';
+      cardBtn.style.borderRadius = '8px';
+      cardBtn.style.background = '#101f36';
+      cardBtn.style.overflow = 'hidden';
+      cardBtn.style.display = 'flex';
+      cardBtn.style.alignItems = 'center';
+      cardBtn.style.justifyContent = 'center';
+      cardBtn.style.cursor = 'pointer';
+      cardBtn.style.position = 'relative';
+      // If option marked as disabled, show it greyed out and prevent selection
+      if (opt.disabled) {
+        cardBtn.style.opacity = '0.5';
+        cardBtn.style.cursor = 'default';
+        // show a small overlay with reason if provided
+        if (opt.disabledReason) {
+          const ol = document.createElement('div');
+          ol.style.position = 'absolute';
+          ol.style.bottom = '4px';
+          ol.style.left = '4px';
+          ol.style.right = '4px';
+          ol.style.fontSize = '11px';
+          ol.style.color = '#ffeead';
+          ol.style.background = 'rgba(0,0,0,0.45)';
+          ol.style.padding = '4px 6px';
+          ol.style.borderRadius = '6px';
+          ol.style.textAlign = 'center';
+          ol.textContent = opt.disabledReason;
+          cardBtn.appendChild(ol);
+        }
+        // clicking disabled just flashes a small message
+        cardBtn.onclick = () => {
+          try { const prev = cardBtn.style.boxShadow; cardBtn.style.boxShadow = '0 0 0 4px rgba(255,255,255,0.06) inset'; setTimeout(()=>cardBtn.style.boxShadow = prev, 220); } catch(e){}
+        };
+      } else {
+        cardBtn.onclick = () => {
+          modal.style.display = 'none';
+          try{ onChoose(opt, i); }catch(e){}
+          done();
+        };
+      }
+      const im = document.createElement('img');
+      im.src = (opt.card ? opt.card.img : opt.img) || 'assets/ui/card-back.png';
+      im.alt = (opt.card ? opt.card.name : opt.name) || '';
+      im.style.width = '100%';
+      im.style.height = '100%';
+      im.style.objectFit = 'cover';
+      // hover/focus to update preview pane
+      cardBtn.onmouseenter = cardBtn.onfocus = () => {
+        try {
+          const c = opt.card || {};
+          prevImg.src = c.img || opt.img || 'assets/ui/card-back.png';
+          prevTitle.textContent = c.name || opt.name || '';
+          let meta = '';
+          if (c.classe) meta += `Classe: ${c.classe}\n`;
+          if (c.tipo) meta += `Tipo: ${c.tipo}\n`;
+          if (c.hp!=null) meta += `HP: ${c.hp}/${c.maxHp || c.hp}\n`;
+          if (c.damage!=null) meta += `Dano: ${c.damage}\n`;
+          if (c.text) meta += `\n${c.text}`;
+          prevMeta.textContent = meta;
+        } catch (e) { console.warn('preview update error', e); }
+      };
+      cardBtn.appendChild(im);
+      grid.appendChild(cardBtn);
+    });
+
+    // Default preview: first option
+    setTimeout(() => { try { const o0 = options[0]; if(o0){ prevImg.src = (o0.card?o0.card.img:o0.img) || 'assets/ui/card-back.png'; prevTitle.textContent = (o0.card?o0.card.name:o0.name)||''; prevMeta.textContent = ((o0.card&&o0.card.text)||''); } } catch(e){} }, 10);
+
+    wrap.appendChild(grid);
+    wrap.appendChild(previewPane);
+    // Close/cancel button
+    const footer = document.createElement('div');
+    footer.style.display = 'flex';
+    footer.style.justifyContent = 'center';
+    footer.style.marginTop = '8px';
+    const btnClose = document.createElement('button');
+    btnClose.textContent = 'Fechar';
+    btnClose.style.background = '#334155';
+    btnClose.style.color = '#f8fafc';
+    btnClose.style.border = 'none';
+    btnClose.style.padding = '10px 18px';
+    btnClose.style.borderRadius = '8px';
+    btnClose.style.cursor = 'pointer';
+    btnClose.onclick = () => { modal.style.display = 'none'; try { onChoose(null, null); } catch(e){}; done(); };
+    footer.appendChild(btnClose);
+    wrap.appendChild(footer);
+    // set modal content and show
+    modal.innerHTML = '';
+    modal.appendChild(wrap);
+    modal.style.display = 'flex';
+  };
+
+  if (window.enqueueModal) enqueueModal(renderChoice);
+  else renderChoice(function(){});
 }
 
 // ============== Chamar Especial Genérico (mão, cemitério, banidas, deck) ==============
