@@ -3192,57 +3192,74 @@ function playFromHand(side, index) {
   }
 
   // --- Intercepta magias/truques do oponente com Conversa Fiada ---
-  // Só intercepta se oponente está jogando (side === 'ai') e carta é magia ou truque
-  if (side === 'ai' && (c.kind === 'spell' || c.kind === 'truque')) {
-    const idxFiada = STATE['you'].hand.findIndex(card => card && card.name === 'Conversa Fiada');
-    if (idxFiada !== -1 && !c._fiadaCheck) {
-      // Usa o modal já presente no HTML
-      let modal = document.getElementById('conversaFiadaModal');
-      if (modal) {
-        modal.style.display = 'flex';
-        // Atualiza custo se necessário
-        var custo = 0;
-        if (STATE['you'].hand[idxFiada] && STATE['you'].hand[idxFiada].cost) {
-          custo = STATE['you'].hand[idxFiada].cost;
+  // Comportamento:
+  // - Se a IA está jogando (side === 'ai'), o jogador humano pode responder com o modal de Conversa Fiada (existente).
+  // - Se o jogador está jogando (side === 'you') e a IA tem Conversa Fiada na mão, a IA pode usar automaticamente para anular.
+  if ((c.kind === 'spell' || c.kind === 'truque')) {
+    // Caso: IA jogando -> mostrar modal para o jogador usar Conversa Fiada
+    if (side === 'ai') {
+      const idxFiada = STATE['you'].hand.findIndex(card => card && card.name === 'Conversa Fiada');
+      if (idxFiada !== -1 && !c._fiadaCheck) {
+        let modal = document.getElementById('conversaFiadaModal');
+        if (modal) {
+          modal.style.display = 'flex';
+          var custo = 0;
+          if (STATE['you'].hand[idxFiada] && STATE['you'].hand[idxFiada].cost) {
+            custo = STATE['you'].hand[idxFiada].cost;
+          }
+          var cfCusto = document.getElementById('cfCusto');
+          if (cfCusto) cfCusto.textContent = custo;
+          try {
+            var cfImg = document.getElementById('cfTargetImg');
+            var cfName = document.getElementById('cfTargetName');
+            var cfSubtitle = document.getElementById('cfTargetSubtitle');
+            if (cfImg) cfImg.src = c.img || 'assets/ui/card-back.png';
+            if (cfName) cfName.textContent = c.name || 'Carta do oponente';
+            if (cfSubtitle) cfSubtitle.textContent = (c.kind ? (c.kind + ' — ' + (c.filiacao || '')) : '') || 'Magia/Truque do oponente';
+          } catch(e) { console.warn('cf preview set error', e); }
+          var btnSim = document.getElementById('btnConversaSim');
+          var btnNao = document.getElementById('btnConversaNao');
+          btnSim.onclick = null;
+          btnNao.onclick = null;
+          btnSim.onclick = function () {
+            modal.style.display = 'none';
+            const fiada = STATE['you'].hand[idxFiada];
+            STATE['you'].grave.push(fiada);
+            STATE['you'].hand.splice(idxFiada, 1);
+            log('Você ativou Conversa Fiada e anulou a magia/truque do oponente!');
+            render();
+            c._fiadaCheck = true;
+            STATE[side].grave.push(c);
+            STATE[side].hand.splice(index, 1);
+            render();
+          };
+          btnNao.onclick = function () {
+            modal.style.display = 'none';
+            c._fiadaCheck = true;
+            setTimeout(function(){ playFromHand(side, index); }, 10);
+          };
         }
-        var cfCusto = document.getElementById('cfCusto');
-        if (cfCusto) cfCusto.textContent = custo;
-        // Show preview of the opponent's card that triggered this window
-        try {
-          var cfImg = document.getElementById('cfTargetImg');
-          var cfName = document.getElementById('cfTargetName');
-          var cfSubtitle = document.getElementById('cfTargetSubtitle');
-          if (cfImg) cfImg.src = c.img || 'assets/ui/card-back.png';
-          if (cfName) cfName.textContent = c.name || 'Carta do oponente';
-          if (cfSubtitle) cfSubtitle.textContent = (c.kind ? (c.kind + ' — ' + (c.filiacao || '')) : '') || 'Magia/Truque do oponente';
-        } catch(e) { console.warn('cf preview set error', e); }
-        // Remove handlers antigos para evitar múltiplos triggers
-        var btnSim = document.getElementById('btnConversaSim');
-        var btnNao = document.getElementById('btnConversaNao');
-        btnSim.onclick = null;
-        btnNao.onclick = null;
-        btnSim.onclick = function () {
-          modal.style.display = 'none';
-          const fiada = STATE['you'].hand[idxFiada];
-          STATE['you'].grave.push(fiada);
-          STATE['you'].hand.splice(idxFiada, 1);
-          log('Você ativou Conversa Fiada e anulou a magia/truque do oponente!');
-          render();
-          c._fiadaCheck = true;
-          STATE[side].grave.push(c);
-          STATE[side].hand.splice(index, 1);
-          render();
-        };
-        btnNao.onclick = function () {
-          modal.style.display = 'none';
-          c._fiadaCheck = true;
-          setTimeout(function(){ playFromHand(side, index); }, 10);
-        };
+        return;
       }
-      return;
+      if (c._fiadaCheck) delete c._fiadaCheck;
     }
-    // Se foi marcado para não interceptar, segue normalmente
-    if (c._fiadaCheck) delete c._fiadaCheck;
+
+    // Caso: jogador (side === 'you') jogando -> IA pode auto-ativar Conversa Fiada se tiver na mão
+    if (side === 'you') {
+      const idxAiFiada = STATE['ai'].hand.findIndex(card => card && card.name === 'Conversa Fiada');
+      if (idxAiFiada !== -1 && !c._fiadaCheck) {
+        const fiada = STATE['ai'].hand[idxAiFiada];
+        STATE['ai'].grave.push(fiada);
+        STATE['ai'].hand.splice(idxAiFiada, 1);
+        log('IA ativou Conversa Fiada e anulou sua magia/truque!');
+        c._fiadaCheck = true;
+        STATE[side].grave.push(c);
+        STATE[side].hand.splice(index, 1);
+        render();
+        return;
+      }
+      if (c._fiadaCheck) delete c._fiadaCheck;
+    }
   }
 
   // Lógica de escolha 1 — IA decide automaticamente, jogador vê modal
