@@ -3202,6 +3202,8 @@ function playFromHand(side, index) {
       if (idxFiada !== -1 && !c._fiadaCheck) {
         let modal = document.getElementById('conversaFiadaModal');
         if (modal) {
+          // Signal AI loop to pause while player responds to modal
+          window.__WAITING_FOR_MODAL = true;
           modal.style.display = 'flex';
           var custo = 0;
           if (STATE['you'].hand[idxFiada] && STATE['you'].hand[idxFiada].cost) {
@@ -3222,6 +3224,8 @@ function playFromHand(side, index) {
           btnSim.onclick = null;
           btnNao.onclick = null;
           btnSim.onclick = function () {
+            // clear pause flag before resolving
+            window.__WAITING_FOR_MODAL = false;
             modal.style.display = 'none';
             const fiada = STATE['you'].hand[idxFiada];
             STATE['you'].grave.push(fiada);
@@ -3234,6 +3238,8 @@ function playFromHand(side, index) {
             render();
           };
           btnNao.onclick = function () {
+            // clear pause flag before continuing
+            window.__WAITING_FOR_MODAL = false;
             modal.style.display = 'none';
             c._fiadaCheck = true;
             setTimeout(function(){ playFromHand(side, index); }, 10);
@@ -5517,9 +5523,11 @@ function aiMain(){
     }catch(e){ console.warn('aiHasValidTargets error', e); return false; }
   }
 
-  try {
+    try {
     let progressed = true;
     while (progressed && STATE.phase === 'main' && STATE.active === 'ai') {
+      // If a modal is open waiting for player input, pause AI loop
+      if (window.__WAITING_FOR_MODAL) { progressed = false; break; }
       progressed = false;
       const hand = STATE.ai.hand || [];
 
