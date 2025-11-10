@@ -891,6 +891,32 @@ function ensureCardId(card){ if(!card) return null; if(!card.id) card.id = gener
 /* Helpers */
 const hasKw = (card, kw) => !!card?.keywords?.some(k => (k||'').toLowerCase()===kw);
 
+// Resolve a leader definition (prefer CARD_DEFS entry when available)
+function resolveLeaderDef(leader){
+  if(!leader) return null;
+  try{
+    if(window.CARD_DEFS && leader.key){
+      const f = (window.CARD_DEFS||[]).find(c=>c.key === leader.key);
+      if(f) return f;
+    }
+    if(window.CARD_DEFS && leader.name){
+      const name = String(leader.name).toLowerCase();
+      const f = (window.CARD_DEFS||[]).find(c=> (c.name && c.name.toLowerCase() === name) || (c.name && name.includes(c.name.toLowerCase())) || (c.key && name.includes(c.key)) );
+      if(f) return f;
+    }
+  }catch(e){/* ignore */}
+  return leader;
+}
+
+function leaderHasEffect(leader, effectName){
+  if(!leader) return false;
+  const def = resolveLeaderDef(leader) || {};
+  if(def.effect && def.effect === effectName) return true;
+  if(def.key && def.key === effectName) return true;
+  if(def.name && typeof def.name === 'string' && def.name.toLowerCase().includes(String(effectName).toLowerCase())) return true;
+  return false;
+}
+
 /* Templates (com keywords) */
 const TEMPLATES = {
   ally_cervo_ga_brancos: () => ({
@@ -1585,7 +1611,7 @@ function checkLeafaeOnAllyHealed(side, healedObj){
     // Leader Leafae behavior (legacy): leader gains the buff when ANOTHER ally is healed
     const leader = STATE[side].leader;
     if (leader) {
-      const isLeafae = (leader.key === 'leafae') || (typeof leader.name === 'string' && leader.name.includes('Leafae')) || (leader.effect === 'leafae');
+      const isLeafae = leaderHasEffect(leader, 'leafae');
       if (isLeafae && healedObj !== leader) {
         leader.atkBonus = (leader.atkBonus||0) + 1;
         leader.damage  = (leader.damage||0)  + 1;
@@ -2031,7 +2057,7 @@ function render(){
     // Ademais (líder Aranha Negra): ganha +1 ATK e +1 AC para cada carta "Aranhas Negras" no SEU campo
     ['you','ai'].forEach(side => {
       const leader = STATE[side].leader;
-      if (!leader || !(leader.name && leader.name.toLowerCase().includes('ademais'))) return;
+      if (!leader || !leaderHasEffect(leader, 'ademais')) return;
   // Capture previous applied value to avoid spamming logs
   const prevAdemais = (typeof leader._ademaisAtk === 'number') ? leader._ademaisAtk : 0;
   // Remove bônus anterior
