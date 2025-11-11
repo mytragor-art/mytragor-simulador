@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor — Cartas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&display=swap');
+    :root{ --bg:#071025; --card:#0f1724; --gold1:#facc15; --gold2:#f59e0b; --muted:#9ca3af }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6eef8;background:linear-gradient(180deg,#071025 0%,#04101a 100%)}
+    .wrap{max-width:1100px;margin:28px auto;padding:26px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.06));box-shadow:0 18px 40px rgba(0,0,0,0.6)}
+    .brand{font-family:'Cinzel', Georgia, 'Times New Roman', serif;color:var(--gold1);font-weight:900;font-size:30px}
+    .subtitle{color:var(--gold1);font-size:12px;margin-top:6px}
+    .lead{color:var(--muted);margin-top:8px}
+    .toolbar{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+    .gold-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;font-weight:800;background:linear-gradient(180deg,var(--gold1),var(--gold2));color:#111;text-decoration:none;border:1px solid rgba(250,170,25,0.9);box-shadow:0 8px 22px rgba(250,170,25,0.08);cursor:pointer}
+    .gold-btn.ghost{background:transparent;color:var(--gold1);border:1px solid rgba(250,204,21,0.12)}
+    .collectionList{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:18px}
+    .cardItem{background:linear-gradient(180deg, rgba(12,14,18,0.8), rgba(6,7,10,0.55));border:1px solid rgba(255,255,255,0.03);padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+    .cardItem img{
+      width:100%;
+      height:auto;
+      max-height:220px;
+      object-fit:contain;
+      border-radius:6px;
+      border:1px solid rgba(0,0,0,0.2);
+      background:#02050a;
+    }
+    .cardItem .name{font-weight:700;color:var(--gold1);font-size:13px;text-align:center}
+    .cardItem .meta{color:var(--muted);font-size:12px}
+    .empty{color:var(--muted);padding:26px;text-align:center;border-radius:8px;border:1px dashed rgba(255,255,255,0.03);margin-top:16px}
+    a.back{color:var(--muted);text-decoration:none;font-size:13px}
+    /* modal */
+    .lightbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.7);z-index:12000;padding:20px}
+    .lightbox .panel{max-width:920px;width:100%;background:linear-gradient(180deg,rgba(12,14,18,0.9),rgba(6,7,10,0.7));padding:18px;border-radius:12px;border:1px solid rgba(250,204,21,0.08);display:flex;gap:14px;align-items:flex-start}
+    .lightbox img{max-width:380px;max-height:64vh;border-radius:8px}
+    .lightbox .desc{color:var(--muted)}
+    .closeBtn{margin-left:auto}
+  @media(max-width:720px){ .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))} .cardItem img{max-height:160px} .lightbox .panel{flex-direction:column;align-items:center} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="brand">Mytragor</div>
+        <div class="subtitle">Galeria — Cartas</div>
+        <div class="lead">Escolha uma coleção para ver suas cartas.</div>
+      </div>
+      <div style="text-align:right">
+        <a class="back" href="/index.html">← Voltar</a>
+      </div>
+    </header>
+
+    <section>
+      <div class="toolbar">
+        <button class="gold-btn ghost" id="btnCollection1">Baralhos iniciais 1</button>
+        <!-- future collections could be added here -->
+      </div>
+
+      <div id="collectionArea">
+        <div class="empty">Selecione uma coleção acima para visualizar as cartas.</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-hidden="true">
+    <div class="panel">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <img id="lbImg" src="" alt="" />
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="lbClose" class="gold-btn ghost">Fechar</button>
+          <a id="openFull" class="gold-btn" href="#" target="_blank">Abrir em nova aba</a>
+        </div>
+      </div>
+      <div class="desc">
+        <div id="lbTitle" style="font-weight:800;color:var(--gold1)"></div>
+        <div id="lbMeta" style="margin-top:8px;color:var(--muted)"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Files in the collection (hard-coded from assets/allies)
+    const ALLIES = [
+      "Aerin_Nieloy.png",
+      "aranhas_agiota.png",
+      "aranhas_executor.png",
+      "aranhas_informante.png",
+      "aranhas_mascote.png",
+      "aranhas_novato.png",
+      "aranhas_observadora.png",
+      "arnold_escudeiro.png",
+      "bartolomeu_inspirador.png",
+      "batedor_kobolt.png",
+      "cao_caca_feroz.png",
+      "cervo_ga_brancos.png",
+      "estudante_magia.png",
+      "gamboa_selva.png",
+      "gladiador_aposentado.png",
+      "gladiador_impenetravel.png",
+      "gladiador_implacavel.png",
+      "gladiador_ousado.png",
+      "gladiador_veloz.png",
+      "goblin_sabotador.png",
+      "hiena_carniceira.png",
+      "informante_beco.png",
+      "jabuti_barreira.png",
+      "kornex_ronin.png",
+      "miliciano_vila.png",
+      "ogro_montanha.png",
+      "o_protetor.png",
+      "picapau_agulheiro.png",
+      "Porco_e_furioso.png",
+      "tamandua_guardiao.png",
+      "thor_martelo_montanha.png",
+      "toupeira_escavadora.png",
+      "urso_N_tanque.png"
+    ];
+
+    // Additional starter collections
+    const CHOSENS = [
+      "valbrak.png",
+      "leafae.png",
+      "katsu.png",
+      "ademais.png"
+    ];
+
+    const ENVS = [
+      "tempestade_arcana.png",
+      "catedral_ensolarada.png",
+      "campos_ensanguentados.png",
+      "caminho_sombras.png"
+    ];
+
+    // Equip, fragments, spells and tricks
+    const EQUIP = [
+      "redoma_santa.png",
+      "orbe_absorcao.png",
+      "manto_couro.png",
+      "livro_arcano_instavel.png",
+      "lamina_serrilhada.png",
+      "aranhas_queliceras.png"
+    ];
+
+    
+
+    const SPELL = [
+      "tonico_revigorante.png",
+      "sede_de_vingança.png",
+      "resgate_energia.png",
+      "raio_gelo.png",
+      "quebra_aco.png",
+      "Maos_flamejantes.png",
+      "fruto_abencoado.png",
+      "falar_animais.png",
+      "espionagem_sorrateira.png",
+      "bom_fruto.png",
+      "aranhas_milicia.png",
+      "amizade_floresta.png",
+      "alerta_fuga.png",
+      "ajuda_povo.png"
+    ];
+
+    const TRICK = [
+      "conversa_fiada.png",
+      "contricao.png",
+      "bem_treinado.png",
+      "aranhas_emboscada.png"
+    ];
+
+    const collectionArea = document.getElementById('collectionArea');
+    const btn1 = document.getElementById('btnCollection1');
+    btn1.addEventListener('click', ()=> {
+      // Build a combined collection that includes allies, chosens and envs
+      const combined = [];
+  ALLIES.forEach(f => combined.push({dir:'../allies/', file:f, type:'ally'}));
+  CHOSENS.forEach(f => combined.push({dir:'../chosens/', file:f, type:'chosen'}));
+  ENVS.forEach(f => combined.push({dir:'../envs/', file:f, type:'env'}));
+  EQUIP.forEach(f => combined.push({dir:'../equip/', file:f, type:'equip'}));
+  // fragments removed from starter collection by request
+  SPELL.forEach(f => combined.push({dir:'../spell/', file:f, type:'spell'}));
+  TRICK.forEach(f => combined.push({dir:'../trick/', file:f, type:'trick'}));
+      showCollection('Baralhos iniciais 1', combined);
+    });
+
+    function niceName(filename){
+      return filename.replace(/\.png$/i,'').replace(/_/g,' ').replace(/\b(\w)/g, s=>s.toUpperCase());
+    }
+
+    function showCollection(title, files){
+      collectionArea.innerHTML = '';
+      const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center';
+      const h = document.createElement('div'); h.innerHTML = `<div style="font-weight:800;color:var(--gold1)">${title}</div><div style="color:var(--muted);font-size:13px;margin-top:6px">${files.length} cartas</div>`;
+      header.appendChild(h);
+      collectionArea.appendChild(header);
+
+      const grid = document.createElement('div'); grid.className='grid';
+      files.forEach(entry=>{
+        // entry can be either a string (legacy) or an object {dir, file, type}
+        const dir = entry.dir || '../allies/';
+        const file = entry.file || entry;
+        const type = entry.type || 'ally';
+
+        const item = document.createElement('div'); item.className='cardItem';
+        const img = document.createElement('img'); img.src = dir + file; img.alt = niceName(file); img.loading = 'lazy'; img.decoding = 'async';
+        const name = document.createElement('div'); name.className='name'; name.textContent = niceName(file);
+        const meta = document.createElement('div'); meta.className='meta';
+        meta.textContent = (
+          type === 'env' ? 'Ambiente' :
+          type === 'chosen' ? 'Escolhido' :
+          type === 'equip' ? 'Equipamento' :
+          type === 'fragment' ? 'Fragmento' :
+          type === 'spell' ? 'Feitiço' :
+          type === 'trick' ? 'Truque' :
+          'Ally'
+        );
+        item.appendChild(img); item.appendChild(name); item.appendChild(meta);
+        item.addEventListener('click', ()=> openLightbox(img.src, name.textContent));
+        grid.appendChild(item);
+      });
+      collectionArea.appendChild(grid);
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    // Lightbox behavior
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lbImg');
+    const lbTitle = document.getElementById('lbTitle');
+    const lbMeta = document.getElementById('lbMeta');
+    const openFull = document.getElementById('openFull');
+    document.getElementById('lbClose').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e)=>{ if(e.target===lightbox) closeLightbox(); });
+
+    function openLightbox(src, title){
+      lbImg.src = src; lbTitle.textContent = title; lbMeta.textContent = '';
+      openFull.href = src;
+      lightbox.style.display = 'flex'; lightbox.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    }
+    function closeLightbox(){ lightbox.style.display='none'; lightbox.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  </script>
+</body>
+</html>

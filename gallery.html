@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor — Galeria</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&display=swap');
+    :root{ --bg:#071025; --card:#0f1724; --gold1:#facc15; --gold2:#f59e0b; --muted:#9ca3af }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6eef8;background:linear-gradient(180deg,#071025 0%,#04101a 100%)}
+    .wrap{max-width:980px;margin:36px auto;padding:28px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.06));box-shadow:0 20px 40px rgba(0,0,0,0.6);}
+    .brand{font-family:'Cinzel', Georgia, 'Times New Roman', serif;color:var(--gold1);font-weight:900;font-size:36px}
+    .subtitle{color:var(--gold1);font-size:13px;margin-top:6px}
+    .lead{color:var(--muted);margin-top:8px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:22px}
+    .card{background:linear-gradient(180deg, rgba(12,14,18,0.8), rgba(6,7,10,0.55));border:1px solid rgba(250,204,21,0.08);padding:18px;border-radius:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+    .card h3{margin:0;color:var(--gold1);font-size:16px}
+    .card p{margin:0;color:var(--muted);font-size:13px}
+    .btnRow{display:flex;gap:12px;justify-content:flex-end;margin-top:18px}
+    .gold-btn{display:inline-block;padding:12px 16px;border-radius:10px;font-weight:800;background:linear-gradient(180deg,var(--gold1),var(--gold2));color:#111;text-decoration:none;border:1px solid rgba(250,170,25,0.9);box-shadow:0 10px 26px rgba(250,170,25,0.08)}
+    .gold-btn.ghost{background:transparent;color:var(--gold1);border:1px solid rgba(250,204,21,0.12)}
+    a.back{color:var(--muted);text-decoration:none;font-size:13px}
+    @media(max-width:520px){ .brand{font-size:28px} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div class="brand">Mytragor</div>
+        <div class="subtitle">Galeria</div>
+        <div class="lead">Explore os elementos visuais e as cartas do jogo.</div>
+      </div>
+      <div style="text-align:right">
+        <a class="back" href="index.html">← Voltar</a>
+      </div>
+    </header>
+
+    <section style="margin-top:18px">
+      <div class="grid">
+        <div class="card">
+          <h3>História</h3>
+          <p>Uma página com a história do mundo de Mytragor.</p>
+          <div style="margin-top:8px"><a class="gold-btn ghost" href="#" aria-disabled="true">Em breve</a></div>
+        </div>
+        <div class="card">
+          <h3>Cartas</h3>
+          <p>Visualize todas as cartas (imagens, efeitos e descrições).</p>
+          <div style="margin-top:8px"><a class="gold-btn" href="assets/ui/cards.html">Ir para Cartas</a></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="btnRow">
+      <a class="gold-btn ghost" href="index.html">Voltar ao início</a>
+    </div>
+  </div>
+</body>
+</html>
