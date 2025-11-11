@@ -228,24 +228,28 @@
   .slide-img{ width:100%; height:auto; max-height:160px; object-fit:cover; border-radius:6px; margin-bottom:8px; box-shadow: 0 8px 20px rgba(0,0,0,0.6) }
 
   /* Layout principal */
-  .app{display:grid;grid-template-columns:224px 1fr 336px;gap:10px;padding:10px;min-height:100vh}
+  /* Layout: make side columns flexible to avoid large empty gutters on wide screens */
+  :root{ --side-min:160px; --side-max-left:220px; --side-max-right:320px; --content-max:1100px; }
+  html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Helvetica Neue',Arial; font-size:15px;}
+  .app{display:grid;grid-template-columns: minmax(var(--side-min), var(--side-max-left)) 1fr minmax(220px, var(--side-max-right)); gap:8px; padding:8px; min-height:100vh; align-items:start}
 
-  @media(max-width:1200px){ .app{grid-template-columns:208px 1fr 288px} }
+  @media(max-width:1200px){ .app{grid-template-columns: minmax(140px,200px) 1fr minmax(180px,260px); } }
   @media(max-width:980px){ .app{grid-template-columns:1fr} }
 
-  .col{background:linear-gradient(180deg,rgba(14,26,43,.86),rgba(12,23,40,.80));backdrop-filter:blur(1.5px) saturate(1.05);-webkit-backdrop-filter:blur(1.5px) saturate(1.05);border:1px solid var(--line);border-radius:12px;overflow:auto}
+  .col{background:linear-gradient(180deg,rgba(14,26,43,.86),rgba(12,23,40,.80));backdrop-filter:blur(1.5px) saturate(1.05);-webkit-backdrop-filter:blur(1.5px) saturate(1.05);border:1px solid var(--line);border-radius:12px;overflow:auto;padding:10px}
   .right{display:flex;flex-direction:column}
 
   h3{margin:12px 14px 0 14px;font-size:15px;color:#a7b5cc;letter-spacing:.04em}
 
-  /* Log mais largo */
-  .log{padding:12px 12px 90px 12px}
-  .logLine{border-left:2px solid #2b3b5c;margin:8px 0;padding-left:8px;color:#c3cee3;font-size:15px;line-height:1.5}
+  /* Log mais compacto e rolável */
+  .log{padding:10px 12px 64px 12px; max-height:36vh; overflow:auto}
+  .logLine{border-left:2px solid #2b3b5c;margin:8px 0;padding-left:8px;color:#c3cee3;font-size:15px;line-height:1.45}
 
   /* Board central otimizado */
   .boardWrap{display:flex;justify-content:center;overflow-x:auto;padding:4px;}
   .boardZoom{transform:scale(var(--zoom));transform-origin:50% 0%}
-  .board{padding:4px;min-width:700px;max-width:100%;} /* mais larga para evitar sobreposição */
+  /* Limit board max width to avoid huge empty gutters on wide monitors */
+  .board{padding:6px;margin:0 auto;min-width:640px;max-width:var(--content-max);width:100%;box-sizing:border-box}
 
   /* Arena (sem cortes e com altura fluida) */
   .arena {
@@ -435,21 +439,23 @@
 
   .hand{
     display:flex;
-    gap:8px;
+    align-items:flex-end;
+    justify-content:center;
+    gap:0;
     flex-wrap:nowrap;
     overflow-x:auto;
-    padding:10px;
-    border:1px solid var(--line);
-    border-radius:12px;
+    padding:8px 6px;
     background:transparent;
     position:relative;
     z-index:auto;
   }
-  .card.handCard{position:relative;inset:auto;margin:0}
+  /* Slight overlap so the hand doesn't push the board horizontally */
+  .hand .card.handCard{ position:relative; width:128px; margin-left:-34px; transition:transform .16s ease, box-shadow .16s ease }
+  .hand .card.handCard:first-child{ margin-left:0 }
   /* Indicador de jogável agora: borda suave + pulso leve */
   .card.handCard.canPlay { border: 2px solid #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.35); animation: pulseRing 1.8s ease-in-out infinite; z-index:2; filter:none; }
   @keyframes pulseRing { 0%{ box-shadow:0 0 0 2px rgba(250,204,21,.35);} 70%{ box-shadow:0 0 0 10px rgba(250,204,21,0);} 100%{ box-shadow:0 0 0 2px rgba(250,204,21,0);} }
-  .card.handCard:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
+  .hand .card.handCard:hover{ transform:translateY(-6px) scale(1.03); z-index:40; box-shadow:0 10px 24px rgba(0,0,0,0.45) }
 
   .aiHand{display:flex;gap:6px;justify-content:center;padding:4px 0}
   .aiBack{width:34px;height:50px;border-radius:5px;border:1px solid #2b3b5c;overflow:hidden;background:#1b2a46}
@@ -470,13 +476,13 @@
   /* === FRAGMENTOS (cristais) — colocados fora da arena pra não empurrar layout === */
   .fragDock{
     position:absolute;
-    left:10px;
+    left:6px;
     top:16px;
     display:flex;
     flex-direction:column;
     align-items:flex-start;
     gap:8px;
-    width:60px;
+    width:48px;
     pointer-events:none;
     z-index:2;
     padding:0;
