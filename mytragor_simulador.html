@@ -726,11 +726,21 @@ try{
 
   <!-- Modal de Seleção de Personagem -->
 
-  <div id="charSelect" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000a;z-index:1000;align-items:center;justify-content:center;">
-  <div style="background:linear-gradient(180deg,#0e1a2b,#0c1728);border:2px solid #2a3b55;border-radius:16px;padding:24px;max-width:800px;box-shadow:0 20px 40px #0008;position:relative;">
-  <button onclick="hideCharSelect()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#64748b;font-size:24px;cursor:pointer;padding:4px">&times;</button>
-  <h2 style="text-align:center;margin:0 0 16px 0;font-size:20px;color:#e2e8f0;font-weight:bold">Escolha seu Escolhido</h2>
-  <div id="charGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;margin-top:20px"></div>
+  <div id="charSelect" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+    <div style="width:100%;max-width:980px;display:flex;gap:18px;align-items:flex-start;">
+      <div style="flex:0 0 320px;background:linear-gradient(180deg,#070709,#0b0b10);border:1px solid rgba(250,204,21,0.08);border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,0.6),0 0 28px rgba(250,190,40,0.03);">
+        <button onclick="hideCharSelect()" style="position:absolute;right:34px;top:24px;background:none;border:none;color:#cbd5e1;font-size:22px;cursor:pointer;padding:4px">&times;</button>
+        <div style="text-align:center;margin-bottom:12px;color:#facc15;font-weight:800;font-size:18px">Pré-visualização do Líder</div>
+        <div id="charPreview" style="display:flex;flex-direction:column;align-items:center;gap:10px;color:#e2e8f0">
+          <img id="charPreviewImg" src="assets/chosens/valbrak.png" alt="preview" style="width:220px;height:300px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 8px 22px rgba(0,0,0,0.6)" />
+          <div id="charPreviewName" style="color:#facc15;font-weight:900"></div>
+          <div id="charPreviewStats" style="color:#aab9d3;font-size:13px;text-align:center"></div>
+        </div>
+      </div>
+      <div style="flex:1;background:linear-gradient(180deg,#07121b,#07111a);border:1px solid rgba(255,255,255,0.02);border-radius:12px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,0.7);">
+        <h2 style="margin:0 0 12px 0;color:#facc15;font-size:20px">Escolha seu Escolhido</h2>
+        <div id="charGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px;margin-top:8px"></div>
+      </div>
     </div>
   </div>
 
@@ -2677,13 +2687,24 @@ function chooseLeader(){
 function showCharSelect(opts){
   const grid = document.getElementById('charGrid');
   grid.innerHTML = '';
+  // reset preview
+  const prevImg = document.getElementById('charPreviewImg');
+  const prevName = document.getElementById('charPreviewName');
+  const prevStats = document.getElementById('charPreviewStats');
+  if(prevImg) prevImg.src = '';
+  if(prevName) prevName.textContent = '';
+  if(prevStats) prevStats.textContent = '';
   opts.forEach((c, idx) => {
     const div = document.createElement('div');
     div.className = 'charOption';
     div.style.cursor = 'pointer';
-    div.onclick = function(){
-      selectLeader(idx, opts);
-      hideCharSelect();
+    div.onclick = function(){ selectLeader(idx, opts); hideCharSelect(); };
+    div.onmouseover = function(){
+      try{
+        if(prevImg) prevImg.src = c.img || CHOSEN_IMAGES[c.key] || '';
+        if(prevName) prevName.textContent = c.name || '';
+        if(prevStats) prevStats.textContent = `AC: ${c.ac||''}  HP: ${c.hp||''}  Dano: ${c.damage||''}  Bônus: ${c.atkBonus||''}`;
+      }catch(e){}
     };
     div.innerHTML = `
       <img src="${CHOSEN_IMAGES[c.key]}" alt="${c.name}">
@@ -2728,126 +2749,51 @@ function getSavedDecks() {
 function showDeckSelect(decks) {
   const modal = document.createElement('div');
   modal.id = 'deckSelectModal';
-  modal.style.position = 'fixed';
-  modal.style.top = '0';
-  modal.style.left = '0';
-  modal.style.width = '100vw';
-  modal.style.height = '100vh';
-  modal.style.background = 'rgba(0,0,0,0.8)';
-  modal.style.display = 'flex';
-  modal.style.alignItems = 'center';
-  modal.style.justifyContent = 'center';
-  modal.style.zIndex = '9999';
-  
+  Object.assign(modal.style, { position:'fixed', inset:'0', background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:'9999', padding:'20px' });
+
   const container = document.createElement('div');
-  container.style.background = '#0e1a2b';
-  container.style.borderRadius = '16px';
-  container.style.padding = '24px';
-  container.style.maxWidth = '80vw';
-  container.style.maxHeight = '80vh';
-  container.style.overflow = 'auto';
-  
-  const title = document.createElement('h2');
-  title.textContent = 'Escolher Deck Salvo';
-  title.style.color = '#facc15';
-  title.style.textAlign = 'center';
-  title.style.marginBottom = '20px';
-  container.appendChild(title);
-  
-  const grid = document.createElement('div');
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-  grid.style.gap = '16px';
-  grid.style.marginBottom = '20px';
-  
+  Object.assign(container.style, { display:'flex', gap:'18px', width:'100%', maxWidth:'1000px', maxHeight:'80vh', overflow:'auto' });
+
+  // Left preview column
+  const preview = document.createElement('div');
+  Object.assign(preview.style, { flex:'0 0 320px', background:'linear-gradient(180deg,#070709,#0b0b10)', border:'1px solid rgba(250,204,21,0.06)', borderRadius:'12px', padding:'14px', color:'#e2e8f0', boxShadow:'0 12px 40px rgba(0,0,0,0.7)' });
+  const pvTitle = document.createElement('div'); pvTitle.textContent='Pré-visualização do Deck'; pvTitle.style.color='#facc15'; pvTitle.style.fontWeight='800'; pvTitle.style.marginBottom='10px';
+  const pvImg = document.createElement('img'); pvImg.id='deckPreviewImg'; pvImg.src='assets/ui/card-back.png'; pvImg.style.width='260px'; pvImg.style.height='340px'; pvImg.style.objectFit='cover'; pvImg.style.borderRadius='8px'; pvImg.style.border='1px solid rgba(255,255,255,0.03)'; pvImg.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)';
+  const pvName = document.createElement('div'); pvName.id='deckPreviewName'; pvName.style.color='#facc15'; pvName.style.fontWeight='800'; pvName.style.marginTop='8px'; pvName.style.textAlign='center';
+  const pvMeta = document.createElement('div'); pvMeta.id='deckPreviewMeta'; pvMeta.style.color='#9fb4d6'; pvMeta.style.fontSize='13px'; pvMeta.style.textAlign='center'; pvMeta.style.marginTop='6px';
+  preview.appendChild(pvTitle); preview.appendChild(pvImg); preview.appendChild(pvName); preview.appendChild(pvMeta);
+
+  // Right: grid of decks
+  const right = document.createElement('div'); Object.assign(right.style, { flex:'1 1 auto', background:'linear-gradient(180deg,#07121b,#07111a)', borderRadius:'12px', padding:'18px', border:'1px solid rgba(255,255,255,0.02)' });
+  const title = document.createElement('h2'); title.textContent='Escolher Deck Salvo'; title.style.color='#facc15'; title.style.margin='0 0 12px 0'; right.appendChild(title);
+
+  const grid = document.createElement('div'); Object.assign(grid.style, { display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:'16px', marginBottom:'18px' });
+
   decks.forEach((deck, idx) => {
     const deckDiv = document.createElement('div');
-    deckDiv.style.background = '#182a4d';
-    deckDiv.style.borderRadius = '12px';
-    deckDiv.style.padding = '16px';
-    deckDiv.style.cursor = 'pointer';
-    deckDiv.style.border = '2px solid transparent';
-    deckDiv.style.transition = 'border-color 0.2s';
-    
-    deckDiv.onmouseover = () => deckDiv.style.borderColor = '#facc15';
-    deckDiv.onmouseout = () => deckDiv.style.borderColor = 'transparent';
-    
-    const deckName = document.createElement('div');
-    deckName.textContent = deck.deckName || deck.leader || 'Deck sem nome';
-    deckName.style.color = '#facc15';
-    deckName.style.fontWeight = 'bold';
-    deckName.style.marginBottom = '8px';
-    deckName.style.textAlign = 'center';
-    
-    const leaderInfo = document.createElement('div');
-    leaderInfo.textContent = `Líder: ${deck.leader}`;
-    leaderInfo.style.color = '#e2e8f0';
-    leaderInfo.style.fontSize = '14px';
-    leaderInfo.style.textAlign = 'center';
-    leaderInfo.style.marginBottom = '8px';
-    
-  const cardCount = document.createElement('div');
-  // Show total including the leader card (decks saved in deckbuilder store 40 cards + 1 leader = 41)
-  const totalCards = (deck.cards ? deck.cards.length : 0) + (deck.leader ? 1 : 0);
-  cardCount.textContent = `${totalCards} cartas${deck.leader ? ' (inclui líder)' : ''}`;
-    cardCount.style.color = '#94a3b8';
-    cardCount.style.fontSize = '12px';
-    cardCount.style.textAlign = 'center';
-    
-    deckDiv.appendChild(deckName);
-    deckDiv.appendChild(leaderInfo);
-    deckDiv.appendChild(cardCount);
-    
-    deckDiv.onclick = () => {
-      selectSavedDeck(deck);
-      document.body.removeChild(modal);
-    };
-    
+    Object.assign(deckDiv.style, { background:'#0f1724', borderRadius:'12px', padding:'12px', cursor:'pointer', border:'2px solid transparent', transition:'box-shadow 160ms, transform 160ms' });
+    deckDiv.onmouseover = ()=>{ deckDiv.style.boxShadow='0 12px 30px rgba(250,180,40,0.06)'; deckDiv.style.transform='translateY(-4px)'; pvImg.src = deck.leaderImg || CHOSEN_IMAGES[(deck.leader && getLeaderKey(deck.leader))||'katsu'] || 'assets/ui/card-back.png'; pvName.textContent = deck.deckName || deck.leader || 'Deck sem nome'; const total = (deck.cards?deck.cards.length:0) + (deck.leader?1:0); pvMeta.textContent = `${total} cartas • Líder: ${deck.leader || '—'}`; };
+    deckDiv.onmouseout = ()=>{ deckDiv.style.boxShadow=''; deckDiv.style.transform=''; };
+
+    const deckName = document.createElement('div'); deckName.textContent = deck.deckName || deck.leader || 'Deck sem nome'; deckName.style.color = '#facc15'; deckName.style.fontWeight='800'; deckName.style.marginBottom='6px'; deckName.style.textAlign='center';
+    const leaderInfo = document.createElement('div'); leaderInfo.textContent = `Líder: ${deck.leader || '—'}`; leaderInfo.style.color='#e2e8f0'; leaderInfo.style.fontSize='13px'; leaderInfo.style.textAlign='center'; leaderInfo.style.marginBottom='6px';
+    const cardCount = document.createElement('div'); const totalCards = (deck.cards ? deck.cards.length : 0) + (deck.leader ? 1 : 0); cardCount.textContent = `${totalCards} cartas${deck.leader ? ' (inclui líder)' : ''}`; cardCount.style.color='#94a3b8'; cardCount.style.fontSize='12px'; cardCount.style.textAlign='center';
+    deckDiv.appendChild(deckName); deckDiv.appendChild(leaderInfo); deckDiv.appendChild(cardCount);
+
+    deckDiv.onclick = () => { selectSavedDeck(deck); document.body.removeChild(modal); };
     grid.appendChild(deckDiv);
   });
-  
-  const buttonContainer = document.createElement('div');
-  buttonContainer.style.textAlign = 'center';
-  buttonContainer.style.gap = '12px';
-  buttonContainer.style.display = 'flex';
-  buttonContainer.style.justifyContent = 'center';
-  
-  const manualButton = document.createElement('button');
-  manualButton.textContent = 'Escolher Líder Manualmente';
-  manualButton.style.background = '#38bdf8';
-  manualButton.style.color = '#18181b';
-  manualButton.style.border = 'none';
-  manualButton.style.borderRadius = '8px';
-  manualButton.style.padding = '8px 16px';
-  manualButton.style.cursor = 'pointer';
-  manualButton.onclick = () => {
-    document.body.removeChild(modal);
-    const opts=[
-      { key:'katsu',name:'Katsu, o Vingador',ac:12,hp:20,maxHp:20,atkBonus:4,damage:4,filiacao:'Marcial',classe:'Guerreiro',tipo:'Humano' },
-      { key:'valbrak',name:'Valbrak, Herói do Povo',ac:10,hp:20,maxHp:20,atkBonus:2,damage:2,filiacao:'Arcana',classe:'Mago',tipo:'Anão' },
-      { key:'leafae',name:'Leafae, Guardião',ac:10,hp:20,maxHp:20,atkBonus:2,damage:1,filiacao:'Religioso',classe:'Druida',tipo:'Elfo' },
-      { key:'ademais',name:'Ademais, Aranha Negra',ac:11,hp:20,maxHp:20,atkBonus:3,damage:3,filiacao:'Sombras',classe:'Clérigo',tipo:'Humano' },
-    ];
-    showCharSelect(opts);
-  };
-  
-  const cancelButton = document.createElement('button');
-  cancelButton.textContent = 'Cancelar';
-  cancelButton.style.background = '#555';
-  cancelButton.style.color = '#e2e8f0';
-  cancelButton.style.border = 'none';
-  cancelButton.style.borderRadius = '8px';
-  cancelButton.style.padding = '8px 16px';
-  cancelButton.style.cursor = 'pointer';
-  cancelButton.onclick = () => document.body.removeChild(modal);
-  
-  buttonContainer.appendChild(manualButton);
-  buttonContainer.appendChild(cancelButton);
-  
-  container.appendChild(grid);
-  container.appendChild(buttonContainer);
-  modal.appendChild(container);
-  document.body.appendChild(modal);
+
+  const buttonContainer = document.createElement('div'); Object.assign(buttonContainer.style, { display:'flex', justifyContent:'center', gap:'12px' });
+  const manualButton = document.createElement('button'); manualButton.textContent = 'Escolher Líder Manualmente'; Object.assign(manualButton.style, { background:'linear-gradient(180deg,#facc15,#f59e0b)', color:'#111', border:'none', borderRadius:'8px', padding:'8px 14px', cursor:'pointer', fontWeight:'800' });
+  manualButton.onclick = () => { document.body.removeChild(modal); const opts=[ { key:'katsu',name:'Katsu, o Vingador',ac:12,hp:20,maxHp:20,atkBonus:4,damage:4,filiacao:'Marcial',classe:'Guerreiro',tipo:'Humano' }, { key:'valbrak',name:'Valbrak, Herói do Povo',ac:10,hp:20,maxHp:20,atkBonus:2,damage:2,filiacao:'Arcana',classe:'Mago',tipo:'Anão' }, { key:'leafae',name:'Leafae, Guardião',ac:10,hp:20,maxHp:20,atkBonus:2,damage:1,filiacao:'Religioso',classe:'Druida',tipo:'Elfo' }, { key:'ademais',name:'Ademais, Aranha Negra',ac:11,hp:20,maxHp:20,atkBonus:3,damage:3,filiacao:'Sombras',classe:'Clérigo',tipo:'Humano' }, ]; showCharSelect(opts); };
+
+  const cancelButton = document.createElement('button'); cancelButton.textContent = 'Cancelar'; Object.assign(cancelButton.style, { background:'#111', color:'#e2e8f0', border:'1px solid rgba(255,255,255,0.03)', borderRadius:'8px', padding:'8px 14px', cursor:'pointer' }); cancelButton.onclick = () => document.body.removeChild(modal);
+
+  buttonContainer.appendChild(manualButton); buttonContainer.appendChild(cancelButton);
+  right.appendChild(grid); right.appendChild(buttonContainer);
+  container.appendChild(preview); container.appendChild(right);
+  modal.appendChild(container); document.body.appendChild(modal);
 }
 
 function selectSavedDeck(deck) {
@@ -2949,60 +2895,19 @@ function configureAIDeck(){
   modal.style.zIndex = '9999';
 
   const box = document.createElement('div');
-  box.style.background = '#0e1a2b';
-  box.style.border = '2px solid #2a3b55';
-  box.style.borderRadius = '16px';
-  box.style.padding = '20px';
-  box.style.maxWidth = '680px';
-  box.style.color = '#e2e8f0';
+  Object.assign(box.style, { background:'linear-gradient(180deg,#07121b,#07111a)', border:'1px solid rgba(250,204,21,0.08)', borderRadius:'14px', padding:'20px', maxWidth:'720px', color:'#e2e8f0', boxShadow:'0 12px 40px rgba(0,0,0,0.7)' });
 
-  const h = document.createElement('h3');
-  h.textContent = 'Deck da IA';
-  h.style.marginTop = '0';
-  h.style.color = '#facc15';
-  box.appendChild(h);
+  const h = document.createElement('h3'); h.textContent = 'Deck da IA'; h.style.marginTop='0'; h.style.color='#facc15'; box.appendChild(h);
+  const p = document.createElement('p'); p.textContent = 'Escolha como a IA montará seu deck:'; p.style.marginBottom='12px'; box.appendChild(p);
+  const row = document.createElement('div'); Object.assign(row.style, { display:'flex', gap:'12px', flexWrap:'wrap' });
 
-  const p = document.createElement('p');
-  p.textContent = 'Escolha como a IA montará seu deck:';
-  p.style.marginBottom = '12px';
-  box.appendChild(p);
+  const btnRand = document.createElement('button'); btnRand.className='btn'; Object.assign(btnRand.style, { background:'linear-gradient(180deg,#facc15,#f59e0b)', color:'#111', fontWeight:'800', border:'none', padding:'10px 14px', borderRadius:'8px' }); btnRand.textContent='Aleatório (padrão)'; btnRand.onclick = ()=>{ STATE.ai.customDeck = null; log('IA: deck aleatório selecionado.'); document.body.removeChild(modal); };
 
-  const row = document.createElement('div');
-  row.style.display = 'flex';
-  row.style.gap = '12px';
-  row.style.flexWrap = 'wrap';
+  const btnSaved = document.createElement('button'); btnSaved.className='btn'; Object.assign(btnSaved.style, { background:'#0f1724', color:'#facc15', border:'1px solid rgba(250,204,21,0.08)', padding:'10px 14px', borderRadius:'8px' }); btnSaved.textContent='Usar um dos meus decks salvos'; btnSaved.onclick = ()=>{ document.body.removeChild(modal); showAiDeckSelect(saved); };
 
-  const btnRand = document.createElement('button');
-  btnRand.className = 'btn';
-  btnRand.style.background = '#38bdf8';
-  btnRand.style.color = '#18181b';
-  btnRand.textContent = 'Aleatório (padrão)';
-  btnRand.onclick = ()=>{
-    STATE.ai.customDeck = null;
-    log('IA: deck aleatório selecionado.');
-    document.body.removeChild(modal);
-  };
+  const btnClose = document.createElement('button'); btnClose.className='btn'; Object.assign(btnClose.style, { background:'#111', color:'#e2e8f0', padding:'10px 14px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.02)' }); btnClose.textContent='Cancelar'; btnClose.onclick = ()=>{ document.body.removeChild(modal); };
 
-  const btnSaved = document.createElement('button');
-  btnSaved.className = 'btn';
-  btnSaved.textContent = 'Usar um dos meus decks salvos';
-  btnSaved.onclick = ()=>{
-    document.body.removeChild(modal);
-    showAiDeckSelect(saved);
-  };
-
-  const btnClose = document.createElement('button');
-  btnClose.className = 'btn';
-  btnClose.style.background = '#475569';
-  btnClose.textContent = 'Cancelar';
-  btnClose.onclick = ()=>{ document.body.removeChild(modal); };
-
-  row.appendChild(btnRand);
-  if (saved && saved.length) row.appendChild(btnSaved);
-  row.appendChild(btnClose);
-  box.appendChild(row);
-  modal.appendChild(box);
-  document.body.appendChild(modal);
+  row.appendChild(btnRand); if (saved && saved.length) row.appendChild(btnSaved); row.appendChild(btnClose); box.appendChild(row); modal.appendChild(box); document.body.appendChild(modal);
 }
 
 function showAiDeckSelect(decks){
