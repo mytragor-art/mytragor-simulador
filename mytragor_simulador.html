@@ -16,6 +16,73 @@
         function addQ(el, attr){
           const url = el.getAttribute(attr);
           if(!url) return;
+    <script>
+    // Panel toggle logic (persist state and update UI)
+    (function(){
+      function setBodyClass(name, val){ if(val) document.body.classList.add(name); else document.body.classList.remove(name); }
+      const logBtn = document.getElementById('btnToggleLog');
+      const rightBtn = document.getElementById('btnToggleRight');
+      const LOG_KEY = 'mt_log_collapsed';
+      const RIGHT_KEY = 'mt_right_collapsed';
+      function applyInitial(){ try{
+        const logCollapsed = localStorage.getItem(LOG_KEY) === '1';
+        const rightCollapsed = localStorage.getItem(RIGHT_KEY) === '1';
+        setBodyClass('log-collapsed', logCollapsed);
+        setBodyClass('right-collapsed', rightCollapsed);
+        if(logBtn) logBtn.setAttribute('aria-expanded', (!logCollapsed).toString());
+        if(rightBtn) rightBtn.setAttribute('aria-expanded', (!rightCollapsed).toString());
+      }catch(e){}}
+      function toggleLog(){ const is = document.body.classList.toggle('log-collapsed'); if(logBtn) logBtn.setAttribute('aria-expanded', (!is).toString()); try{ localStorage.setItem(LOG_KEY, is? '1':'0'); }catch(e){} }
+      function toggleRight(){ const is = document.body.classList.toggle('right-collapsed'); if(rightBtn) rightBtn.setAttribute('aria-expanded', (!is).toString()); try{ localStorage.setItem(RIGHT_KEY, is? '1':'0'); }catch(e){} }
+      if(logBtn) logBtn.addEventListener('click', toggleLog);
+      if(rightBtn) rightBtn.addEventListener('click', toggleRight);
+      applyInitial();
+    })();
+
+    // Modal polish: close-on-esc, overlay click-to-close, focus trap and restore
+    (function(){
+      const focusable = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
+      function initModal(modal){ if(!modal) return; try{
+        modal.setAttribute('aria-hidden','false');
+        // save previous focus
+        modal.__prevFocus = document.activeElement;
+        // focus first focusable or the modal itself
+        const f = modal.querySelector(focusable);
+        (f || modal).focus({preventScroll:true});
+        // click outside to close (if not disabled)
+        modal.__overlayClick = function(e){ if(e.target === modal && modal.dataset.noOverlayClose!=='true'){ closeModal(modal); } };
+        modal.addEventListener('click', modal.__overlayClick);
+        // trap tab
+        modal.__trap = function(ev){ if(ev.key === 'Tab'){ const nodes = Array.from(modal.querySelectorAll(focusable)).filter(n=>n.offsetParent!==null); if(!nodes.length) { ev.preventDefault(); return; } const first = nodes[0], last = nodes[nodes.length-1]; if(ev.shiftKey && document.activeElement === first){ ev.preventDefault(); last.focus(); } else if(!ev.shiftKey && document.activeElement === last){ ev.preventDefault(); first.focus(); } } };
+        document.addEventListener('keydown', modal.__trap);
+      }catch(e){ console.warn('initModal error', e); }}
+      function cleanupModal(modal){ if(!modal) return; try{
+        modal.setAttribute('aria-hidden','true');
+        if(modal.__overlayClick) modal.removeEventListener('click', modal.__overlayClick);
+        if(modal.__trap) document.removeEventListener('keydown', modal.__trap);
+        if(modal.__prevFocus && typeof modal.__prevFocus.focus === 'function') modal.__prevFocus.focus({preventScroll:true});
+        delete modal.__prevFocus; delete modal.__overlayClick; delete modal.__trap;
+      }catch(e){ console.warn('cleanupModal error', e); }}
+
+      // close topmost modal (last in DOM that is visible)
+      function closeTopModal(){ const mods = Array.from(document.querySelectorAll('.modal')).filter(m=>m.style && (m.style.display==='flex' || m.style.display==='block')); if(!mods.length) return; const top = mods[mods.length-1]; closeModal(top); }
+      function closeModal(modal){ try{ modal.style.display='none'; cleanupModal(modal); // if using modal queue, ensure we clear showing flag and process queue
+        try{ if(window.__modalShowing){ window.__modalShowing = false; if(window.processModalQueue) setTimeout(window.processModalQueue,20); } }catch(e){}
+      }catch(e){ console.warn('closeModal error', e); }}
+
+      // observe existing modals for being shown and init
+      function watchModals(){ const mods = document.querySelectorAll('.modal'); mods.forEach(m=>{
+        // initial aria
+        if(!m.hasAttribute('aria-hidden')) m.setAttribute('aria-hidden','true');
+        // attach attribute observer
+        const obs = new MutationObserver((records)=>{ records.forEach(r=>{ if(r.attributeName === 'style'){ try{ const d = m.style.display; if(d==='flex' || d==='block'){ initModal(m); } else { cleanupModal(m); } }catch(e){} }); });
+        obs.observe(m, { attributes:true, attributeFilter:['style'] });
+      }); }
+      // global Esc handler
+      document.addEventListener('keydown', function(ev){ if(ev.key === 'Escape'){ closeTopModal(); } });
+      watchModals();
+    })();
+    </script>
           if(/^(https?:|data:|file:|\/\/)/i.test(url)) return;
           if(url.indexOf('?')>-1) el.setAttribute(attr, url + '&' + v); else el.setAttribute(attr, url + '?' + v);
         }
@@ -235,6 +302,16 @@
 
   @media(max-width:1200px){ .app{grid-template-columns: minmax(140px,200px) 1fr minmax(180px,260px); } }
   @media(max-width:980px){ .app{grid-template-columns:1fr} }
+
+  /* Collapsed layout helpers (toggled via body class) */
+  body.log-collapsed .app{ grid-template-columns: 48px 1fr minmax(220px, var(--side-max-right)) !important }
+  body.right-collapsed .app{ grid-template-columns: minmax(var(--side-min), var(--side-max-left)) 1fr 48px !important }
+
+  /* Panel toggle button */
+  .panelToggle{ background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--ink);padding:6px;border-radius:6px;cursor:pointer;font-size:14px }
+  .panelToggle.rightToggle{ position:absolute; right:8px; top:8px; z-index:60; opacity:0.9 }
+  /* When a column is visually collapsed hide its children content except the toggle area */
+  .col.collapsed > *:not(.panelToggle){ display:none }
 
   .col{background:linear-gradient(180deg,rgba(14,26,43,.86),rgba(12,23,40,.80));backdrop-filter:blur(1.5px) saturate(1.05);-webkit-backdrop-filter:blur(1.5px) saturate(1.05);border:1px solid var(--line);border-radius:12px;overflow:auto;padding:10px}
   .right{display:flex;flex-direction:column}
@@ -609,8 +686,11 @@ try{
 
 <div class="app">
   <!-- Log -->
-  <div class="col">
-    <h3>Log</h3>
+  <div class="col" id="logCol">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Log</h3>
+      <button id="btnToggleLog" class="panelToggle" title="Colapsar/Expandir log" aria-expanded="true">▸</button>
+    </div>
     <div class="logControls" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
       <button class="btn btn-choose" id="btnChoose">Escolher Baralho</button>
       <button class="btn" id="btnRestart" title="Reiniciar o simulador">Reiniciar</button>
@@ -620,6 +700,7 @@ try{
 
   <!-- Board -->
   <div class="col right">
+    <button id="btnToggleRight" class="panelToggle rightToggle" title="Colapsar/Expandir coluna direita" aria-expanded="true">◂</button>
     <div class="boardWrap">
       <div class="board boardZoom">
 
