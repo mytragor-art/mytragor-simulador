@@ -23,8 +23,11 @@
 <body>
 	<div class="topbar">
 		<span class="logo">Mytragor</span>
-		<span style="font-size:16px;color:#e2e8f0;">Decks Salvos</span>
-		<a href="deckbuilder.html" class="btn" style="margin-left:24px;">Montar baralho</a>
+		<div style="display:flex;align-items:center;gap:12px">
+			<span style="font-size:16px;color:#e2e8f0;">Decks Salvos</span>
+			<input id="searchDecks" placeholder="Buscar decks..." style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#e6eef8;width:220px;" />
+			<a href="deckbuilder.html" class="btn" style="margin-left:8px;">Montar baralho</a>
+		</div>
 	</div>
 	<div id="deckGrid" class="deckGrid"></div>
 	<script src="../cards/cartas.js"></script>
@@ -36,6 +39,13 @@
 				leafae: '../chosens/leafae.png',
 				ademais: '../chosens/ademais.png'
 			};
+
+			// small UI polish: show deck count
+			function updateDeckCount(n){
+				let el = document.getElementById('deckCount');
+				if(!el){ el = document.createElement('div'); el.id='deckCount'; el.style.color='#cbd5e1'; el.style.fontSize='13px'; el.style.marginLeft='12px'; document.querySelector('.topbar').appendChild(el); }
+				el.textContent = `${n} decks salvos`;
+			}
 			// Imagens dos cards
 				// Busca imagem pelo nome da carta no CARD_DEFS
 				function resolveImg(path) {
@@ -71,13 +81,15 @@
 		}
 		function renderDecks() {
 			const decks = getSavedDecks();
+			const q = (document.getElementById('searchDecks') && document.getElementById('searchDecks').value || '').toLowerCase().trim();
+			const filtered = q ? decks.filter(d => ((d.deckName||'') + ' ' + (d.leaderName||d.leader||'')).toLowerCase().includes(q)) : decks;
 			const grid = document.getElementById('deckGrid');
 			grid.innerHTML = '';
-			if (!decks.length) {
+			if (!filtered.length) {
 				grid.innerHTML = '<div style="color:#f87171;font-size:18px;text-align:center;padding:40px 0;">Nenhum deck salvo.</div>';
 				return;
 			}
-					decks.forEach((deck, idx) => {
+					filtered.forEach((deck, idx) => {
 						const card = document.createElement('div');
 						card.className = 'deckCard';
 					// Imagem do líder
@@ -122,24 +134,34 @@
 										miniGrid.appendChild(mini);
 						});
 						card.appendChild(miniGrid);
-						// Botão de excluir
+						// Botões de ações: Jogar, Copiar, Excluir
 						const actions = document.createElement('div');
 						actions.className = 'deckActions';
-						const btnDel = document.createElement('button');
-						btnDel.className = 'btn';
-						btnDel.textContent = 'Excluir';
+						const btnPlay = document.createElement('button'); btnPlay.className='btn'; btnPlay.textContent='Jogar';
+						btnPlay.onclick = function(){
+							try{ localStorage.setItem('mytragor_play_deck', JSON.stringify({ deckName: deck.deckName||'', leader: deck.leaderName||deck.leader||'', leaderImg: deck.leaderImg||null, cards: deck.cards||[], fragImg: deck.fragImg||null })); }catch(e){}
+							window.open('../../mytragor_simulador.html','_blank');
+						};
+						const btnCopy = document.createElement('button'); btnCopy.className='btn'; btnCopy.textContent='Copiar';
+						btnCopy.onclick = function(){
+							navigator.clipboard && navigator.clipboard.writeText((deck.cards||[]).join('\n'));
+							alert('Lista de cartas copiada para a área de transferência.');
+						};
+						const btnDel = document.createElement('button'); btnDel.className='btn'; btnDel.textContent='Excluir';
 						btnDel.onclick = function () {
 							if (confirm('Excluir este deck salvo?')) {
-								const decks = getSavedDecks();
-								decks.splice(idx, 1);
-								localStorage.setItem('mytragor_decks', JSON.stringify(decks));
-								renderDecks();
+								const all = getSavedDecks();
+								// find the actual index in storage (filtered may change ordering)
+								const realIdx = all.findIndex(x=> (x.deckName===deck.deckName && x.leader===deck.leader) || (x.leaderName===deck.leaderName && x.deckName===deck.deckName));
+								if(realIdx>=0) { all.splice(realIdx,1); localStorage.setItem('mytragor_decks', JSON.stringify(all)); }
+								renderDecks(); updateDeckCount(all.length);
 							}
 						};
-						actions.appendChild(btnDel);
+						actions.appendChild(btnPlay); actions.appendChild(btnCopy); actions.appendChild(btnDel);
 						card.appendChild(actions);
 						grid.appendChild(card);
 					});
+					updateDeckCount(filtered.length);
 
 					// Modal para exibir carta ampliada
 					function showCardModal(imgSrc, cardName) {
@@ -173,7 +195,10 @@
 						modal.appendChild(img);
 					}
 		}
-		renderDecks();
+			renderDecks();
+			// wire search
+			const search = document.getElementById('searchDecks');
+			if(search) search.addEventListener('input', ()=>{ renderDecks(); });
 	</script>
 </body>
 </html>

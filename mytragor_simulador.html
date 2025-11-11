@@ -16,7 +16,17 @@
         function addQ(el, attr){
           const url = el.getAttribute(attr);
           if(!url) return;
-    <script>
+          if(/^(https?:|data:|file:|\/\/)/i.test(url)) return;
+          if(url.indexOf('?')>-1) el.setAttribute(attr, url + '&' + v); else el.setAttribute(attr, url + '?' + v);
+        }
+        document.querySelectorAll('link[rel=stylesheet], script[src], img').forEach(el=>{
+          if(el.tagName==='LINK') addQ(el,'href'); else addQ(el,'src');
+        });
+      }catch(e){ console.warn('cache-bust failed', e); }
+    })();
+  </script>
+
+  <script>
     // Panel toggle logic (persist state and update UI)
     (function(){
       function setBodyClass(name, val){ if(val) document.body.classList.add(name); else document.body.classList.remove(name); }
@@ -31,7 +41,7 @@
         setBodyClass('right-collapsed', rightCollapsed);
         if(logBtn) logBtn.setAttribute('aria-expanded', (!logCollapsed).toString());
         if(rightBtn) rightBtn.setAttribute('aria-expanded', (!rightCollapsed).toString());
-      }catch(e){}}
+      }catch(e){} }
       function toggleLog(){ const is = document.body.classList.toggle('log-collapsed'); if(logBtn) logBtn.setAttribute('aria-expanded', (!is).toString()); try{ localStorage.setItem(LOG_KEY, is? '1':'0'); }catch(e){} }
       function toggleRight(){ const is = document.body.classList.toggle('right-collapsed'); if(rightBtn) rightBtn.setAttribute('aria-expanded', (!is).toString()); try{ localStorage.setItem(RIGHT_KEY, is? '1':'0'); }catch(e){} }
       if(logBtn) logBtn.addEventListener('click', toggleLog);
@@ -75,21 +85,25 @@
         // initial aria
         if(!m.hasAttribute('aria-hidden')) m.setAttribute('aria-hidden','true');
         // attach attribute observer
-        const obs = new MutationObserver((records)=>{ records.forEach(r=>{ if(r.attributeName === 'style'){ try{ const d = m.style.display; if(d==='flex' || d==='block'){ initModal(m); } else { cleanupModal(m); } }catch(e){} }); });
+        const obs = new MutationObserver((records)=>{
+          records.forEach(r=>{
+            if(r.attributeName === 'style'){
+              try{
+                const d = m.style.display;
+                if(d === 'flex' || d === 'block'){
+                  initModal(m);
+                } else {
+                  cleanupModal(m);
+                }
+              }catch(e){}
+            }
+          });
+        });
         obs.observe(m, { attributes:true, attributeFilter:['style'] });
       }); }
       // global Esc handler
       document.addEventListener('keydown', function(ev){ if(ev.key === 'Escape'){ closeTopModal(); } });
       watchModals();
-    })();
-    </script>
-          if(/^(https?:|data:|file:|\/\/)/i.test(url)) return;
-          if(url.indexOf('?')>-1) el.setAttribute(attr, url + '&' + v); else el.setAttribute(attr, url + '?' + v);
-        }
-        document.querySelectorAll('link[rel=stylesheet], script[src], img').forEach(el=>{
-          if(el.tagName==='LINK') addQ(el,'href'); else addQ(el,'src');
-        });
-      }catch(e){ console.warn('cache-bust failed', e); }
     })();
   </script>
 <style>

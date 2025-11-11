@@ -13,24 +13,24 @@
       min-height: 100vh;
       margin: 0 auto;
       background: linear-gradient(180deg, rgba(14,20,38,0.6), rgba(6,10,20,0.6));
-      padding: 36px 20px;
+  padding: 24px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
       box-sizing: border-box;
-      gap: 18px;
+      gap: 12px;
     }
     h1 { text-align: center; margin-bottom: 6px; color: #facc15; font-family: 'Cinzel', Georgia, serif; font-weight:800; letter-spacing:1px }
-    .deck-builder-wrap { width:100%; max-width:1100px; display:flex; gap:20px; align-items:flex-start }
+  .deck-builder-wrap { width:100%; max-width:1100px; display:flex; gap:14px; align-items:flex-start }
     .panel { background: linear-gradient(180deg, rgba(14,26,43,.9), rgba(8,14,26,.72)); border:1px solid rgba(250,204,21,0.06); border-radius:12px; padding:14px; box-shadow: 0 12px 30px rgba(2,6,23,0.7); }
     .left, .right { box-sizing:border-box }
   .left { flex: 1 1 auto; min-width: 0; }
   /* slightly increase panel width so 3 columns fit without clipping */
-  .right { flex: 0 0 360px; width: 360px; }
+  .right { flex: 0 0 320px; width: 320px; }
   /* make the right deck-list visually match the card-pool: three responsive columns
      with card tiles that reuse the main .card look (scaled to fit) so the "veil"
      and background don't get visually clipped. */
-  .right .deck-list { display:grid; grid-template-columns: repeat(3, minmax(96px, 1fr)); gap:8px; padding:8px; min-height: 420px; }
+  .right .deck-list { display:grid; grid-template-columns: repeat(3, minmax(88px, 1fr)); gap:8px; padding:8px; min-height: 360px; }
   .right .deck-list .card { /* preserve main .card aesthetics but scale to grid cell */
     background: linear-gradient(180deg, rgba(16,32,57,0.6), rgba(8,18,32,0.6));
     border-radius: 10px;
@@ -49,7 +49,7 @@
   .right .deck-list .card img{ width:40px; height:60px; object-fit:cover; border-radius:4px; }
   .right .deck-list .card div{ font-size:11px; color: #e6eef8; }
   .deck-list { display: grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:8px; min-height: 120px; background: transparent; border-radius: 8px; padding: 8px; }
-  .card-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap:12px; margin-bottom: 8px; min-height: 40px; max-width: 100%; justify-items: start; align-items: start; }
+  .card-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:10px; margin-bottom: 8px; min-height: 40px; max-width: 100%; justify-items: start; align-items: start; }
   /* Filter bar */
   .filterBar { display:flex; gap:8px; align-items:center; margin:6px 0 12px 0; }
   .filterSearch { padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background: rgba(0,0,0,0.24); color:#e6eef8; font-size:14px; width:320px; }
@@ -62,7 +62,7 @@
       background: linear-gradient(180deg, rgba(16,32,57,0.6), rgba(8,18,32,0.6));
       border-radius: 10px;
       padding: 8px;
-  width: 160px;
+  width: 140px;
       text-align: center;
       cursor: pointer;
       box-shadow: 0 8px 20px rgba(2,6,23,0.6);
@@ -89,7 +89,7 @@
   .modalBox { background: #0b1220; color: #e2e8f0; padding: 18px; border-radius: 8px; max-width: 1000px; width: 96%; box-shadow: 0 8px 40px #0008; }
     .controls { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; }
   /* golden primary buttons across the page */
-  button { background: linear-gradient(180deg,#facc15,#f59e0b); color: #111111; border: 1px solid rgba(250,200,60,0.12); border-radius: 6px; padding: 8px 16px; font-size: 16px; cursor: pointer; box-shadow: 0 8px 20px rgba(250,180,20,0.06); }
+  button { background: linear-gradient(180deg,#facc15,#f59e0b); color: #111111; border: 1px solid rgba(250,200,60,0.12); border-radius: 8px; padding: 8px 14px; font-size: 15px; cursor: pointer; box-shadow: 0 8px 20px rgba(250,180,20,0.06); }
     button:disabled { background: #555; color: #aaa; cursor: not-allowed; }
   /* smaller filter-style buttons use the same gold palette but subtler */
   .filterBtn { background: linear-gradient(180deg,#facc15,#f59e0b); color:#111; border:1px solid rgba(250,200,60,0.08); }
@@ -98,6 +98,9 @@
   .card-preview { position: fixed; pointer-events: none; background: linear-gradient(180deg, #071025, #0b1220); border: 1px solid rgba(250,204,21,0.08); padding: 12px; border-radius:12px; width:440px; max-width:50vw; box-shadow: 0 18px 48px rgba(2,6,23,0.85); color:#e6eef8; z-index:20000; display:none; }
   /* larger hover/modal preview so card text is easier to read */
   .card-preview img { width:200px; height:300px; object-fit:cover; border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,0.6); }
+  /* bigger preview variant used when hovering items in the right column */
+  .card-preview.deck-large { width:360px; }
+  .card-preview.deck-large img { width:280px; height:420px; }
   .card-preview .meta { margin-left:12px; max-height:260px; overflow:auto }
   /* floating small hint shown when leader selected (right side modal-like) */
   .floatingHint {
@@ -130,6 +133,9 @@
     text-align: center;
     min-width: 140px;
   }
+  /* subtle pulse to draw attention to play CTA */
+  @keyframes softPulse { 0% { transform: translateY(0); box-shadow: 0 6px 18px rgba(250,180,20,0.06);} 50% { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(250,170,20,0.12);} 100% { transform: translateY(0); box-shadow: 0 6px 18px rgba(250,180,20,0.06);} }
+  .pulse { animation: softPulse 1600ms ease-in-out infinite; }
   </style>
   <script>
     (function(){
@@ -154,7 +160,8 @@
     <div style="text-align:center;margin-bottom:6px;">
       <img src="logo.png" alt="Logo Mytragor" style="max-width:220px;width:36vw;filter:drop-shadow(0 6px 22px rgba(0,0,0,0.7));margin-bottom:8px;border-radius:8px;" onerror="this.style.display='none'">
     </div>
-    <h1>Montador de Deck</h1>
+  <h1>Montador de Deck</h1>
+  <div style="text-align:center;color:#cbd5e1;max-width:760px;margin:0 auto 6px;font-size:14px">Monte um deck competitivo em minutos — escolha um líder, preencha 40 cartas e clique em "Jogar" para testar seu deck imediatamente no simulador.</div>
     <div class="deck-builder-wrap">
       <div class="panel left">
         <div class="deck-info" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -214,7 +221,7 @@
         <div class="card-pool" id="cardPool"></div>
       </div>
       <div class="panel right">
-        <div style="margin-bottom:8px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 style="font-size:18px;margin:0;color:#e6eef8">Seu deck</h2><div style="display:flex;gap:8px"><input id="deckNameInput" type="text" placeholder="Nome do deck (opcional)" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#e6eef8;width:180px;" /><button id="btnSalvar" class="mp-btn primary" disabled>Salvar</button></div></div>
+  <div style="margin-bottom:8px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 style="font-size:18px;margin:0;color:#e6eef8">Seu deck</h2><div style="display:flex;gap:8px;align-items:center"><input id="deckNameInput" type="text" placeholder="Nome do deck (opcional)" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#e6eef8;width:140px;" /><button id="btnSalvar" class="mp-btn primary" disabled>Salvar</button><button id="btnPlay" title="Testar este deck agora" style="margin-left:6px;" class="pulse">Jogar</button></div></div>
         <div class="deck-list" id="deckList"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button id="btnLimpar" class="mp-btn">Limpar</button><button id="btnVerDecks" class="mp-btn">Ver decks</button></div>
       </div>
@@ -231,6 +238,7 @@
   const cardPool = document.getElementById('cardPool');
   const deckSize = document.getElementById('deckSize');
   const btnSalvar = document.getElementById('btnSalvar');
+  const btnPlay = document.getElementById('btnPlay');
   const btnLimpar = document.getElementById('btnLimpar');
   const btnVerDecks = document.getElementById('btnVerDecks');
   const deckNameInput = document.getElementById('deckNameInput');
@@ -485,19 +493,21 @@
         cardPreview.style.left = left + 'px'; cardPreview.style.top = top + 'px';
       }
 
-      function hidePreviewCard(){ cardPreview.style.display = 'none'; }
+      function hidePreviewCard(){ cardPreview.style.display = 'none'; cardPreview.classList.remove('deck-large'); }
 
       function attachPreviewHandlers(el, card){
         if(!el || !card) return;
         let moved = false;
-        const onEnter = (ev)=>{ moved=false; showPreviewCard(card, ev.clientX, ev.clientY); };
+        // determine if this element is part of the right-hand deck list (larger preview)
+        const wantsLarge = el.dataset && el.dataset.preview === 'large' || !!el.closest && !!el.closest('#deckList');
+        const onEnter = (ev)=>{ moved=false; if(wantsLarge) cardPreview.classList.add('deck-large'); else cardPreview.classList.remove('deck-large'); showPreviewCard(card, ev.clientX, ev.clientY); };
         const onMove = (ev)=>{ moved=true; positionPreview(ev.clientX, ev.clientY); };
         const onLeave = ()=>{ hidePreviewCard(); };
         el.addEventListener('mouseenter', onEnter);
         el.addEventListener('mousemove', onMove);
         el.addEventListener('mouseleave', onLeave);
         // touch fallback: show on touchstart briefly
-        el.addEventListener('touchstart', (e)=>{ const t = e.touches && e.touches[0]; if(t) showPreviewCard(card, t.clientX, t.clientY); setTimeout(hidePreviewCard, 2500); }, {passive:true});
+        el.addEventListener('touchstart', (e)=>{ const t = e.touches && e.touches[0]; if(t){ if(wantsLarge) cardPreview.classList.add('deck-large'); else cardPreview.classList.remove('deck-large'); showPreviewCard(card, t.clientX, t.clientY); } setTimeout(hidePreviewCard, 2500); }, {passive:true});
       }
 
     function renderLeaders() {
@@ -657,7 +667,8 @@
         }
       }
       deckSize.textContent = `${deck.length}/40 cartas${chosenLeader ? ' + 1 líder' : ''}`;
-      btnSalvar.disabled = !(chosenLeader && deck.length === 40);
+  btnSalvar.disabled = !(chosenLeader && deck.length === 40);
+  if (btnPlay) btnPlay.disabled = !(chosenLeader && deck.length === 40);
       // update floating deck info (small modal on right)
       try{
         const f = document.getElementById('deckInfoFloating');
@@ -788,6 +799,18 @@
       // Optionally redirect to decks salvos page
       // leave on page by default; if user wants, they can click 'Ver decks salvos'
     };
+
+    // Play with this deck: save a temporary key and open the simulator in a new tab
+    if (btnPlay) {
+      btnPlay.onclick = function() {
+        if (!chosenLeader || deck.length !== 40) { alert('Selecione um líder e complete 40 cartas antes de testar.'); return; }
+        const deckName = (deckNameInput && String(deckNameInput.value || '').trim()) || '';
+        const payload = { deckName: deckName, leader: chosenLeader.name, leaderImg: chosenLeader.img, cards: deck.map(c=>c.name), fragImg: chosenFragImg || null };
+        try { localStorage.setItem('mytragor_play_deck', JSON.stringify(payload)); } catch(e){ console.warn('could not persist play deck', e); }
+        // open simulator — path relative to assets/ui
+        window.open('../../mytragor_simulador.html', '_blank');
+      };
+    }
 
     if (btnVerDecks) {
       btnVerDecks.onclick = function() {
