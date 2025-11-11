@@ -450,7 +450,7 @@
     z-index:auto;
   }
   /* Slight overlap so the hand doesn't push the board horizontally */
-  .hand .card.handCard{ position:relative; width:128px; margin-left:-34px; transition:transform .16s ease, box-shadow .16s ease }
+  .hand .card.handCard{ position:relative; width:128px; /* keep card aspect ratio based on --cardW/--cardH */ height: calc(128px * (var(--cardH) / var(--cardW))); margin-left:-34px; transition:transform .16s ease, box-shadow .16s ease }
   .hand .card.handCard:first-child{ margin-left:0 }
   /* Indicador de jogável agora: borda suave + pulso leve */
   .card.handCard.canPlay { border: 2px solid #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.35); animation: pulseRing 1.8s ease-in-out infinite; z-index:2; filter:none; }
