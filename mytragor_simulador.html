@@ -154,24 +154,21 @@
 }
   html,body{height:100%}
 
-  /* Fundo com aparência de papel pergaminho envelhecido */
+  /* Enhanced scenic background: map texture + subtle veil + grain */
   body{
     margin:0;
-    background:
-      /* grão sutil (pontinhos) */
-      repeating-radial-gradient(circle at 15% 35%, rgba(0,0,0,.03) 0 1px, transparent 1px 12px),
-      repeating-radial-gradient(circle at 75% 65%, rgba(0,0,0,.02) 0 1px, transparent 1px 10px),
-      /* manchas e nuances */
-      radial-gradient(1100px 700px at 20% 10%, rgba(255,255,255,.5), rgba(255,255,255,0) 60%),
-      radial-gradient(1200px 800px at 80% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 65%),
-      radial-gradient(1400px 900px at 50% 60%, rgba(139, 101, 8, .08), rgba(139,101,8,0) 60%),
-      /* vinheta leve nas bordas */
-      linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 82%, rgba(0,0,0,.08)),
-      /* base do papel */
-      #f5edd6;
-    background-attachment: fixed;
+    /* Layer order: color veil (top), subtle vignette & highlights, map image, grain texture */
+    background-color: #071025;
+    background-image:
+      linear-gradient(180deg, rgba(6,12,20,0.66), rgba(6,12,20,0.66)),
+      radial-gradient(1200px 700px at 15% 10%, rgba(255,255,255,0.06), rgba(255,255,255,0) 45%),
+      url("assets/bgambientes/campos_bg.png"),
+      repeating-radial-gradient(circle at 15% 35%, rgba(0,0,0,.03) 0 1px, transparent 1px 12px);
+    background-size: cover, cover, cover, auto;
+    background-position: center center, center center, center center, 0 0;
+    background-attachment: fixed, fixed, fixed, scroll;
     color:var(--ink);
-    font:14px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial
+    font:14px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
   }
 
   /* Topbar */
