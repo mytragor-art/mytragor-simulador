@@ -154,19 +154,19 @@
 }
   html,body{height:100%}
 
-  /* Enhanced scenic background: map texture + subtle veil + grain */
+  /* Scenic background: map texture + subtle highlights + grain. The global veil is removed
+     so individual arenas (which have their own veils) remain visually distinct. */
   body{
     margin:0;
-    /* Layer order: color veil (top), subtle vignette & highlights, map image, grain texture */
     background-color: #071025;
+    /* Layer order: subtle highlight, map image, grain texture */
     background-image:
-      linear-gradient(180deg, rgba(6,12,20,0.66), rgba(6,12,20,0.66)),
-      radial-gradient(1200px 700px at 15% 10%, rgba(255,255,255,0.06), rgba(255,255,255,0) 45%),
+      radial-gradient(1200px 700px at 15% 10%, rgba(255,255,255,0.04), rgba(255,255,255,0) 45%),
       url("assets/bgambientes/campos_bg.png"),
       repeating-radial-gradient(circle at 15% 35%, rgba(0,0,0,.03) 0 1px, transparent 1px 12px);
-    background-size: cover, cover, cover, auto;
-    background-position: center center, center center, center center, 0 0;
-    background-attachment: fixed, fixed, fixed, scroll;
+    background-size: cover, cover, auto;
+    background-position: center center, center center, 0 0;
+    background-attachment: fixed, fixed, scroll;
     color:var(--ink);
     font:14px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
   }
@@ -313,6 +313,11 @@
 
   @media(max-width:1200px){ .app{grid-template-columns: minmax(140px,200px) 1fr minmax(180px,260px); } }
   @media(max-width:980px){ .app{grid-template-columns:1fr} }
+
+  /* Background rotator layers (behind everything) */
+  .bg-rotator{ position:fixed; inset:0; z-index:-9999; pointer-events:none; overflow:hidden }
+  .bg-rotator .bgLayer{ position:absolute; inset:0; background-size:cover; background-position:center center; background-repeat:no-repeat; opacity:0; transition:opacity 1200ms ease; filter:brightness(0.86) saturate(1.02); }
+  .bg-rotator .bgLayer.visible{ opacity:1 }
 
   /* Collapsed layout helpers (toggled via body class) */
   body.log-collapsed .app{ grid-template-columns: 48px 1fr minmax(220px, var(--side-max-right)) !important }
@@ -662,7 +667,41 @@ try{
 }catch(e){ console.warn('modal queue init failed', e); }
 </script>
 
+<script>
+// Background selection script: pick one image from assets/bgambientes on each load
+;(function(){
+  const IMAGES = [
+    'assets/bgambientes/tempestade_bg.png',
+    'assets/bgambientes/labirinto_bg.png',
+    'assets/bgambientes/catedral_bg.png',
+    'assets/bgambientes/campos_bg.png'
+  ];
+  function preload(src){ const i=new Image(); i.src=src; }
+  IMAGES.forEach(preload);
+  function setBg(el, src){ if(!el) return; el.style.backgroundImage = `url("${src}")`; }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    try{
+      const a = document.getElementById('bgLayerA');
+      const b = document.getElementById('bgLayerB');
+      if(!a) return;
+      const idx = Math.floor(Math.random() * IMAGES.length);
+      setBg(a, IMAGES[idx]);
+      a.classList.add('visible');
+      // ensure the secondary layer is empty/hidden
+      if(b){ b.classList.remove('visible'); b.style.backgroundImage = '' }
+    }catch(e){ console.warn('bg select failed', e); }
+  });
+})();
+</script>
+
 <body>
+
+  <!-- Background rotator (controlled by JS) -->
+  <div class="bg-rotator" aria-hidden="true">
+    <div class="bgLayer" id="bgLayerA"></div>
+    <div class="bgLayer" id="bgLayerB"></div>
+  </div>
 
 <!-- Topbar -->
 <div class="topbar">
