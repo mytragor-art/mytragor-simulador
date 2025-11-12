@@ -1,0 +1,40 @@
+/* minimal styles */
+html,body,#root{height:100%;margin:0;padding:0}
+body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6eef8;background:#071025}
+button{cursor:pointer}
+
+/* Cross-browser compatibility fallbacks */
+/* Filters: provide -webkit-filter and unprefixed filter for modern browsers */
+.filterable { -webkit-filter: blur(0); filter: blur(0); }
+
+/* Text size adjust: help prevent automatic font-size changes on mobile */
+html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Backdrop filter (use prefixed form for Safari) */
+.backdrop-glass { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+
+/* User select: prefixed versions for Safari/old browsers */
+.no-select { -webkit-user-select: none; -ms-user-select: none; user-select: none; }
+
+/* Forced color adjust: provide prefixed/alternate for print & older engines */
+/* Note: Safari doesn't support forced-color-adjust; use -webkit-print-color-adjust where relevant */
+.no-forced-color {
+	/* Respect forced color mode when possible */
+	forced-color-adjust: none;
+	/* Preserve colors when printing (WebKit/Blink) */
+	-webkit-print-color-adjust: exact;
+	/* Standard print color adjust */
+	print-color-adjust: exact;
+	/* Legacy property 'color-adjust' is deprecated; keep commented to avoid linter warnings
+		 If you need it for an older engine uncomment the next line. */
+	/* color-adjust: exact; */
+}
+
+/* Icon background: fallback to a single image to avoid PostCSS parsing issues with image-set in some environments */
+.icon {
+	background-image: url('icon@1x.png');
+	/* If you want HiDPI support, consider serving @2x via media queries or picture element instead of image-set */
+}
+
+/* fallback for older Safari: ensure basic visuals degrade gracefully */
+.card { background-color: rgba(255,255,255,0.03); }

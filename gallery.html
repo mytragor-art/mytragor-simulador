@@ -32,7 +32,8 @@
         <div class="lead">Explore os elementos visuais e as cartas do jogo.</div>
       </div>
       <div style="text-align:right">
-        <a class="back" href="index.html">← Voltar</a>
+        <!-- Use JS-backed back (history) with fallback to local index.html to avoid wrong relative-path errors -->
+        <a id="btnBackHeader" class="back" href="#" title="Voltar">← Voltar</a>
       </div>
     </header>
 
@@ -52,8 +53,41 @@
     </section>
 
     <div class="btnRow">
-      <a class="gold-btn ghost" href="index.html">Voltar ao início</a>
+      <!-- Footer: provide explicit 'Voltar' (history) and 'Voltar ao menu' buttons -->
+      <button id="btnBackFooter" class="gold-btn ghost" style="background:transparent;border:1px solid rgba(250,204,21,0.12);">Voltar</button>
+      <a id="btnMenu" class="gold-btn ghost" href="#" style="margin-left:8px">Voltar ao menu</a>
     </div>
+    <script>
+      // Wire back/menu buttons: try history.back(), else navigate to index.html in the same folder.
+      (function(){
+        function resolveIndexPath(){
+          try{
+            const p = window.location.pathname || '';
+            // If path ends with a filename, strip to directory and append index.html
+            const base = p.endsWith('/') ? p : p.substring(0, p.lastIndexOf('/')+1);
+            return base + 'index.html';
+          }catch(e){ return 'index.html'; }
+        }
+
+        function safeBack(){
+          // If there's a previous entry in history, go back; otherwise go to index.html
+          if(window.history && history.length > 1){
+            history.back();
+            // In case history.back() does nothing (single entry), also set a timeout fallback
+            setTimeout(()=>{ if(document.visibilityState === 'visible') window.location.href = resolveIndexPath(); }, 400);
+          } else { window.location.href = resolveIndexPath(); }
+        }
+
+        document.addEventListener('DOMContentLoaded', ()=>{
+          const h = document.getElementById('btnBackHeader');
+          const f = document.getElementById('btnBackFooter');
+          const m = document.getElementById('btnMenu');
+          if(h) h.addEventListener('click', (e)=>{ e.preventDefault(); safeBack(); });
+          if(f) f.addEventListener('click', (e)=>{ e.preventDefault(); safeBack(); });
+          if(m) m.addEventListener('click', (e)=>{ e.preventDefault(); window.location.href = resolveIndexPath(); });
+        });
+      })();
+    </script>
   </div>
 </body>
 </html>
