@@ -729,7 +729,15 @@
     /* board wrapper should allow the board to take remaining space and center */
     .boardWrap { padding: 4px 0; }
     .scaler { justify-content: center; align-items: flex-start; }
-    .boardStage { transform-origin: top center; }
+     /* On mobile, let the boardStage fill available width and avoid global scaling that makes the arena tiny.
+       We remove the transform scale so the board uses natural responsive sizing; inner elements should
+       respond to width (cards use CSS variables) — this keeps interactions/touch coordinates consistent. */
+     .boardStage { transform-origin: top center; width: 100% !important; height: auto !important; transform: none !important; }
+     .board { width: 100% !important; max-width: 100% !important; min-width: 320px; box-sizing: border-box; }
+
+     /* Ensure the arena and its veil expand to full width so the player can interact comfortably */
+     .col.right, .arena, .arenaEnvBg { width: 100% !important; max-width: 100% !important; }
+     .arena { padding-left: 12px; padding-right: 12px; }
 
     /* hand and other side elements should wrap more compactly */
     .hand .card.handCard { width: 112px; height: calc(112px * (var(--cardH) / var(--cardW))); margin-left: -28px; }
