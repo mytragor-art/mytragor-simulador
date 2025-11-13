@@ -19,6 +19,7 @@
 	.btn:hover { filter: brightness(1.05); transform: translateY(-2px); }
 	@media (max-width: 700px) { .deckGrid { grid-template-columns: 1fr; padding: 12px; } }
 	</style>
+	<link rel="stylesheet" href="../mobile.css" media="(max-width:880px)">
 </head>
 <body>
 	<div class="topbar">
@@ -31,6 +32,7 @@
 	</div>
 	<div id="deckGrid" class="deckGrid"></div>
 	<script src="../cards/cartas.js"></script>
+	<script src="../mobile.js"></script>
 	<script>
 			// Imagens dos líderes
 			const CHOSEN_IMAGES = {

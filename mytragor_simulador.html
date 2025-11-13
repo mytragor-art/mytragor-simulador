@@ -736,6 +736,20 @@
     /* cap the inspector height to avoid pushing the arena too far */
     #previewCol .inspector { max-height: 28vh; overflow:auto; }
 
+    /* COLLAPSE by default on mobile: preview and log hidden unless column has .expanded */
+    #previewCol .inspector, #previewCol .meta { display: none; }
+    #previewCol .inspector img { max-width:100%; }
+    #previewCol.expanded .inspector, #previewCol.expanded .meta { display: block; }
+
+    #logCol .log { display: none; }
+    #logCol.expanded .log { display: block; max-height: 40vh; overflow:auto; }
+
+    /* show mobile-specific toggle buttons */
+    #btnTogglePreview, #btnToggleLogMobile { display: inline-block !important; }
+
+    /* ensure arena gets minimum usable height */
+    .boardStage, .board { min-height: 50vh !important; height: auto !important; }
+
     /* make the log reasonably tall but not dominant; allow it to shrink */
     #logCol .log { max-height: 34vh; padding-bottom: 48px; overflow:auto; }
 
@@ -756,6 +770,8 @@
     .hand .card.handCard { width: 112px; height: calc(112px * (var(--cardH) / var(--cardW))); margin-left: -28px; }
   }
 </style>
+
+  <link rel="stylesheet" href="assets/mobile.css" media="(max-width:880px)">
 
 </head>
 
@@ -852,7 +868,10 @@ try{
   <div class="col" id="logCol">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
       <h3 style="margin:0">Log</h3>
-      <button id="btnToggleLog" class="panelToggle" title="Colapsar/Expandir log" aria-expanded="true">▸</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button id="btnToggleLog" class="panelToggle" title="Colapsar/Expandir log" aria-expanded="true">▸</button>
+        <button id="btnToggleLogMobile" class="panelToggle" title="Abrir/Fechar log" aria-expanded="false" style="display:none">Abrir</button>
+      </div>
     </div>
     <div class="logControls" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
       <button class="btn btn-choose" id="btnChoose">Escolher Baralho</button>
@@ -941,7 +960,12 @@ try{
 
   <!-- Prévia (moved visually to left column via CSS grid) -->
   <div class="col" id="previewCol">
-    <h3>Prévia</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Prévia</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button id="btnTogglePreview" class="panelToggle" aria-expanded="false" title="Abrir/Fechar prévia" style="display:none">Abrir</button>
+      </div>
+    </div>
     <div class="inspector"><div class="big"><img id="bigImg" src="" alt=""></div></div>
     <div class="meta" id="bigMeta">
 Passe o mouse sobre uma carta…
@@ -1220,6 +1244,31 @@ window.addEventListener('resize', ()=>{ clearTimeout(window.__arenaHeightTO); wi
 window.addEventListener('orientationchange', adjustArenaHeightForMobile);
 window.addEventListener('load', ()=>{ setTimeout(adjustArenaHeightForMobile, 140); });
 window.adjustArenaHeightForMobile = adjustArenaHeightForMobile;
+
+// Mobile toggle wiring: manage Preview and Log collapse on small screens
+(function(){
+  function isMobile(){ return window.matchMedia && window.matchMedia('(max-width: 880px)').matches; }
+  function setBtnLabel(btn, expanded, base){ if(!btn) return; btn.setAttribute('aria-expanded', expanded? 'true':'false'); try{ btn.textContent = expanded ? (base? 'Fechar '+base : 'Fechar') : (base? 'Abrir '+base : 'Abrir'); }catch(e){} }
+  function initMobileToggles(){
+    const previewCol = document.getElementById('previewCol');
+    const logCol = document.getElementById('logCol');
+    const btnPreview = document.getElementById('btnTogglePreview');
+    const btnLogMobile = document.getElementById('btnToggleLogMobile');
+
+    function togglePreview(){ if(!previewCol) return; const will = previewCol.classList.toggle('expanded'); setBtnLabel(btnPreview, will, 'Preview'); adjustArenaHeightForMobile(); }
+    function toggleLog(){ if(!logCol) return; const will = logCol.classList.toggle('expanded'); setBtnLabel(btnLogMobile, will, 'Log'); adjustArenaHeightForMobile(); }
+
+    if(btnPreview){ btnPreview.addEventListener('click', togglePreview); }
+    if(btnLogMobile){ btnLogMobile.addEventListener('click', toggleLog); }
+
+    // On load/resize: ensure collapsed by default on mobile, expanded on desktop
+    function applyDefault(){ if(isMobile()){ if(previewCol) previewCol.classList.remove('expanded'); if(logCol) logCol.classList.remove('expanded'); setBtnLabel(btnPreview, false, 'Preview'); setBtnLabel(btnLogMobile, false, 'Log'); } else { if(previewCol) previewCol.classList.add('expanded'); if(logCol) logCol.classList.add('expanded'); setBtnLabel(btnPreview, true, 'Preview'); setBtnLabel(btnLogMobile, true, 'Log'); } adjustArenaHeightForMobile(); }
+    window.addEventListener('resize', ()=>{ clearTimeout(window.__mobileToggleTO); window.__mobileToggleTO = setTimeout(applyDefault, 160); });
+    applyDefault();
+  }
+  // Initialize after DOM ready
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMobileToggles); else initMobileToggles();
+})();
 
 /* Imagens */
 // Build chosen images map from CARD_DEFS leaders so leaders are centralized in cartas.js
@@ -6427,5 +6476,6 @@ window.__tour_startDemo = function(){ try{
 <script src="net/net.js"></script>
 <script src="mp_intercept.js"></script>
 
+<script src="assets/mobile.js"></script>
 </body>
 </html>

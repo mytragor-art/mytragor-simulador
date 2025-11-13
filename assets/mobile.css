@@ -1,0 +1,34 @@
+/* Mobile-only stylesheet for small viewports. Loaded with media="(max-width:880px)" so desktop remains unchanged. */
+
+/* Basic touch-friendly defaults */
+html,body{ -webkit-text-size-adjust:100%; font-size:16px; }
+
+/* Generic mobile layout adjustments */
+.app{ grid-template-columns:1fr !important; grid-template-rows: auto minmax(0,1fr) auto !important; height:100vh; }
+.app > .col { min-height:0; }
+
+/* Show mobile toggles */
+#btnTogglePreview, #btnToggleLogMobile { display:inline-block !important; }
+
+/* Collapse preview and log by default — JS will toggle .expanded to show them */
+#previewCol .inspector, #previewCol .meta, #logCol .log{ display:none; }
+#previewCol.expanded .inspector, #previewCol.expanded .meta, #logCol.expanded .log{ display:block; }
+
+/* Ensure board gets usable height */
+.boardStage, .board { min-height:50vh !important; height:auto !important; width:100% !important; transform:none !important; }
+
+/* Increase hit targets for touch */
+.panelToggle, .btn, .gold-btn, .btn-start { padding:12px 18px; font-size:16px; }
+
+/* Avoid huge images pushing layout */
+img{ max-width:100%; height:auto; }
+
+/* Small helper classes */
+.mobile-only{ display:block; }
+.desktop-only{ display:none; }
+
+/* Slightly larger spacing on mobile for readability */
+body{ padding-bottom: 12px; }
+
+/* If a page wants to opt-out of global mobile rules, add class .no-global-mobile on <body> */
+.no-global-mobile .app, .no-global-mobile #previewCol .inspector, .no-global-mobile #logCol .log { all: initial; }
