@@ -1163,26 +1163,56 @@ window.addEventListener('resize', () => {
 function adjustArenaHeightForMobile(){
   try{
     const mq = window.matchMedia('(max-width: 880px)');
+    const preview = document.getElementById('previewCol');
+    const log = document.getElementById('logCol');
+    const topbar = document.querySelector('.topbar');
     if(!mq.matches){
+      // restore
       document.documentElement.style.removeProperty('--arena-available-h');
+      if(preview){ preview.style.maxHeight = ''; preview.style.overflow = ''; }
+      if(log){ log.querySelector && (log.querySelector('.log').style.maxHeight = ''); }
       const stage = document.getElementById('boardStage'); if(stage) { stage.style.height = ''; stage.style.width = ''; }
       const board = document.querySelector('.board'); if(board){ board.style.height = ''; }
       return;
     }
-    const preview = document.getElementById('previewCol');
-    const log = document.getElementById('logCol');
-    const topbar = document.querySelector('.topbar');
-    const previewH = preview ? preview.getBoundingClientRect().height : 0;
-    const logH = log ? log.getBoundingClientRect().height : 0;
+
     const topH = topbar ? topbar.getBoundingClientRect().height : 0;
+    const vh = window.innerHeight;
+    // Minimum arena target: 45% of viewport or 260px whichever larger
+    const arenaMin = Math.max(Math.floor(vh * 0.45), 260);
+
+    // Current natural heights of preview and log (if present)
+    const previewRect = preview ? preview.getBoundingClientRect() : { height: 0 };
+    const logRect = log ? (log.querySelector('.log') ? log.querySelector('.log').getBoundingClientRect() : log.getBoundingClientRect()) : { height: 0 };
+    const previewH = previewRect.height || 0;
+    const logH = logRect.height || 0;
+
     const gap = 32; // spacing allowances
-    // available height for arena: total viewport minus preview, log and topbar
-    const avail = Math.max(220, Math.floor(window.innerHeight - previewH - logH - topH - gap));
-    document.documentElement.style.setProperty('--arena-available-h', avail + 'px');
+    const remaining = Math.max(0, vh - topH - gap - previewH - logH);
+
+    let arenaH = remaining;
+    // If remaining is less than desired min, we must shrink preview/log to make room
+    if(remaining < arenaMin){
+      arenaH = arenaMin;
+      // compute space left for preview+log combined
+      const spaceForSides = Math.max(80, vh - topH - gap - arenaH);
+      // allocate 40% to preview, 60% to log by default
+      const previewMax = Math.max(56, Math.floor(spaceForSides * 0.38));
+      const logMax = Math.max(72, Math.floor(spaceForSides * 0.62));
+      if(preview){ preview.style.maxHeight = previewMax + 'px'; preview.style.overflow = 'auto'; }
+      if(log && log.querySelector('.log')){ log.querySelector('.log').style.maxHeight = logMax + 'px'; log.querySelector('.log').style.overflow = 'auto'; }
+    } else {
+      // natural fit: ensure previous inline caps are cleared
+      if(preview){ preview.style.maxHeight = ''; preview.style.overflow = ''; }
+      if(log && log.querySelector('.log')){ log.querySelector('.log').style.maxHeight = ''; log.querySelector('.log').style.overflow = ''; }
+    }
+
+    // finally apply arena height (use CSS var and inline style as fallback)
+    document.documentElement.style.setProperty('--arena-available-h', arenaH + 'px');
     const stage = document.getElementById('boardStage');
-    if(stage){ stage.style.height = avail + 'px'; stage.style.width = '100%'; }
+    if(stage){ stage.style.height = arenaH + 'px'; stage.style.width = '100%'; }
     const board = document.querySelector('.board');
-    if(board){ board.style.height = avail + 'px'; }
+    if(board){ board.style.height = arenaH + 'px'; }
   }catch(e){ console.warn('adjustArenaHeightForMobile failed', e); }
 }
 
