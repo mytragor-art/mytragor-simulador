@@ -706,7 +706,7 @@
   /* MOBILE ADJUSTMENTS: Force preview+log to stack above the arena on small screens
      and reduce preview/log sizes so the arena remains visible. These rules override
      the desktop two-column layout only on narrow viewports. */
-  @media (max-width: 700px) {
+  @media (max-width: 880px) {
     .app {
       grid-template-columns: 1fr !important;
       /* make rows: preview (auto), arena (flexible), log (auto) */
@@ -736,8 +736,8 @@
      .scaler { justify-content: center; align-items: stretch; flex: 1 1 auto; }
      /* On mobile, let the boardStage fill available width and height and avoid global scaling that makes the arena tiny.
        We remove the transform scale so the board uses natural responsive sizing; then allow it to grow vertically. */
-     .boardStage { transform-origin: top center; width: 100% !important; height: 100% !important; transform: none !important; display:block; }
-     .board { width: 100% !important; max-width: 100% !important; min-width: 320px; box-sizing: border-box; flex: 1 1 auto; }
+    .boardStage { transform-origin: top center; width: 100% !important; height: var(--arena-available-h, 60vh) !important; transform: none !important; display:block; }
+    .board { width: 100% !important; max-width: 100% !important; min-width: 320px; box-sizing: border-box; flex: 1 1 auto; height: 100% !important; }
 
      /* Ensure the arena and its veil expand to full width and height so the player can interact comfortably */
      .col.right, .arena, .arenaEnvBg { width: 100% !important; max-width: 100% !important; height: 100% !important; }
@@ -1149,6 +1149,38 @@ window.addEventListener('resize', () => {
   // Expose for manual debugging
   window.recalcArenaScale = recalcArenaScale;
 })();
+
+// Ensure arena height on mobile/tablet fills the space between preview and log.
+function adjustArenaHeightForMobile(){
+  try{
+    const mq = window.matchMedia('(max-width: 880px)');
+    if(!mq.matches){
+      document.documentElement.style.removeProperty('--arena-available-h');
+      const stage = document.getElementById('boardStage'); if(stage) { stage.style.height = ''; stage.style.width = ''; }
+      const board = document.querySelector('.board'); if(board){ board.style.height = ''; }
+      return;
+    }
+    const preview = document.getElementById('previewCol');
+    const log = document.getElementById('logCol');
+    const topbar = document.querySelector('.topbar');
+    const previewH = preview ? preview.getBoundingClientRect().height : 0;
+    const logH = log ? log.getBoundingClientRect().height : 0;
+    const topH = topbar ? topbar.getBoundingClientRect().height : 0;
+    const gap = 32; // spacing allowances
+    // available height for arena: total viewport minus preview, log and topbar
+    const avail = Math.max(220, Math.floor(window.innerHeight - previewH - logH - topH - gap));
+    document.documentElement.style.setProperty('--arena-available-h', avail + 'px');
+    const stage = document.getElementById('boardStage');
+    if(stage){ stage.style.height = avail + 'px'; stage.style.width = '100%'; }
+    const board = document.querySelector('.board');
+    if(board){ board.style.height = avail + 'px'; }
+  }catch(e){ console.warn('adjustArenaHeightForMobile failed', e); }
+}
+
+window.addEventListener('resize', ()=>{ clearTimeout(window.__arenaHeightTO); window.__arenaHeightTO = setTimeout(adjustArenaHeightForMobile, 120); });
+window.addEventListener('orientationchange', adjustArenaHeightForMobile);
+window.addEventListener('load', ()=>{ setTimeout(adjustArenaHeightForMobile, 140); });
+window.adjustArenaHeightForMobile = adjustArenaHeightForMobile;
 
 /* Imagens */
 // Build chosen images map from CARD_DEFS leaders so leaders are centralized in cartas.js
