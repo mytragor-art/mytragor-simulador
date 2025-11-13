@@ -709,14 +709,18 @@
   @media (max-width: 700px) {
     .app {
       grid-template-columns: 1fr !important;
-      grid-template-rows: auto auto 1fr;
+      /* make rows: preview (auto), arena (flexible), log (auto) */
+      grid-template-rows: auto 1fr auto;
       gap: 8px;
       padding: 8px;
+      min-height: 100vh;
+      height: 100vh;
+      box-sizing: border-box;
     }
-    /* ensure preview and log occupy full width and keep order */
+    /* ensure preview, arena and log occupy full width and the arena sits in the middle row */
     #previewCol { grid-column: 1; grid-row: 1; }
-    #logCol { grid-column: 1; grid-row: 2; }
-    .col.right { grid-column: 1; grid-row: 3; }
+    .col.right { grid-column: 1; grid-row: 2; }
+    #logCol { grid-column: 1; grid-row: 3; }
 
     /* reduce inspector/preview size on mobile */
     .inspector { padding: 8px; }
@@ -726,18 +730,18 @@
     /* make the log reasonably tall but not dominant */
     .log { max-height: 34vh; padding-bottom: 48px; }
 
-    /* board wrapper should allow the board to take remaining space and center */
-    .boardWrap { padding: 4px 0; }
-    .scaler { justify-content: center; align-items: flex-start; }
-     /* On mobile, let the boardStage fill available width and avoid global scaling that makes the arena tiny.
-       We remove the transform scale so the board uses natural responsive sizing; inner elements should
-       respond to width (cards use CSS variables) — this keeps interactions/touch coordinates consistent. */
-     .boardStage { transform-origin: top center; width: 100% !important; height: auto !important; transform: none !important; }
-     .board { width: 100% !important; max-width: 100% !important; min-width: 320px; box-sizing: border-box; }
+     /* board wrapper should allow the board to take the remaining vertical space */
+     .col.right { display:flex; flex-direction:column; }
+     .boardWrap { padding: 4px 0; flex: 1 1 auto; display:flex; flex-direction:column; }
+     .scaler { justify-content: center; align-items: stretch; flex: 1 1 auto; }
+     /* On mobile, let the boardStage fill available width and height and avoid global scaling that makes the arena tiny.
+       We remove the transform scale so the board uses natural responsive sizing; then allow it to grow vertically. */
+     .boardStage { transform-origin: top center; width: 100% !important; height: 100% !important; transform: none !important; display:block; }
+     .board { width: 100% !important; max-width: 100% !important; min-width: 320px; box-sizing: border-box; flex: 1 1 auto; }
 
-     /* Ensure the arena and its veil expand to full width so the player can interact comfortably */
-     .col.right, .arena, .arenaEnvBg { width: 100% !important; max-width: 100% !important; }
-     .arena { padding-left: 12px; padding-right: 12px; }
+     /* Ensure the arena and its veil expand to full width and height so the player can interact comfortably */
+     .col.right, .arena, .arenaEnvBg { width: 100% !important; max-width: 100% !important; height: 100% !important; }
+     .arena { padding-left: 12px; padding-right: 12px; flex: 1 1 auto; display:flex; flex-direction:column; }
 
     /* hand and other side elements should wrap more compactly */
     .hand .card.handCard { width: 112px; height: calc(112px * (var(--cardH) / var(--cardW))); margin-left: -28px; }
