@@ -73,6 +73,23 @@
 					const def = CARD_DEFS.find(c => c.name === cardName);
 					return resolveImg(def?.img || 'card-back.png');
 				}
+		// Encode deck to shareable code
+		function encodeDeck(deck) {
+			try {
+				const deckData = {
+					leader: deck.leaderName || deck.leader || '',
+					leaderKey: deck.leaderKey || '',
+					cards: deck.cards || [],
+					fragImg: deck.fragImg || null,
+					deckName: deck.deckName || ''
+				};
+				return 'MTG:' + btoa(JSON.stringify(deckData));
+			} catch (e) {
+				console.warn('encodeDeck failed', e);
+				return '';
+			}
+		}
+
 		// Carregar decks salvos do localStorage
 		function getSavedDecks() {
 			const raw = localStorage.getItem('mytragor_decks');
@@ -142,11 +159,17 @@
 							try{ localStorage.setItem('mytragor_play_deck', JSON.stringify({ deckName: deck.deckName||'', leader: deck.leaderName||deck.leader||'', leaderImg: deck.leaderImg||null, cards: deck.cards||[], fragImg: deck.fragImg||null })); }catch(e){}
 							window.open('../../mytragor_simulador.html','_blank');
 						};
-						const btnCopy = document.createElement('button'); btnCopy.className='btn'; btnCopy.textContent='Copiar';
-						btnCopy.onclick = function(){
-							navigator.clipboard && navigator.clipboard.writeText((deck.cards||[]).join('\n'));
-							alert('Lista de cartas copiada para a área de transferência.');
-						};
+					const btnCopy = document.createElement('button'); btnCopy.className='btn'; btnCopy.textContent='Copiar lista';
+					btnCopy.onclick = function(){
+						navigator.clipboard && navigator.clipboard.writeText((deck.cards||[]).join('\n'));
+						alert('Lista de cartas copiada para a área de transferência.');
+					};
+					const btnExport = document.createElement('button'); btnExport.className='btn'; btnExport.textContent='Copiar código';
+					btnExport.onclick = function(){
+						const deckCode = encodeDeck(deck);
+						navigator.clipboard && navigator.clipboard.writeText(deckCode);
+						alert('Código do deck copiado! Cole no montador para importar.');
+					};
 						const btnDel = document.createElement('button'); btnDel.className='btn'; btnDel.textContent='Excluir';
 						btnDel.onclick = function () {
 							if (confirm('Excluir este deck salvo?')) {
@@ -157,7 +180,7 @@
 								renderDecks(); updateDeckCount(all.length);
 							}
 						};
-						actions.appendChild(btnPlay); actions.appendChild(btnCopy); actions.appendChild(btnDel);
+						actions.appendChild(btnPlay); actions.appendChild(btnCopy); actions.appendChild(btnExport); actions.appendChild(btnDel);
 						card.appendChild(actions);
 						grid.appendChild(card);
 					});

@@ -247,7 +247,12 @@
       <div class="panel right">
   <div style="margin-bottom:8px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 style="font-size:18px;margin:0;color:#e6eef8">Seu deck</h2><div style="display:flex;gap:8px;align-items:center"><input id="deckNameInput" type="text" placeholder="Nome do deck (opcional)" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#e6eef8;width:140px;" /><button id="btnSalvar" class="mp-btn primary" disabled>Salvar</button><button id="btnPlay" title="Testar este deck agora" style="margin-left:6px;" class="pulse">Jogar</button></div></div>
         <div class="deck-list" id="deckList"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button id="btnLimpar" class="mp-btn">Limpar</button><button id="btnVerDecks" class="mp-btn">Ver decks</button></div>
+        <!-- Importar deck via código -->
+        <div style="margin-top:12px;padding:8px;border-top:1px solid rgba(255,255,255,0.04);">
+          <input id="importCodeInput" type="text" placeholder="Colar código do deck aqui..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#e6eef8;margin-bottom:6px;" />
+          <button id="btnImportDeck" style="width:100%;margin-bottom:8px;">Importar deck</button>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;"><button id="btnLimpar" class="mp-btn">Limpar</button><button id="btnVerDecks" class="mp-btn">Ver decks</button></div>
       </div>
     </div>
   </div>
@@ -841,6 +846,79 @@
         location.href = 'decks_salvos.html';
       };
     }
+
+  // Decode deck from shareable code
+  function decodeDeck(code) {
+    try {
+      if (!code.startsWith('MTG:')) throw new Error('Invalid deck code format');
+      const data = JSON.parse(atob(code.slice(4)));
+      return {
+        leaderName: data.leader || '',
+        leaderKey: data.leaderKey || '',
+        cards: data.cards || [],
+        fragImg: data.fragImg || null,
+        deckName: data.deckName || ''
+      };
+    } catch (e) {
+      console.warn('decodeDeck failed', e);
+      return null;
+    }
+  }
+
+  // Wire import deck functionality
+  const importCodeInput = document.getElementById('importCodeInput');
+  const btnImportDeck = document.getElementById('btnImportDeck');
+  if (btnImportDeck && importCodeInput) {
+    btnImportDeck.onclick = function() {
+      const code = (importCodeInput.value || '').trim();
+      if (!code) {
+        alert('Cole um código de deck válido.');
+        return;
+      }
+      const deckData = decodeDeck(code);
+      if (!deckData) {
+        alert('Código inválido. Verifique se copiou corretamente.');
+        return;
+      }
+      
+      // Clear current deck
+      deck = [];
+      chosenLeader = null;
+      chosenFragImg = deckData.fragImg;
+      
+      // Set leader
+      if (deckData.leaderName) {
+        const leader = LEADERS.find(l => l.name === deckData.leaderName || l.name.toLowerCase() === deckData.leaderName.toLowerCase());
+        if (leader) {
+          chosenLeader = leader;
+        }
+      }
+      
+      // Import cards
+      (deckData.cards || []).forEach(cardName => {
+        const card = CARD_POOL.find(c => c.name === cardName);
+        if (card && deck.length < 40) {
+          deck.push(card);
+        }
+      });
+      
+      // Set deck name if provided
+      if (deckData.deckName && deckNameInput) {
+        deckNameInput.value = deckData.deckName;
+      }
+      
+      // Clear import field
+      importCodeInput.value = '';
+      
+      // Re-render everything
+      renderLeaders();
+      renderFragChooser();
+      renderPool();
+      renderDeck();
+      
+      alert(`Deck importado: ${deck.length} cartas${chosenLeader ? ', líder: ' + chosenLeader.name : ''}`);
+    };
+  }
 
   // initialize filters and render
   try { setupFilters(); } catch(e) { /* ignore if setup missing */ }
