@@ -710,13 +710,17 @@
     .app {
       grid-template-columns: 1fr !important;
       /* make rows: preview (auto), arena (flexible), log (auto) */
-      grid-template-rows: auto 1fr auto;
+      /* use minmax(0,1fr) to allow the middle row to shrink/grow without overflow */
+      grid-template-rows: auto minmax(0,1fr) auto;
       gap: 8px;
       padding: 8px;
       min-height: 100vh;
       height: 100vh;
       box-sizing: border-box;
     }
+    /* allow children columns to shrink properly inside grid rows */
+    .app > .col { min-height: 0; }
+    .boardWrap { min-height: 0; }
     /* ensure preview, arena and log occupy full width and the arena sits in the middle row */
     #previewCol { grid-column: 1; grid-row: 1; }
     .col.right { grid-column: 1; grid-row: 2; }
