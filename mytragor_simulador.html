@@ -702,6 +702,38 @@
     justify-content: center !important;
     align-items: center !important;
   }
+  
+  /* MOBILE ADJUSTMENTS: Force preview+log to stack above the arena on small screens
+     and reduce preview/log sizes so the arena remains visible. These rules override
+     the desktop two-column layout only on narrow viewports. */
+  @media (max-width: 700px) {
+    .app {
+      grid-template-columns: 1fr !important;
+      grid-template-rows: auto auto 1fr;
+      gap: 8px;
+      padding: 8px;
+    }
+    /* ensure preview and log occupy full width and keep order */
+    #previewCol { grid-column: 1; grid-row: 1; }
+    #logCol { grid-column: 1; grid-row: 2; }
+    .col.right { grid-column: 1; grid-row: 3; }
+
+    /* reduce inspector/preview size on mobile */
+    .inspector { padding: 8px; }
+    .inspector .big { width: 140px; height: 196px; }
+    .meta { max-width: 140px; font-size: 12px; }
+
+    /* make the log reasonably tall but not dominant */
+    .log { max-height: 34vh; padding-bottom: 48px; }
+
+    /* board wrapper should allow the board to take remaining space and center */
+    .boardWrap { padding: 4px 0; }
+    .scaler { justify-content: center; align-items: flex-start; }
+    .boardStage { transform-origin: top center; }
+
+    /* hand and other side elements should wrap more compactly */
+    .hand .card.handCard { width: 112px; height: calc(112px * (var(--cardH) / var(--cardW))); margin-left: -28px; }
+  }
 </style>
 
 </head>
