@@ -34,18 +34,47 @@ body{ padding-bottom: 12px; }
 .no-global-mobile .app, .no-global-mobile #previewCol .inspector, .no-global-mobile #logCol .log { all: initial; }
 
 /* --- Mobile card/frag fixes --- */
-/* Reduce hand card size so the hand doesn't overlap on small screens */
-.col.right .hand .card.handCard { width: 96px !important; height: calc(96px * (var(--cardH) / var(--cardW))) !important; margin-left: -26px !important; transform: none !important; }
+/* Reduce hand card size so the hand doesn't overlap on small screens and make all sizes proportional */
+:root{
+	/* mobile card reference size — change once to affect all related elements */
+	--mobile-cardW: 88px;
+	--mobile-cardH: calc((var(--cardH) / var(--cardW)) * var(--mobile-cardW));
+}
+
+.col.right .hand .card.handCard {
+	width: var(--mobile-cardW) !important;
+	height: var(--mobile-cardH) !important;
+	margin-left: calc(var(--mobile-cardW) * -0.28) !important;
+	transform: none !important;
+}
 .col.right .hand .card.handCard:first-child{ margin-left: 0 !important; }
 
-/* Ensure fragile dock is visible and interactive on mobile (override desktop shifts) */
-.fragDock{ left: 8px !important; top: 8px !important; pointer-events: auto !important; opacity: 1 !important; z-index: 60 !important; width: auto !important; }
-.fragDock .fragStack{ width:36px !important; height:50px !important; }
-.fragDock .crystal{ width:28px !important; height:28px !important; opacity:1 !important; }
+/* Ensure frag dock and crystals are sized relative to card size */
+.fragDock{
+	left: 6px !important;
+	top: 8px !important;
+	pointer-events: auto !important;
+	opacity: 1 !important;
+	z-index: 80 !important;
+	width: auto !important;
+}
+.fragDock .fragStack{ width: calc(var(--mobile-cardW) * 0.36) !important; height: calc(var(--mobile-cardH) * 0.48) !important; }
+.fragDock .fragBack{ border-radius:6px !important; }
+.fragDock .crystal{ width: calc(var(--mobile-cardW) * 0.18) !important; height: calc(var(--mobile-cardH) * 0.18) !important; opacity:1 !important; }
 .fragDock .crystal::before{ border-radius:6px !important; }
 
-/* Slightly reduce hand card hover/enlarge effect on mobile to avoid overlapping */
-.col.right .hand .card.handCard:hover{ transform: translateY(-4px) scale(1.03) !important; z-index:40 !important; }
+/* Reduce hover/enlarge effect on mobile to avoid overlap */
+.col.right .hand .card.handCard:hover{ transform: translateY(-4px) scale(1.02) !important; z-index:40 !important; }
+
+/* Scale badge/pill sizes (hpTag, costTag, badgeKw) proportionally so they don't overwhelm small cards */
+.card .hpTag, .card .costTag, .card .badgeKw {
+	font-size: calc(var(--mobile-cardW) * 0.11) !important;
+	padding: 2px 6px !important;
+	border-radius: 6px !important;
+}
+.card .hpTag{ left: 6px !important; bottom: 6px !important; }
+.card .costTag{ left: 6px !important; top: 6px !important; }
+.card .badgeKw{ right: 6px !important; bottom: 6px !important; max-width: calc(var(--mobile-cardW) - 12px) !important; }
 
 /* If page opted out of global mobile rules, preserve opt-out */
 .no-global-mobile .col.right .hand .card.handCard, .no-global-mobile .fragDock { all: initial; }
