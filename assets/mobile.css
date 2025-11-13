@@ -78,3 +78,8 @@ body{ padding-bottom: 12px; }
 
 /* If page opted out of global mobile rules, preserve opt-out */
 .no-global-mobile .col.right .hand .card.handCard, .no-global-mobile .fragDock { all: initial; }
+
+/* Mobile compact frag badge: hide individual tokens and show numeric badge */
+.fragDock > * { display: none !important; }
+.fragDock .mobile-frag-badge { display: inline-flex !important; align-items:center; justify-content:center; gap:8px; background: rgba(0,0,0,0.6); color: #facc15; padding:6px 10px; border-radius:999px; font-weight:700; font-size:14px; border:1px solid rgba(250,200,60,0.08); }
+.fragDock .mobile-frag-badge small{ font-weight:600; color:#e6eef8; font-size:12px }
