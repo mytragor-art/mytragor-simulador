@@ -724,11 +724,16 @@
 
     /* reduce inspector/preview size on mobile */
     .inspector { padding: 8px; }
-    .inspector .big { width: 140px; height: 196px; }
-    .meta { max-width: 140px; font-size: 12px; }
+    /* make the preview adapt: image scales with viewport but is capped so it doesn't push arena out */
+    .inspector .big { width: min(44vw, 160px); height: auto; aspect-ratio: 120 / 168; }
+    /* meta text should be scrollable if long */
+    #previewCol .meta { max-height: 12vh; overflow:auto; font-size: 12px; }
 
-    /* make the log reasonably tall but not dominant */
-    .log { max-height: 34vh; padding-bottom: 48px; }
+    /* cap the inspector height to avoid pushing the arena too far */
+    #previewCol .inspector { max-height: 28vh; overflow:auto; }
+
+    /* make the log reasonably tall but not dominant; allow it to shrink */
+    #logCol .log { max-height: 34vh; padding-bottom: 48px; overflow:auto; }
 
      /* board wrapper should allow the board to take the remaining vertical space */
      .col.right { display:flex; flex-direction:column; }
