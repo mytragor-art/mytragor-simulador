@@ -112,8 +112,16 @@
     --panel: #0e1a2b;
     --line: #2a3b55;
     --ink: #e2e8f0;
-    --cardW: 75px;
-    --cardH: 106px;
+  --cardW: 75px;
+  --cardH: 106px;
+  /* Keep base (unscaled) card sizes so JS can compute scaled values reliably */
+  --cardW-base: 75px;
+  --cardH-base: 106px;
+    /* Responsive scaler vars */
+    --scale: 1;
+    --left-w: 360px; /* width reserved for Log + Preview column */
+    --arena-w: 1600; /* logical arena width (px) */
+    --arena-h: 900;  /* logical arena height (px) */
     --radius: 8px;
     --gap: 8px;
     --zoom: 1.0;
@@ -337,12 +345,54 @@
   /* Log mais compacto e rolável */
   .log{padding:10px 12px 64px 12px; max-height:36vh; overflow:auto}
   .logLine{border-left:2px solid #2b3b5c;margin:8px 0;padding-left:8px;color:#c3cee3;font-size:15px;line-height:1.45}
+  /* Log variants (stronger colors) */
+  .logLine.hit{
+    border-left:4px solid #059669; /* vivid green */
+    background: transparent; /* remove veil */
+    color: #e6fff4; /* light green text for contrast */
+    text-shadow: 0 1px 0 rgba(0,0,0,0.7);
+    font-weight:700;
+  }
+  .logLine.miss{
+    border-left:4px solid #dc2626; /* vivid red */
+    background: transparent; /* remove veil */
+    color: #ffecec; /* light red/pink text for contrast */
+    text-shadow: 0 1px 0 rgba(0,0,0,0.7);
+    font-weight:700;
+  }
+  .logLine.effect{
+    border-left:4px solid #b45309; /* stronger amber */
+    background: transparent; /* remove veil */
+    color: #fff7e6;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.65);
+    font-weight:600;
+  }
+  .logLine.dice{
+    border-left:3px solid #2563eb;
+    background: transparent; /* remove veil */
+    color: #eaf4ff;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.65);
+    font-weight:600;
+  }
 
   /* Board central otimizado */
-  .boardWrap{display:flex;justify-content:center;overflow-x:auto;padding:4px;}
-  .boardZoom{transform:scale(var(--zoom));transform-origin:50% 0%}
+  /* Layout: left column (log+preview) & right column (arena) */
+  .app{ display:grid; grid-template-columns: var(--left-w) 1fr; gap:12px; align-items:start; padding:12px; box-sizing:border-box }
+  /* Place preview at left column row 1 (on top) */
+  #previewCol{ grid-column:1; grid-row:1 }
+  /* Place log at left column row 2 (below preview) */
+  #logCol{ grid-column:1; grid-row:2 }
+  /* Board column occupies rows 1..2 on the right */
+  .col.right{ grid-column:2; grid-row:1 / span 2 }
+
+  .boardWrap{display:flex;justify-content:center;overflow:auto;padding:4px;align-items:center}
+  /* Stage wrapper that will be scaled to fit the available right-side area */
+  .scaler{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; pointer-events:auto }
+  .boardStage{ width: calc(var(--arena-w) * 1px); height: calc(var(--arena-h) * 1px); transform-origin: top left; pointer-events:auto; transform: scale(var(--scale)); }
+  /* The board itself keeps its internal layout. We keep existing boardZoom so --zoom adjustments still apply (vertical fit). */
+  .boardZoom{ transform: scale(var(--zoom)); transform-origin: 0 0 }
   /* Limit board max width to avoid huge empty gutters on wide monitors */
-  .board{padding:6px;margin:0 auto;min-width:640px;max-width:var(--content-max);width:100%;box-sizing:border-box}
+  .board{ padding:6px; margin:0 auto; min-width:640px; max-width:var(--content-max); width:100%; box-sizing:border-box }
 
   /* Arena (sem cortes e com altura fluida) */
   .arena {
@@ -762,7 +812,9 @@ try{
   <div class="col right">
     <button id="btnToggleRight" class="panelToggle rightToggle" title="Colapsar/Expandir coluna direita" aria-expanded="true">◂</button>
     <div class="boardWrap">
-      <div class="board boardZoom">
+      <div class="scaler">
+        <div class="boardStage" id="boardStage">
+          <div class="board boardZoom">
 
         <!-- Oponente -->
         <div class="arena" id="opArena">
@@ -828,12 +880,14 @@ try{
           <div class="hand" id="youHand"></div>
         </div>
 
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Prévia -->
-  <div class="col">
+  <!-- Prévia (moved visually to left column via CSS grid) -->
+  <div class="col" id="previewCol">
     <h3>Prévia</h3>
     <div class="inspector"><div class="big"><img id="bigImg" src="" alt=""></div></div>
     <div class="meta" id="bigMeta">
@@ -949,7 +1003,13 @@ function contarCartasTipo(side, tipo, pilhas=['grave']) {
 }
 const $ = s => document.querySelector(s);
 const logEl = $('#log');
-function log(msg){ const d=document.createElement('div'); d.className='logLine'; d.textContent = `[${STATE.active==='you'?'Você':'IA'}] ${msg}`; logEl.prepend(d); }
+// Logging helpers
+function appendLogLine(text, cls){ try{ const d=document.createElement('div'); d.className='logLine' + (cls? ' '+cls : ''); d.innerHTML = `[${STATE && STATE.active==='you'?'Você':'IA'}] ${text}`; if(logEl) logEl.prepend(d); }catch(e){ console.warn('appendLogLine error', e); } }
+function logDice(text){ appendLogLine(text, 'dice'); console.log('[dice]', text); }
+function logEffect(text){ appendLogLine(text, 'effect'); console.log('[effect]', text); }
+function logAttackResult(hit, text){ appendLogLine(text, hit? 'hit':'miss'); console.log('[attack]', hit? 'HIT':'MISS', text); }
+// Legacy: keep log(...) as console-only (won't appear in UI) to avoid cluttering the log panel
+function log(msg){ try{ console.log('[log]', msg); }catch(e){} }
 function rnd(n){ try{ const r = (window.RNG && typeof window.RNG.random === 'function') ? window.RNG.random() : Math.random(); return Math.floor(r * n); }catch(e){ return Math.floor(Math.random()*n); } }
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const zoomRange = document.getElementById('zoomRange');
@@ -1003,6 +1063,48 @@ window.addEventListener('resize', () => {
   clearTimeout(window.__fitZoomTO);
   window.__fitZoomTO = setTimeout(()=>ensureBoardFits(false), 120);
 });
+
+/* =================== Arena responsive scaler =================== */
+(function(){
+  const root = document.documentElement;
+  function recalcArenaScale(){
+    try{
+      const leftWraw = getComputedStyle(root).getPropertyValue('--left-w') || '360px';
+      const leftW = parseFloat(leftWraw) || 360;
+      const topbar = document.querySelector('.topbar');
+      const topH = topbar ? topbar.getBoundingClientRect().height : 0;
+      const gap = 24; // grid gap + padding allowance
+      const availW = Math.max(320, window.innerWidth - leftW - gap);
+      const availH = Math.max(300, window.innerHeight - topH - 24);
+      const logicalW = parseFloat(getComputedStyle(root).getPropertyValue('--arena-w')) || 1600;
+      const logicalH = parseFloat(getComputedStyle(root).getPropertyValue('--arena-h')) || 900;
+      let scale = Math.min(availW / logicalW, availH / logicalH);
+      if(!isFinite(scale) || scale <= 0) scale = 1;
+      // clamp to reasonable bounds so UI doesn't explode on ultra-wide monitors
+      scale = Math.max(0.45, Math.min(scale, 1.4));
+      root.style.setProperty('--scale', String(scale));
+      // update boardStage transform (inline style as fallback)
+      const stage = document.getElementById('boardStage');
+      if(stage) stage.style.transform = `scale(${scale})`;
+
+      // Scale card vars so slot grid uses proportional sizes
+  const baseCardW = parseFloat(getComputedStyle(root).getPropertyValue('--cardW-base')) || 75;
+  const baseCardH = parseFloat(getComputedStyle(root).getPropertyValue('--cardH-base')) || 106;
+  root.style.setProperty('--cardW', Math.round(baseCardW * scale) + 'px');
+  root.style.setProperty('--cardH', Math.round(baseCardH * scale) + 'px');
+
+      // Ensure the internal zoom logic re-evaluates to avoid clipping of hand, etc.
+      try{ ensureBoardFits(false); }catch(e){}
+      // Debug
+      // console.log('recalcArenaScale', { scale, availW, availH, leftW, topH });
+    }catch(e){ console.warn('recalcArenaScale error', e); }
+  }
+  window.addEventListener('resize', ()=>{ clearTimeout(window.__arenaScaleTO); window.__arenaScaleTO = setTimeout(recalcArenaScale, 110); });
+  window.addEventListener('orientationchange', recalcArenaScale);
+  window.addEventListener('load', ()=>{ setTimeout(recalcArenaScale, 60); });
+  // Expose for manual debugging
+  window.recalcArenaScale = recalcArenaScale;
+})();
 
 /* Imagens */
 // Build chosen images map from CARD_DEFS leaders so leaders are centralized in cartas.js
@@ -1521,7 +1623,7 @@ function sendEquipToGrave(ownerSide, equip){
       const foe = ownerSide === 'you' ? 'ai' : 'you';
       if (STATE[foe].leader) {
         STATE[foe].leader.hp = Math.max(0, (STATE[foe].leader.hp||0) - dmg);
-        log(`${equip.name}: ao ir para o cemitério, causou ${dmg} de dano ao líder ${STATE[foe].leader.name}. (HP: ${STATE[foe].leader.hp})`);
+  logEffect(`${equip.name}: ao ir para o cemitério, causou ${dmg} de dano ao líder ${STATE[foe].leader.name}. (HP: ${STATE[foe].leader.hp})`);
         if (STATE[foe].leader.hp === 0) {
           showVictory(ownerSide==='you'?'Você':'IA', ownerSide);
         }
@@ -1599,7 +1701,7 @@ function cleanupEquipsOf(side, targetObj){
           const filtered = items.filter(it => {
             if(!it) return true;
             if(it.token) {
-              try{ log(`${it.name || 'Ficha'} deixou o campo (token) e não foi para o cemitério.`); }catch(e){}
+        try{ console.log(`${it.name || 'Ficha'} deixou o campo (token) e não foi para o cemitério.`); }catch(e){}
               // Also remove token from STATE.tokens if present
               try{
                 const owner = it.ownerSide || (it.owner && it.owner.side) || null;
@@ -1774,7 +1876,7 @@ function checkLeafaeOnAllyHealed(side, healedObj){
         leader.atkBonus = (leader.atkBonus||0) + 1;
         leader.damage  = (leader.damage||0)  + 1;
         leader.ac      = (leader.ac||0)      + 1;
-        log('Leafae absorveu vigor: +1 ATK, +1 Dano, +1 AC.');
+  logEffect('Leafae absorveu vigor: +1 ATK, +1 Dano, +1 AC.');
       }
     }
 
@@ -2164,7 +2266,7 @@ function chooseFragmentsFor(side){
     const cap = document.createElement('div'); cap.textContent = label; cap.style.textAlign='center'; cap.style.marginTop='6px'; cap.style.color='#cbd5e1';
     card.onmouseover = ()=> card.style.borderColor = '#facc15';
     card.onmouseout  = ()=> card.style.borderColor = 'transparent';
-    card.onclick = ()=>{ STATE[side].fragImg = imgPath; log(`${side==='you'?'Você':'IA'} selecionou fragmentos: ${label}.`); try{ document.body.removeChild(modal);}catch{} renderFrags(side); };
+  card.onclick = ()=>{ STATE[side].fragImg = imgPath; console.log(`${side==='you'?'Você':'IA'} selecionou fragmentos: ${label}.`); try{ document.body.removeChild(modal);}catch{} renderFrags(side); };
     card.appendChild(img); card.appendChild(cap); return card;
   };
 
@@ -2234,7 +2336,7 @@ function render(){
       leader.ac = (leader.ac||0) + leader._ademaisAc;
       // Log only when the applied bonus changes
       if (prevAdemais !== count) {
-        log(`${leader.name}: bônus Ademais atualizado — +${count} ATK / +${count} AC (anterior: +${prevAdemais}).`);
+  logEffect(`${leader.name}: bônus Ademais atualizado — +${count} ATK / +${count} AC (anterior: +${prevAdemais}).`);
       }
     });
     renderSide('you');
@@ -2855,7 +2957,7 @@ function selectSavedDeck(deck) {
     }
   }
   
-  log(`Deck "${deck.deckName || deck.leader}" carregado! Líder: ${deck.leader}`);
+  console.log(`Deck "${deck.deckName || deck.leader}" carregado! Líder: ${deck.leader}`);
 
   // Após escolher o deck do jogador, somente oferecer deck da IA se não for MP
   if(!__IS_MP){
@@ -2901,7 +3003,7 @@ function configureAIDeck(){
   const p = document.createElement('p'); p.textContent = 'Escolha como a IA montará seu deck:'; p.style.marginBottom='12px'; box.appendChild(p);
   const row = document.createElement('div'); Object.assign(row.style, { display:'flex', gap:'12px', flexWrap:'wrap' });
 
-  const btnRand = document.createElement('button'); btnRand.className='btn'; Object.assign(btnRand.style, { background:'linear-gradient(180deg,#facc15,#f59e0b)', color:'#111', fontWeight:'800', border:'none', padding:'10px 14px', borderRadius:'8px' }); btnRand.textContent='Aleatório (padrão)'; btnRand.onclick = ()=>{ STATE.ai.customDeck = null; log('IA: deck aleatório selecionado.'); document.body.removeChild(modal); };
+  const btnRand = document.createElement('button'); btnRand.className='btn'; Object.assign(btnRand.style, { background:'linear-gradient(180deg,#facc15,#f59e0b)', color:'#111', fontWeight:'800', border:'none', padding:'10px 14px', borderRadius:'8px' }); btnRand.textContent='Aleatório (padrão)'; btnRand.onclick = ()=>{ STATE.ai.customDeck = null; console.log('IA: deck aleatório selecionado.'); document.body.removeChild(modal); };
 
   const btnSaved = document.createElement('button'); btnSaved.className='btn'; Object.assign(btnSaved.style, { background:'#0f1724', color:'#facc15', border:'1px solid rgba(250,204,21,0.08)', padding:'10px 14px', borderRadius:'8px' }); btnSaved.textContent='Usar um dos meus decks salvos'; btnSaved.onclick = ()=>{ document.body.removeChild(modal); showAiDeckSelect(saved); };
 
@@ -2971,11 +3073,11 @@ function selectAiSavedDeck(deck){
   STATE.ai.leader = data;
   STATE.ai.customDeck = deck.cards;
   if (deck.fragImg) { STATE.ai.fragImg = deck.fragImg; } else { try { ensureDefaultFrag('ai'); } catch(e){ console.warn('ensureDefaultFrag(ai) failed', e); } }
-  log(`IA: usando deck salvo "${deck.deckName || deck.leader}" (líder ${deck.leader}).`);
+  console.log(`IA: usando deck salvo "${deck.deckName || deck.leader}" (líder ${deck.leader}).`);
 }
 
 /* ============== Fluxo / FRAGMENTOS ============== */
-function coin(){ STATE.first=(Math.random()<0.5)?'you':'ai'; STATE.active=STATE.first; STATE.turnCount.you=STATE.turnCount.ai=0; STATE.maxPool.you=STATE.maxPool.ai=0; STATE.pool.you=STATE.pool.ai=0; log(`${STATE.first==='you'?'Você':'IA'} começa!`); renderHUD(); }
+function coin(){ STATE.first=(Math.random()<0.5)?'you':'ai'; STATE.active=STATE.first; STATE.turnCount.you=STATE.turnCount.ai=0; STATE.maxPool.you=STATE.maxPool.ai=0; STATE.pool.you=STATE.pool.ai=0; console.log(`${STATE.first==='you'?'Você':'IA'} começa!`); renderHUD(); }
 function startMatch(){
   try{ window.__MATCH_STARTED = true; }catch(e){}
   // Offline / VS IA: behave as before
@@ -3086,7 +3188,7 @@ function endTurn(){ STATE.phase='main'; STATE.active=(STATE.active==='you')?'ai'
   // (Removido: efeito agora é ao entrar em campo)
 
 /* ============== Ações básicas ============== */
-function draw(side){ const c=STATE[side].deck.pop(); if(!c) return; STATE[side].hand.push(c); STATE[side].hand=STATE[side].hand.filter(Boolean); renderSide(side); log(`${side==='you'?'Você':'IA'} comprou uma carta.`); }
+function draw(side){ const c=STATE[side].deck.pop(); if(!c) return; STATE[side].hand.push(c); STATE[side].hand=STATE[side].hand.filter(Boolean); renderSide(side); console.log(`${side==='you'?'Você':'IA'} comprou uma carta.`); }
 function pay(side,c){ if(STATE.pool[side]<c){ alert('Fragmentos insuficientes!'); return false; } STATE.pool[side]-=c; renderHUD(); renderFrags(side); return true; }
 // Solicita pagamento em HP de um aliado ou líder quando a carta possui `costHp`
 function requestHpPayment(side, index, c){
@@ -3103,22 +3205,22 @@ function requestHpPayment(side, index, c){
     const chosen = payers[0];
     const tgt = chosen.type === 'leader' ? STATE[side].leader : STATE[side].allies[chosen.slot];
     tgt.hp = Math.max(0, (tgt.hp||0) - costHp);
-    log(`${side==='you'?'Você':'IA'} pagou ${costHp} HP de ${tgt.name} para ${c.name}.`);
+    console.log(`${side==='you'?'Você':'IA'} pagou ${costHp} HP de ${tgt.name} para ${c.name}.`);
     // remover se morreu
-  if(tgt.hp===0){ log(`${tgt.name} morreu ao pagar vida.`); if(chosen.type==='ally'){ cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].allies[chosen.slot]=null; try{ if(typeof MYTRAGOR_EFFECTS!=='undefined'&&MYTRAGOR_EFFECTS.notifyAllySentToGrave) MYTRAGOR_EFFECTS.notifyAllySentToGrave(tgt, side); }catch(e){} } else { cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].leader=null; } }
+  if(tgt.hp===0){ logEffect(`${tgt.name} morreu ao pagar vida.`); if(chosen.type==='ally'){ cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].allies[chosen.slot]=null; try{ if(typeof MYTRAGOR_EFFECTS!=='undefined'&&MYTRAGOR_EFFECTS.notifyAllySentToGrave) MYTRAGOR_EFFECTS.notifyAllySentToGrave(tgt, side); }catch(e){} } else { cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].leader=null; } }
     c._hpPaid = true; setTimeout(()=> playFromHand(side, index), 10); return true;
   }
   // Jogador: mostrar escolha visual
   showCardChoice(
     payers.map(p=>({ card: p.obj, label: p.type==='leader' ? 'Líder' : 'Aliado' })),
     (chosen, idx)=>{
-      if(chosen==null){ log(`${c.name}: pagamento de HP cancelado.`); return; }
+    if(chosen==null){ console.log(`${c.name}: pagamento de HP cancelado.`); return; }
       const sel = payers[idx];
       const tgt = sel.type==='leader' ? STATE[side].leader : STATE[side].allies[sel.slot];
       if(!tgt){ alert('Alvo não encontrado.'); return; }
-      tgt.hp = Math.max(0, (tgt.hp||0) - costHp);
-      log(`Você pagou ${costHp} HP de ${tgt.name} para ${c.name}.`);
-  if(tgt.hp===0){ log(`${tgt.name} morreu ao pagar vida.`); if(sel.type==='ally'){ cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].allies[sel.slot]=null; try{ if(typeof MYTRAGOR_EFFECTS!=='undefined'&&MYTRAGOR_EFFECTS.notifyAllySentToGrave) MYTRAGOR_EFFECTS.notifyAllySentToGrave(tgt, side); }catch(e){} } else { cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].leader=null; } }
+    tgt.hp = Math.max(0, (tgt.hp||0) - costHp);
+    console.log(`Você pagou ${costHp} HP de ${tgt.name} para ${c.name}.`);
+  if(tgt.hp===0){ logEffect(`${tgt.name} morreu ao pagar vida.`); if(sel.type==='ally'){ cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].allies[sel.slot]=null; try{ if(typeof MYTRAGOR_EFFECTS!=='undefined'&&MYTRAGOR_EFFECTS.notifyAllySentToGrave) MYTRAGOR_EFFECTS.notifyAllySentToGrave(tgt, side); }catch(e){} } else { cleanupEquipsOf(side, tgt); STATE[side].grave.push(tgt); STATE[side].leader=null; } }
       c._hpPaid = true; setTimeout(()=> playFromHand(side, index), 10);
     },
     `Pague ${costHp} de vida para jogar ${c.name}`
@@ -3795,14 +3897,14 @@ function playFromHand(side, index) {
         if(c.effect === 'redoma_santa' && target && target.type === 'ally' && targetObj.hp != null && targetObj.maxHp != null && targetObj.hp < targetObj.maxHp){
           const healed = (targetObj.maxHp || 0) - targetObj.hp;
           targetObj.hp = targetObj.maxHp;
-          log(`${c.name}: curou ${targetObj.name} por ${healed} de vida ao ser equipado.`);
+          logEffect(`${c.name}: curou ${targetObj.name} por ${healed} de vida ao ser equipado.`);
           // Trigger Leafae passive when healed by equipment
           try { if (typeof checkLeafaeOnAllyHealed === 'function') checkLeafaeOnAllyHealed(side, targetObj); } catch (e) { console.warn('checkLeafaeOnAllyHealed error', e); }
         }
       }
-      STATE[side].spells[pos]=c;
-      STATE[side].hand.splice(index,1);
-      log((side==='you'?'Você':'IA') + ' equipou ' + c.name + (targetObj && targetObj.name ? ' em ' + targetObj.name + '.' : '.'));
+  STATE[side].spells[pos]=c;
+  STATE[side].hand.splice(index,1);
+  logEffect((side==='you'?'Você':'IA') + ' equipou ' + c.name + (targetObj && targetObj.name ? ' em ' + targetObj.name + '.' : '.'));
       // Se o equipamento tem efeito de olhar topo, dispare o efeito também
       if (c.effect === 'olhar_topo' || c.effect === 'olhar_topo_2') {
         setTimeout(() => habilitarOlharTopo(1, side), 10);
@@ -5001,19 +5103,19 @@ let ATTACK_CTX = { attacker:null, side:null };
 function isBattlePhase(){ return STATE.phase==='battle'; }
 function firstTurnOf(side){ return STATE.turnCount[side]===1; }
 function canAttackCard(side, card) {
-  if (!isBattlePhase()) { log('Ainda não é fase de combate.'); return false; }
-  if (firstTurnOf(side)) { log('No 1º turno não pode atacar.'); return false; }
+  if (!isBattlePhase()) { console.log('Ainda não é fase de combate.'); return false; }
+  if (firstTurnOf(side)) { console.log('No 1º turno não pode atacar.'); return false; }
   if (!card || card.hp <= 0) return false;
   // Efeito de Katsu: Guerreiros podem atacar inimigos deitados ou em pé
   const katsu = STATE[side].leader && STATE[side].leader.name === 'Katsu';
-  if (katsu && card.classe === 'Guerreiro') {
-    if (card.tapped) { log('Este atacante já está deitado.'); return false; }
-    if (card.summonedThisTurn) { log('Aliados não atacam no turno em que entram.'); return false; }
+    if (katsu && card.classe === 'Guerreiro') {
+    if (card.tapped) { console.log('Este atacante já está deitado.'); return false; }
+    if (card.summonedThisTurn) { console.log('Aliados não atacam no turno em que entram.'); return false; }
     return true;
   }
   // Regra normal
-  if (card.tapped) { log('Este atacante já está deitado.'); return false; }
-  if (card.summonedThisTurn) { log('Aliados não atacam no turno em que entram.'); return false; }
+  if (card.tapped) { console.log('Este atacante já está deitado.'); return false; }
+  if (card.summonedThisTurn) { console.log('Aliados não atacam no turno em que entram.'); return false; }
   return true;
 }
 // Variante silenciosa usada para render/indicação visual (não registra logs)
@@ -5037,16 +5139,16 @@ function selectAttacker(side, idx){
   ATTACK_CTX={ attacker:{side,idx}, side };
   // Janela de resposta: Constrição (defensor pode responder ao declarar ataque)
   try { if (tryConstricaoResponse(side, card)) return; } catch(e){ console.warn('Constrição hook (ally) error', e); }
-  log(`Selecionado atacante: ${card.name}. Agora escolha um alvo.`);
+  console.log(`Selecionado atacante: ${card.name}. Agora escolha um alvo.`);
   highlightTargetsFor(side);
 }
 function selectLeaderAttacker(side){
   const card=STATE[side].leader;
-  if(!card||card.tapped||card.hp<=0||!isBattlePhase()||firstTurnOf(side)){ log('Líder não pode atacar agora.'); return; }
+  if(!card||card.tapped||card.hp<=0||!isBattlePhase()||firstTurnOf(side)){ console.log('Líder não pode atacar agora.'); return; }
   ATTACK_CTX={ attacker:{side, leader:true}, side };
   // Janela de resposta: Constrição (defensor pode responder ao declarar ataque do líder)
   try { if (tryConstricaoResponse(side, card, true)) return; } catch(e){ console.warn('Constrição hook (leader) error', e); }
-  log(`Líder selecionado. Escolha um alvo.`);
+  console.log(`Líder selecionado. Escolha um alvo.`);
   highlightTargetsFor(side);
 }
 function enemySide(side){ return side==='you'?'ai':'you'; }
@@ -5062,13 +5164,13 @@ function highlightTargetsFor(side) {
   // Se atacante é Guerreiro e Katsu está em campo, pode atacar qualquer inimigo, EXCETO se houver provocadores deitados
   if (ATTACK_CTX.attacker) {
     const attackerCard = ATTACK_CTX.attacker.leader ? STATE[side].leader : STATE[side].allies[ATTACK_CTX.attacker.idx];
-    if (katsu && attackerCard.classe === 'Guerreiro') {
+  if (katsu && attackerCard.classe === 'Guerreiro') {
       const enemies = STATE[foe].allies.map((c,i)=>({c,i})).filter(x=>x.c && x.c.hp>0);
       const tauntersTapped = enemies.filter(x => x.c.tapped && hasKw(x.c,'provocar'));
       if (tauntersTapped.length) {
         // Se há provocadores deitados, só pode atacar eles
-        tauntersTapped.forEach(t => { any=true; markSlotClickable(`${foe}-ally-${t.i}`, ()=>resolveAttackOn({type:'ally',side:foe,index:t.i})); });
-        log('Provocar (deitado): escolha um dos provocadores deitados.');
+  tauntersTapped.forEach(t => { any=true; markSlotClickable(`${foe}-ally-${t.i}`, ()=>resolveAttackOn({type:'ally',side:foe,index:t.i})); });
+  console.log('Provocar (deitado): escolha um dos provocadores deitados.');
         if(!any) log('Sem alvos válidos.');
         if (ATTACK_CTX.attacker?.leader) markSlotSelected(`${side}-leader`);
         else if (ATTACK_CTX.attacker) markSlotSelected(`${side}-ally-${ATTACK_CTX.attacker.idx}`);
@@ -5085,7 +5187,7 @@ function highlightTargetsFor(side) {
           any = true;
           markSlotClickable(`${foe}-leader`, () => resolveAttackOn({ type: 'leader', side: foe }));
         }
-        if (!any) log('Sem alvos válidos.');
+        if (!any) console.log('Sem alvos válidos.');
         if (ATTACK_CTX.attacker?.leader) markSlotSelected(`${side}-leader`);
         else if (ATTACK_CTX.attacker) markSlotSelected(`${side}-ally-${ATTACK_CTX.attacker.idx}`);
         return;
@@ -5103,7 +5205,7 @@ function highlightTargetsFor(side) {
 
   if (tauntersTapped.length){
     tauntersTapped.forEach(t => { any=true; markSlotClickable(`${foe}-ally-${t.i}`, ()=>resolveAttackOn({type:'ally',side:foe,index:t.i})); });
-    log('Provocar (deitado): escolha um dos provocadores deitados.');
+    console.log('Provocar (deitado): escolha um dos provocadores deitados.');
   } else {
     enemies.filter(x => x.c.tapped).forEach(x => {
       any=true;
@@ -5113,7 +5215,7 @@ function highlightTargetsFor(side) {
     if(STATE[foe].leader && STATE[foe].leader.hp>0){ any=true; markSlotClickable(`${foe}-leader`, ()=>resolveAttackOn({type:'leader',side:foe})); }
   }
 
-  if(!any) log('Sem alvos válidos.');
+  if(!any) console.log('Sem alvos válidos.');
   if(ATTACK_CTX.attacker?.leader) markSlotSelected(`${side}-leader`);
   else if(ATTACK_CTX.attacker)    markSlotSelected(`${side}-ally-${ATTACK_CTX.attacker.idx}`);
 }
@@ -5323,9 +5425,11 @@ function resolveAttackOn(target){
   const total = d20 + (attackerCard.atkBonus || 0) + bonusTempAtk;
   const ac = getAC(finalTarget);
   if (d20b !== null) {
-    log(`Rolagem precisão: ${d20} (maior de ${d20} e ${d20b}) + ${attackerCard.atkBonus||0}${bonusTempAtk ? "+"+bonusTempAtk+" (Campos Ensanguentados)" : ""} vs AC ${ac} → ${total>=ac?'ACERTOU':'ERROU'}.`);
+    const txt = `Rolagem precisão: ${d20} (maior de ${d20} e ${d20b}) + ${attackerCard.atkBonus||0}${bonusTempAtk ? "+"+bonusTempAtk+" (Campos Ensanguentados)" : ""} vs AC ${ac} → ${total>=ac?'ACERTOU':'ERROU'}.`;
+    logAttackResult(total>=ac, txt);
   } else {
-    log(`Rolagem ${d20}+${attackerCard.atkBonus||0}${bonusTempAtk ? "+"+bonusTempAtk+" (Campos Ensanguentados)" : ""} vs AC ${ac} → ${total>=ac?'ACERTOU':'ERROU'}.`);
+    const txt = `Rolagem ${d20}+${attackerCard.atkBonus||0}${bonusTempAtk ? "+"+bonusTempAtk+" (Campos Ensanguentados)" : ""} vs AC ${ac} → ${total>=ac?'ACERTOU':'ERROU'}.`;
+    logAttackResult(total>=ac, txt);
   }
   attackerCard.tapped=true;
 
@@ -5335,7 +5439,7 @@ function resolveAttackOn(target){
   if(finalTarget.type==='leader'){
     let dmg=baseDmg+damageBonusTemp;
     STATE[foe].leader.hp=Math.max(0,(STATE[foe].leader.hp||20)-dmg);
-    log(`💥 Dano ${dmg} no Escolhido (${STATE[foe].leader.hp}).`);
+  logEffect(`💥 Dano ${dmg} no Escolhido (${STATE[foe].leader.hp}).`);
   if(STATE[foe].leader.hp===0){ showVictory((side==='you'?'Você':'IA'), side); }
   } else {
     const t=STATE[foe].allies[finalTarget.index];
@@ -5347,14 +5451,14 @@ function resolveAttackOn(target){
       dmg = Math.max(0, dmg - 1);
     }
     const before=t.hp; t.hp=Math.max(0,t.hp-dmg);
-    log(`💥 Dano ${dmg} em ${t.name} (${t.hp}).`);
+  logEffect(`💥 Dano ${dmg} em ${t.name} (${t.hp}).`);
 
     // ATROPELAR
     if(hasKw(attackerCard,'atropelar') && t.hp===0){
       const over = dmg - before;
       if(over>0){
         STATE[foe].leader.hp=Math.max(0,(STATE[foe].leader.hp||20)-over);
-        log(`🐘 Atropelar: excesso ${over} no Líder! (${STATE[foe].leader.hp}).`);
+  logEffect(`🐘 Atropelar: excesso ${over} no Líder! (${STATE[foe].leader.hp}).`);
   if(STATE[foe].leader.hp===0){ showVictory((side==='you'?'Você':'IA'), side); }
       }
     }
@@ -5366,7 +5470,7 @@ function resolveAttackOn(target){
   STATE[foe].allies[finalTarget.index]=null;
   // Notificar módulo de efeitos que um aliado foi enviado ao cemitério
   try{ if(typeof MYTRAGOR_EFFECTS!=='undefined' && MYTRAGOR_EFFECTS.notifyAllySentToGrave) MYTRAGOR_EFFECTS.notifyAllySentToGrave(t, foe); }catch(e){}
-      log(`☠️ Destruído: ${t.name}.`);
+  logEffect(`☠️ Destruído: ${t.name}.`);
 
       // Gladiador Implacável: efeito buff_on_kill
       if(attackerCard && attackerCard.effect === 'buff_on_kill' && attackerCard.effectValue){
