@@ -32,3 +32,20 @@ body{ padding-bottom: 12px; }
 
 /* If a page wants to opt-out of global mobile rules, add class .no-global-mobile on <body> */
 .no-global-mobile .app, .no-global-mobile #previewCol .inspector, .no-global-mobile #logCol .log { all: initial; }
+
+/* --- Mobile card/frag fixes --- */
+/* Reduce hand card size so the hand doesn't overlap on small screens */
+.col.right .hand .card.handCard { width: 96px !important; height: calc(96px * (var(--cardH) / var(--cardW))) !important; margin-left: -26px !important; transform: none !important; }
+.col.right .hand .card.handCard:first-child{ margin-left: 0 !important; }
+
+/* Ensure fragile dock is visible and interactive on mobile (override desktop shifts) */
+.fragDock{ left: 8px !important; top: 8px !important; pointer-events: auto !important; opacity: 1 !important; z-index: 60 !important; width: auto !important; }
+.fragDock .fragStack{ width:36px !important; height:50px !important; }
+.fragDock .crystal{ width:28px !important; height:28px !important; opacity:1 !important; }
+.fragDock .crystal::before{ border-radius:6px !important; }
+
+/* Slightly reduce hand card hover/enlarge effect on mobile to avoid overlapping */
+.col.right .hand .card.handCard:hover{ transform: translateY(-4px) scale(1.03) !important; z-index:40 !important; }
+
+/* If page opted out of global mobile rules, preserve opt-out */
+.no-global-mobile .col.right .hand .card.handCard, .no-global-mobile .fragDock { all: initial; }
