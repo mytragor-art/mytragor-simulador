@@ -351,7 +351,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: 'assets/allies/tamandua_guardiao
     keywords: [],
     effect: 'aranhas_informante',
     effectValue: { damage: 4, discard: 1 },
-    text: 'Ao entrar em campo: cause 4 de dano ao líder inimigo. Em seguida, descarte 1 carta aleatória da mão do oponente.'
+    text: 'Ao entrar em campo: cause 4 de dano no seu próprio escolhido. Em seguida, faça o oponente descartar 1 carta aleatória da mão.'
   },
 ];
 

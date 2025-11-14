@@ -371,27 +371,28 @@ const MYTRAGOR_EFFECTS = (function() {
       }, 10);
     },
 
-    // Aranhas Negras, Informante: dano ao líder + descarte aleatório
+    // Aranhas Negras, Informante: dano ao seu próprio escolhido + descarte do oponente
     aranhas_informante: (card, side, pos) => {
       setTimeout(() => {
         const foe = side === 'you' ? 'ai' : 'you';
         const dmg = (card.effectValue && card.effectValue.damage) || 4;
 
-        // Aplicar dano ao líder inimigo
-        if (STATE[foe].leader) {
-          const beforeHp = STATE[foe].leader.hp || 0;
-          STATE[foe].leader.hp = Math.max(0, (STATE[foe].leader.hp || 0) - dmg);
-          const dealt = Math.max(0, beforeHp - STATE[foe].leader.hp);
-          helpers.log(`${card.name}: ao entrar causou ${dealt} de dano ao líder ${STATE[foe].leader.name}.`);
-          
-          if (STATE[foe].leader.hp === 0) {
-            alert((side === 'you' ? 'Você' : 'IA') + ' venceu!');
+        // Aplicar dano ao líder DO PRÓPRIO lado (side)
+        if (STATE[side].leader) {
+          const beforeHp = STATE[side].leader.hp || 0;
+          STATE[side].leader.hp = Math.max(0, (STATE[side].leader.hp || 0) - dmg);
+          const dealt = Math.max(0, beforeHp - STATE[side].leader.hp);
+          helpers.log(`${card.name}: ao entrar causou ${dealt} de dano ao seu escolhido ${STATE[side].leader.name}.`);
+
+          if (STATE[side].leader.hp === 0) {
+            // aviso de derrota do lado que teve o escolhido zerado
+            alert((side === 'you' ? 'Você' : 'IA') + ' teve seu escolhido derrotado!');
           }
         } else {
-          helpers.log(`${card.name}: nenhum líder inimigo encontrado para causar dano.`);
+          helpers.log(`${card.name}: nenhum escolhido seu encontrado para causar dano.`);
         }
 
-        // Forçar descarte aleatório
+        // Forçar descarte aleatório do oponente
         const discardCount = (card.effectValue && card.effectValue.discard) || 1;
         const removed = discardRandomFromHand(foe, discardCount, {
           sourceSide: side,

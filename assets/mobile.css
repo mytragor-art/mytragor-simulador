@@ -83,3 +83,40 @@ body{ padding-bottom: 12px; }
 .fragDock > * { display: none !important; }
 .fragDock .mobile-frag-badge { display: inline-flex !important; align-items:center; justify-content:center; gap:8px; background: rgba(0,0,0,0.6); color: #facc15; padding:6px 10px; border-radius:999px; font-weight:700; font-size:14px; border:1px solid rgba(250,200,60,0.08); }
 .fragDock .mobile-frag-badge small{ font-weight:600; color:#e6eef8; font-size:12px }
+
+/* --- Arena tag proportional fixes --- */
+/* Use --cardW (the logical card width) to compute proportional badge sizes for cards in the arena. */
+.board .card .hpTag,
+.board .card .costTag,
+.board .card .badgeKw{
+	/* fallback to 75px if --cardW isn't set */
+	font-size: calc((var(--cardW,75px) * 0.10)) !important;
+	padding: 2px 6px !important;
+	border-radius: 6px !important;
+	line-height: 1 !important;
+}
+
+/* Slightly move badges inward so they do not cover the card artwork */
+.board .card .hpTag{ left:6px !important; bottom:6px !important; }
+.board .card .costTag{ left:6px !important; top:6px !important; }
+.board .card .badgeKw{ right:6px !important; bottom:6px !important; max-width: calc(var(--cardW,75px) - 12px) !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+/* Leaders and tokens may have slightly larger badges but still proportional */
+.leader .hpTag, .leader .costTag { font-size: calc(var(--cardW,75px) * 0.115) !important; padding: 3px 6px !important; }
+
+/* Ensure tooltip/hover previews don't inflate badges on mobile */
+.card:hover .hpTag, .card:hover .costTag, .card:hover .badgeKw { transform: none !important; }
+
+/* Scale and reposition generic .badge elements inside the board (div.badge) */
+.board .badge, .board div.badge {
+	font-size: calc(var(--cardW,75px) * 0.10) !important;
+	padding: 3px 7px !important;
+	border-radius: 6px !important;
+	line-height: 1 !important;
+	right: 6px !important;
+	top: 6px !important;
+	box-shadow: none !important;
+}
+
+/* If badges were using absolute large sizes, clip their max-width to the card width */
+.board .badge { max-width: calc(var(--cardW,75px) - 12px) !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }

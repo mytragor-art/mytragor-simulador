@@ -137,6 +137,27 @@
 						// Miniaturas das cartas
 						const miniGrid = document.createElement('div');
 						miniGrid.className = 'miniGrid';
+										// Tags do deck (se houver) — exibidas como chips abaixo do título
+										if (Array.isArray(deck.tags) && deck.tags.length){
+											const tagsWrap = document.createElement('div');
+											tagsWrap.style.display = 'flex';
+											tagsWrap.style.flexWrap = 'wrap';
+											tagsWrap.style.gap = '6px';
+											tagsWrap.style.justifyContent = 'center';
+											tagsWrap.style.margin = '6px 0 10px 0';
+											deck.tags.forEach(t => {
+												const chip = document.createElement('span');
+												chip.textContent = String(t);
+												chip.style.fontSize = '11px';
+												chip.style.color = '#cbd5e1';
+												chip.style.border = '1px solid rgba(255,255,255,0.06)';
+												chip.style.borderRadius = '999px';
+												chip.style.padding = '2px 8px';
+												chip.style.background = 'rgba(255,255,255,0.03)';
+												tagsWrap.appendChild(chip);
+											});
+											card.appendChild(tagsWrap);
+										}
 						// show up to 40 cards (4 rows x 10 columns)
 						(deck.cards || []).slice(0, 40).forEach(cardName => {
 										const mini = document.createElement('img');

@@ -25,30 +25,47 @@
   safeWire('btnTogglePreview','previewCol');
   safeWire('btnToggleLogMobile','logCol');
 
-  // Compact fragment dock into a single "X/10" badge for mobile
+  // Compact fragment dock into a per-player "X/10" badge for mobile
   function updateMobileFragBadge(){
     try{
-      const dock = document.querySelector('.fragDock');
-      if(!dock) return;
-      // Count visible fragment token nodes (fallbacks for different markup)
-      const tokenSelectors = ['.fragToken', '.fragStack', '.fragBack', '.frag'];
-      let count = 0;
-      for(const sel of tokenSelectors){ const els = dock.querySelectorAll(sel); if(els && els.length) { count = els.length; break; } }
-      // If still zero, try counting img children
-      if(count === 0){ count = Array.from(dock.children).filter(c=> c.tagName === 'IMG' || c.classList.contains('fragToken') ).length; }
-      // Cap at 10 for display (user requested X/10)
+      const docks = Array.from(document.querySelectorAll('.fragDock'));
+      if(!docks.length) return;
       const max = 10;
-      if(count > max) count = max;
+      docks.forEach(dock => {
+        try{
+          // Determine which side this dock belongs to (prefer id: you-frags / ai-frags)
+          let side = null;
+          if(dock.id && dock.id.indexOf('you')!==-1) side = 'you';
+          else if(dock.id && dock.id.indexOf('ai')!==-1) side = 'ai';
 
-      let badge = dock.querySelector('.mobile-frag-badge');
-      if(!badge){ badge = document.createElement('div'); badge.className = 'mobile-frag-badge'; badge.setAttribute('aria-hidden','false'); dock.appendChild(badge); }
-      badge.textContent = count + '/' + max;
-      // ensure badge stays visible
-      badge.style.display = 'inline-flex';
+          let count = 0;
+          // Prefer authoritative in-memory state if available
+          if(window.STATE && typeof window.STATE.pool === 'object' && side){
+            count = Number(window.STATE.pool[side] || 0);
+          } else {
+            // Fallback: count only ACTIVE fragment tokens inside this dock ('.fragToken.lit')
+            const litEls = dock.querySelectorAll('.fragToken.lit');
+            if(litEls && litEls.length) {
+              count = litEls.length;
+            } else {
+              // Older markup fallback: count images or elements that look like active fragments
+              count = Array.from(dock.querySelectorAll('.fragToken')).filter(el => el.classList.contains('lit')).length;
+              if(count === 0){ count = Array.from(dock.children).filter(c=> c.tagName === 'IMG' || c.classList.contains('fragToken') ).length; }
+            }
+          }
+          if(count > max) count = max;
+
+          // Ensure we have a badge element inside THIS dock
+          let badge = dock.querySelector('.mobile-frag-badge');
+          if(!badge){ badge = document.createElement('div'); badge.className = 'mobile-frag-badge'; badge.setAttribute('aria-hidden','false'); dock.appendChild(badge); }
+          badge.textContent = count + '/' + max;
+          badge.style.display = 'inline-flex';
+        }catch(e){ console.warn('updateMobileFragBadge per-dock failed', e); }
+      });
     }catch(e){ console.warn('updateMobileFragBadge failed', e); }
   }
 
-  // run once on load and also on small intervals to catch dynamic updates
+  // run once on load and periodically to catch dynamic updates
   try{ updateMobileFragBadge(); window.__mobileFragBadgeTO = setInterval(updateMobileFragBadge, 900); }catch(e){}
 
 })();

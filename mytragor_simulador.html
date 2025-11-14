@@ -114,12 +114,15 @@
     --ink: #e2e8f0;
   --cardW: 75px;
   --cardH: 106px;
+  /* hand scale (does not affect board slots/cards) */
+  --hand-scale: 0.8;   /* -20% hand card size */
   /* Keep base (unscaled) card sizes so JS can compute scaled values reliably */
   --cardW-base: 75px;
   --cardH-base: 106px;
     /* Responsive scaler vars */
     --scale: 1;
-    --left-w: 360px; /* width reserved for Log + Preview column */
+    --left-w: 260px; /* largura da coluna do Log (menor para liberar arena) */
+    --right-w: 240px; /* largura da coluna da Prévia */
     --arena-w: 1600; /* logical arena width (px) */
     --arena-h: 900;  /* logical arena height (px) */
     --radius: 8px;
@@ -332,8 +335,8 @@
   body.right-collapsed .app{ grid-template-columns: minmax(var(--side-min), var(--side-max-left)) 1fr 48px !important }
 
   /* Panel toggle button */
-  .panelToggle{ background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--ink);padding:6px;border-radius:6px;cursor:pointer;font-size:14px }
-  .panelToggle.rightToggle{ position:absolute; right:8px; top:8px; z-index:60; opacity:0.9 }
+  .panelToggle{ display:none !important; background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--ink);padding:6px;border-radius:6px;cursor:pointer;font-size:14px }
+  .panelToggle.rightToggle{ display:none !important; position:absolute; right:8px; top:8px; z-index:60; opacity:0.9 }
   /* When a column is visually collapsed hide its children content except the toggle area */
   .col.collapsed > *:not(.panelToggle){ display:none }
 
@@ -376,23 +379,27 @@
   }
 
   /* Board central otimizado */
-  /* Layout: left column (log+preview) & right column (arena) */
-  .app{ display:grid; grid-template-columns: var(--left-w) 1fr; gap:12px; align-items:start; padding:12px; box-sizing:border-box }
-  /* Place preview at left column row 1 (on top) */
-  #previewCol{ grid-column:1; grid-row:1 }
-  /* Place log at left column row 2 (below preview) */
-  #logCol{ grid-column:1; grid-row:2 }
-  /* Board column occupies rows 1..2 on the right */
+  /* Layout: 3 colunas — Log | Arena | Prévia */
+  .app{ display:grid; grid-template-columns: var(--left-w) 1fr var(--right-w); gap:12px; align-items:start; padding:12px; box-sizing:border-box }
+  /* Log à esquerda (ocupa altura toda) */
+  #logCol{ grid-column:1; grid-row:1 / span 2; max-width: var(--left-w); overflow:auto }
+  /* Arena no centro */
   .col.right{ grid-column:2; grid-row:1 / span 2 }
+  /* Prévia à direita (altura toda) */
+  #previewCol{ grid-column:3; grid-row:1 / span 2; max-width: var(--right-w); overflow:auto }
 
-  .boardWrap{display:flex;justify-content:center;overflow:auto;padding:4px;align-items:center}
+  .boardWrap{display:flex;justify-content:center;align-items:center;overflow:auto;padding:4px;flex:1;min-height:0}
   /* Stage wrapper that will be scaled to fit the available right-side area */
   .scaler{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; pointer-events:auto }
-  .boardStage{ width: calc(var(--arena-w) * 1px); height: calc(var(--arena-h) * 1px); transform-origin: top left; pointer-events:auto; transform: scale(var(--scale)); }
+  .boardStage{ width: calc(var(--arena-w) * 1px); height: calc(var(--arena-h) * 1px); transform-origin: top left; pointer-events:auto; /* transform removed to keep 1:1 sizes */ margin:0 auto; display:block }
   /* The board itself keeps its internal layout. We keep existing boardZoom so --zoom adjustments still apply (vertical fit). */
-  .boardZoom{ transform: scale(var(--zoom)); transform-origin: 0 0 }
+  .boardZoom{ /* transform removed to keep 1:1 sizes */ transform-origin: 0 0 }
   /* Limit board max width to avoid huge empty gutters on wide monitors */
   .board{ padding:6px; margin:0 auto; min-width:640px; max-width:var(--content-max); width:100%; box-sizing:border-box }
+
+  /* Prévia compacta para não competir com a arena */
+  #previewCol .inspector{ max-height: 70vh; overflow:auto }
+  #charPreviewImg{ width: 100%; height: auto; max-height: 40vh; object-fit: contain }
 
   /* Arena (sem cortes e com altura fluida) */
   .arena {
@@ -485,8 +492,10 @@
     display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:center;
   }
 
-  .lane{display:grid; grid-template-columns:repeat(5,var(--cardW)); grid-auto-rows:var(--cardH); gap:var(--gap); justify-content:center}
+  .lane{display:grid; grid-template-columns:repeat(5, var(--cardW)); grid-auto-rows: var(--cardH); gap:var(--gap); justify-content:center}
   .slot{width:var(--cardW);height:var(--cardH);border:1px dashed #3a4a6d;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:#6d7fa3;position:relative}
+  /* ensure any child .card in a pile stays below the labels by default */
+  .slot > .card{ z-index:1 }
 
   .slot.clickable{
     outline:none;
@@ -496,8 +505,8 @@
   }
   .slot.clickable *{pointer-events:none;}
   .slot.selected{box-shadow:0 0 0 3px #f59e0b inset}
-  .slotLabel{position:absolute;bottom:4px;left:4px;background:#0f172a;border:1px solid #304566;border-radius:6px;padding:1px 5px;font-size:10px;color:#c9d4e7;z-index:5}
-  .slotCount{position:absolute;top:4px;right:4px;background:#0f172a;border:1px solid #304566;border-radius:6px;padding:1px 5px;font-size:10px;color:#c9d4e7;z-index:5}
+  .slotLabel{position:absolute;bottom:4px;left:4px;background:#0f172a;border:1px solid #304566;border-radius:6px;padding:1px 5px;font-size:10px;color:#c9d4e7;z-index:10; pointer-events:none}
+  .slotCount{position:absolute;top:4px;right:4px;background:#0f172a;border:1px solid #304566;border-radius:6px;padding:1px 5px;font-size:10px;color:#c9d4e7;z-index:10; pointer-events:none}
 
   .card{
     width:var(--cardW);
@@ -508,6 +517,29 @@
   position:absolute;
   inset:0;
   margin:auto;
+    /* Ensure cards placed on the board match the enlarged slot size */
+    .board .card{
+      width: var(--cardW);
+      height: var(--cardH);
+      inset: 0; /* ensure it fills the slot exactly */
+      margin: 0; /* avoid centering offsets when sizes match */
+    }
+    .board .card img{ border-radius: var(--radius); }
+    /* Force any card placed into a slot (ally, spell, leader, env, equips) to fill that slot */
+    .slot > .card{
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      margin: 0;
+    }
+    /* Generic class for any non-hand board card created by JS */
+    .boardCard{ position:absolute; left:0; top:0; width:100%; height:100%; margin:0; }
+
+    /* Leader and Environment slots use the same exact card size */
+    #you-leader, #ai-leader, #you-env, #ai-env{
+      width: var(--cardW);
+      height: var(--cardH);
+    }
   z-index: 20;
     display:flex;
     align-items:center;
@@ -530,7 +562,7 @@
     100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.0); transform: translateY(0); }
   }
   .card:hover {
-    transform: scale(1.13);
+    /* remove scale to avoid card size drift vs slot */
     z-index: 50; /* garantir que fique acima de pilhas/slots vizinhos */
     box-shadow: 0 12px 32px rgba(0,0,0,0.45);
   }
@@ -593,12 +625,12 @@
     z-index:auto;
   }
   /* Slight overlap so the hand doesn't push the board horizontally */
-  .hand .card.handCard{ position:relative; width:128px; /* keep card aspect ratio based on --cardW/--cardH */ height: calc(128px * (var(--cardH) / var(--cardW))); margin-left:-34px; transition:transform .16s ease, box-shadow .16s ease }
+  .hand .card.handCard{ position:relative; width: calc(128px * var(--hand-scale)); /* keep card aspect ratio based on --cardW/--cardH */ height: calc((128px * var(--hand-scale)) * (var(--cardH) / var(--cardW))); margin-left: calc(-34px * var(--hand-scale)); transition:transform .16s ease, box-shadow .16s ease }
   .hand .card.handCard:first-child{ margin-left:0 }
   /* Indicador de jogável agora: borda suave + pulso leve */
   .card.handCard.canPlay { border: 2px solid #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.35); animation: pulseRing 1.8s ease-in-out infinite; z-index:2; filter:none; }
   @keyframes pulseRing { 0%{ box-shadow:0 0 0 2px rgba(250,204,21,.35);} 70%{ box-shadow:0 0 0 10px rgba(250,204,21,0);} 100%{ box-shadow:0 0 0 2px rgba(250,204,21,0);} }
-  .hand .card.handCard:hover{ transform:translateY(-6px) scale(1.03); z-index:40; box-shadow:0 10px 24px rgba(0,0,0,0.45) }
+  .hand .card.handCard:hover{ transform:translateY(-6px); z-index:40; box-shadow:0 10px 24px rgba(0,0,0,0.45) }
 
   .aiHand{display:flex;gap:6px;justify-content:center;padding:4px 0}
   .aiBack{width:34px;height:50px;border-radius:5px;border:1px solid #2b3b5c;overflow:hidden;background:#1b2a46}
@@ -1892,7 +1924,7 @@ function cardEl(card,{hand=false,onClick=null,canPlay=false,blockerReady=false,t
   const el=document.createElement('div');
   let equipped = card && card.equip && (Array.isArray(card.equip) ? card.equip.length > 0 : true);
   el.className = 'card'
-    + (hand ? ' handCard' : '')
+    + (hand ? ' handCard' : ' boardCard')
     + (card?.tapped ? ' tap' : '')
     + (hand && canPlay ? ' canPlay' : '')
     + (blockerReady ? ' blockerReady' : '')
@@ -2104,11 +2136,16 @@ function renderSide(side){
   if(STATE[side].leader) L.appendChild(cardEl(STATE[side].leader,{onClick:()=> side==='you'&&selectLeaderAttacker(side), canAttack: canAttackCardQuiet(side, STATE[side].leader)}));
   if(STATE[side].env) E.appendChild(cardEl(STATE[side].env));
 
-  // Deck
+  // Deck — show a full-size back that exactly fills the slot
   const D=$(`#${side}-deck`); if(D){ [...D.querySelectorAll('.card')].forEach(n=>n.remove());
     if(STATE[side].deck.length>0){ const back=document.createElement('div'); back.className='card';
       const img=document.createElement('img'); img.src=CARD_BACK; img.onerror=()=>img.src=FALLBACK_BACK; back.appendChild(img);
-      back.style.width='calc(var(--cardW) - 8px)'; back.style.height='calc(var(--cardH) - 8px)'; D.appendChild(back); }
+      // Fill the slot entirely so it matches the enlarged slot size
+      back.style.position = 'absolute';
+      back.style.left = '0'; back.style.top = '0';
+      back.style.width='100%'; back.style.height='100%';
+      back.style.zIndex = '1'; // keep below labels/counters
+      D.appendChild(back); }
   }
 
   // Cemitério (capa + overlay)
@@ -3043,8 +3080,14 @@ function showDeckSelect(decks) {
 
     const deckName = document.createElement('div'); deckName.textContent = deck.deckName || deck.leader || 'Deck sem nome'; deckName.style.color = '#facc15'; deckName.style.fontWeight='800'; deckName.style.marginBottom='6px'; deckName.style.textAlign='center';
     const leaderInfo = document.createElement('div'); leaderInfo.textContent = `Líder: ${deck.leader || '—'}`; leaderInfo.style.color='#e2e8f0'; leaderInfo.style.fontSize='13px'; leaderInfo.style.textAlign='center'; leaderInfo.style.marginBottom='6px';
+    // tags do deck (se houver)
+    const tagsWrap = document.createElement('div');
+    Object.assign(tagsWrap.style, { display:'flex', flexWrap:'wrap', gap:'6px', justifyContent:'center', margin:'6px 0' });
+    if (Array.isArray(deck.tags) && deck.tags.length){
+      deck.tags.forEach(t => { const chip = document.createElement('span'); chip.textContent = String(t); Object.assign(chip.style,{ fontSize:'11px', color:'#cbd5e1', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'999px', padding:'2px 8px', background:'rgba(255,255,255,0.03)' }); tagsWrap.appendChild(chip); });
+    }
     const cardCount = document.createElement('div'); const totalCards = (deck.cards ? deck.cards.length : 0) + (deck.leader ? 1 : 0); cardCount.textContent = `${totalCards} cartas${deck.leader ? ' (inclui líder)' : ''}`; cardCount.style.color='#94a3b8'; cardCount.style.fontSize='12px'; cardCount.style.textAlign='center';
-    deckDiv.appendChild(deckName); deckDiv.appendChild(leaderInfo); deckDiv.appendChild(cardCount);
+    deckDiv.appendChild(deckName); deckDiv.appendChild(leaderInfo); if(tagsWrap.childElementCount){ deckDiv.appendChild(tagsWrap); } deckDiv.appendChild(cardCount);
 
     deckDiv.onclick = () => { selectSavedDeck(deck); document.body.removeChild(modal); };
     grid.appendChild(deckDiv);
