@@ -2894,6 +2894,13 @@ function buildDeck(side){
     }
   }
   
+  // Cap deck size to 40 cards maximum (both sides)
+  try{
+    if (d.length > 40) {
+      d = d.slice(0, 40);
+    }
+  }catch(e){ /* noop */ }
+
   // ensure every card has a stable id
   d.forEach(c=>{ try{ ensureCardId(c); }catch(e){} });
   for(let i=d.length-1;i>0;i--){ const j=rnd(i+1); [d[i],d[j]]=[d[j],d[i]]; }
