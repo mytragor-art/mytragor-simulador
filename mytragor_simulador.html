@@ -4753,11 +4753,21 @@ function showCardChoice(options, onChoose, title='Escolha uma carta') {
     h.textContent = title;
     wrap.appendChild(h);
 
+    // detect whether options include side information to render two columns (you vs opponent)
+    const hasSide = options.some(o => (o.obj && o.obj.side) || o.side);
     const grid = document.createElement('div');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(90px, 1fr))';
-    grid.style.gap = '10px';
-    grid.style.flex = '1 1 360px';
+    if (!hasSide) {
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(90px, 1fr))';
+      grid.style.gap = '10px';
+      grid.style.flex = '1 1 360px';
+    } else {
+      // two-column layout: left = you, right = opponent
+      grid.style.display = 'flex';
+      grid.style.flexDirection = (window.innerWidth && window.innerWidth < 720) ? 'column' : 'row';
+      grid.style.gap = '12px';
+      grid.style.flex = '1 1 360px';
+    }
 
     // Preview pane on the right for a larger preview of the hovered/selected option
     const previewPane = document.createElement('div');
@@ -4785,8 +4795,8 @@ function showCardChoice(options, onChoose, title='Escolha uma carta') {
 
     options.forEach((opt, i) => {
       const cardBtn = document.createElement('div');
-      cardBtn.style.width = '90px';
-      cardBtn.style.height = '120px';
+      cardBtn.style.width = hasSide ? '88px' : '90px';
+      cardBtn.style.height = hasSide ? '118px' : '120px';
       cardBtn.style.border = '1.5px solid #2b3b5c';
       cardBtn.style.borderRadius = '8px';
       cardBtn.style.background = '#101f36';
@@ -4849,7 +4859,46 @@ function showCardChoice(options, onChoose, title='Escolha uma carta') {
         } catch (e) { console.warn('preview update error', e); }
       };
       cardBtn.appendChild(im);
-      grid.appendChild(cardBtn);
+      if (!hasSide) {
+        grid.appendChild(cardBtn);
+      } else {
+        // If option carries side info, place into You or Opponent container
+        const sideKey = (opt.obj && opt.obj.side) || opt.side || 'you';
+        // ensure helper containers exist
+        if (!document.getElementById('choiceYouCol')) {
+          const colWrap = document.createElement('div');
+          colWrap.style.flex = '1';
+          colWrap.style.display = 'flex';
+          colWrap.style.flexDirection = 'column';
+          colWrap.style.alignItems = 'center';
+          const tit = document.createElement('div'); tit.textContent = 'Seu'; tit.style.fontSize='16px'; tit.style.fontWeight='700'; tit.style.color='#2563eb'; tit.style.marginBottom='8px';
+          const cont = document.createElement('div'); cont.id = 'choiceYouCol'; cont.style.display='flex'; cont.style.flexWrap='wrap'; cont.style.gap='8px'; cont.style.justifyContent='center'; cont.style.background='transparent';
+          colWrap.appendChild(tit); colWrap.appendChild(cont); grid.appendChild(colWrap);
+          const colWrap2 = document.createElement('div');
+          colWrap2.style.flex = '1'; colWrap2.style.display='flex'; colWrap2.style.flexDirection='column'; colWrap2.style.alignItems='center';
+          const tit2 = document.createElement('div'); tit2.textContent = 'Oponente'; tit2.style.fontSize='16px'; tit2.style.fontWeight='700'; tit2.style.color='#dc2626'; tit2.style.marginBottom='8px';
+          const cont2 = document.createElement('div'); cont2.id = 'choiceOppoCol'; cont2.style.display='flex'; cont2.style.flexWrap='wrap'; cont2.style.gap='8px'; cont2.style.justifyContent='center';
+          colWrap2.appendChild(tit2); colWrap2.appendChild(cont2); grid.appendChild(colWrap2);
+        }
+        // label for the mini card
+        const label = document.createElement('div');
+        label.textContent = ((opt.obj && opt.obj.side) === 'you' || opt.side === 'you') ? 'Seu' : 'Oponente';
+        label.style.position = 'absolute';
+        label.style.bottom = '2px';
+        label.style.left = '0';
+        label.style.width = '100%';
+        label.style.textAlign = 'center';
+        label.style.background = ((opt.obj && opt.obj.side) === 'you' || opt.side === 'you') ? '#bae6fd' : '#fecaca';
+        label.style.color = ((opt.obj && opt.obj.side) === 'you' || opt.side === 'you') ? '#2563eb' : '#dc2626';
+        label.style.fontWeight = 'bold';
+        label.style.fontSize = '12px';
+        label.style.padding = '1px 0';
+        label.style.borderRadius = '0 0 6px 6px';
+        cardBtn.appendChild(label);
+        const targetId = ((opt.obj && opt.obj.side) === 'you' || opt.side === 'you') ? 'choiceYouCol' : 'choiceOppoCol';
+        const target = document.getElementById(targetId);
+        if (target) target.appendChild(cardBtn);
+      }
     });
 
     // Default preview: first option
@@ -6065,11 +6114,20 @@ function aiMain(){
 
       const chooseTargetFor = (attackerCard) => {
         const katsu = STATE[side].leader && STATE[side].leader.name === 'Katsu';
-        const candidates = [];
-        // enemy allies
-        (STATE[foe].allies||[]).forEach((c,i)=>{ if(c && c.hp>0) candidates.push({ type:'ally', side:foe, index:i, obj:c }); });
-        // leader
-        if(STATE[foe].leader && STATE[foe].leader.hp>0) candidates.push({ type:'leader', side:foe, obj: STATE[foe].leader });
+        let candidates = [];
+        // enemy allies (collect raw for taunt detection)
+        const enemyEntries = (STATE[foe].allies||[]).map((c,i)=>({ c, i })).filter(x=>x.c && x.c.hp>0);
+        // detect provocadores deitados (taunt rule used elsewhere)
+        const tauntersTapped = enemyEntries.filter(x => x.c.tapped && hasKw(x.c,'provocar'));
+        if (tauntersTapped.length) {
+          // if there are tapped provokers, AI must target them
+          candidates = tauntersTapped.map(x => ({ type:'ally', side:foe, index: x.i, obj: x.c }));
+        } else {
+          // otherwise any alive ally is a candidate
+          candidates = enemyEntries.map(x => ({ type:'ally', side:foe, index: x.i, obj: x.c }));
+          // include leader as a candidate when alive
+          if (STATE[foe].leader && STATE[foe].leader.hp>0) candidates.push({ type:'leader', side:foe, obj: STATE[foe].leader });
+        }
         if(candidates.length===0) return null;
         // score every candidate
         let best = null; let bestScore = -1e9;
