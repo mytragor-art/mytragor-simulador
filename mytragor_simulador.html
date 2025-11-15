@@ -3850,11 +3850,8 @@ function playFromHand(side, index) {
           if (c && c.name) q.excludeName = c.name;
           performSearchDeck(side, q, c.effectA.max || 10, c.effectA.title || 'Buscar no deck', (chosenCard, chosenIdx) => {
             if (!chosenCard) { log('Busca cancelada ou sem resultados.'); return; }
-            // remove chosen card from deck
-            const di = STATE[side].deck.indexOf(chosenCard);
-            if (di !== -1) STATE[side].deck.splice(di, 1);
-            STATE[side].hand.push(chosenCard);
-            log(`Você buscou ${chosenCard.name} e a colocou na mão.`);
+            // performSearchDeck already moves the chosen card from deck to hand;
+            // here we only finalize playing this card (move to grave and update hand)
             STATE[side].grave.push(c);
             STATE[side].hand.splice(index, 1);
             render();
@@ -3979,10 +3976,7 @@ function playFromHand(side, index) {
           if (c && c.name) q.excludeName = c.name;
           performSearchDeck(side, q, c.effectB.max || 10, c.effectB.title || 'Buscar no deck', (chosenCard, chosenIdx) => {
             if (!chosenCard) { log('Busca cancelada ou sem resultados.'); return; }
-            const di = STATE[side].deck.indexOf(chosenCard);
-            if (di !== -1) STATE[side].deck.splice(di, 1);
-            STATE[side].hand.push(chosenCard);
-            log(`Você buscou ${chosenCard.name} e a colocou na mão.`);
+            // performSearchDeck already moved the chosen card to the hand;
             STATE[side].grave.push(c);
             STATE[side].hand.splice(index, 1);
             render();
