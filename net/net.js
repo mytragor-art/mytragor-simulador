@@ -4,6 +4,9 @@
 // - Methods: Net.start(), Net.sendAction(action), Net.publishState(state), Net.getStatus()
 ;(function(){
   var SERVER = localStorage.getItem('mpServer') || 'ws://localhost:8080';
+  var CANDIDATES = (function(){ var list=[]; try{ var s = localStorage.getItem('mpServer'); if(s) list.push(s); }catch(e){}
+    list.push('ws://localhost:8080'); list.push('ws://localhost:5500/'); return list; })();
+  var curIdx = 0;
   var PARAMS = new URLSearchParams(location.search);
   var ROOM = (PARAMS.get('room') || 'TESTE123').trim().toUpperCase();
   var SIDE = (PARAMS.get('side') === 'p2') ? 'p2' : 'p1';
@@ -21,11 +24,11 @@
     if(ws && ws.readyState === WebSocket.OPEN) return;
     ws = new WebSocket(SERVER + '?room=' + encodeURIComponent(ROOM) + '&side=' + encodeURIComponent(SIDE));
 
-    ws.onopen = function(){ connected = true; log('ws open', ROOM, SIDE); flush();
+    ws.onopen = function(){ connected = true; try{ localStorage.setItem('mpServer', SERVER); }catch(e){} log('ws open', SERVER, ROOM, SIDE); flush();
       if(SIDE === 'p2'){ setTimeout(function(){ safeSend({ type:'ready', from: SIDE }); }, 120); }
     };
 
-    ws.onclose = function(){ connected = false; log('ws close'); setTimeout(start, 1500); };
+    ws.onclose = function(){ connected = false; log('ws close'); curIdx = (curIdx+1) % CANDIDATES.length; SERVER = CANDIDATES[curIdx]; setTimeout(start, 1200); };
     ws.onerror = function(e){ console.warn('[Net] ws error', e); };
 
     ws.onmessage = function(ev){
