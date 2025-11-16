@@ -41,11 +41,18 @@
     const orig=Dispatcher.apply.bind(Dispatcher); this._orig=orig;
     Dispatcher.apply=(action)=>{
       try{
-        if(!action._remote && this.ws && this.ws.readyState===1){
+        const isLocal = !action._remote;
+        if(isLocal && this.ws && this.ws.readyState===1){
           this.ws.send(JSON.stringify({type:'action',room:this.room,payload:action}));
         }
       }catch(e){ /* ignore send errors */ }
-      return orig(action);
+      const ret = orig(action);
+      try{
+        if(isLocal && this.ws && this.ws.readyState===1 && window.Game && typeof Game.buildSnapshot==='function'){
+          const snap = Game.buildSnapshot(); this.sendSync(snap);
+        }
+      }catch(e){ /* ignore */ }
+      return ret;
     };
     // expose a global handle so the game can send sync/seed when needed
     try{ window.NetPeer=this; }catch(e){}
@@ -67,3 +74,7 @@
   NetController.prototype.dispose=function(){this.onDetach();};
   window.NetController=NetController;
 })();
+      if(m.type === 'peer-left'){
+        try{ alert('Oponente saiu da sala'); }catch(e){}
+        return;
+      }

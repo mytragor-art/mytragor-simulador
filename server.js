@@ -1,11 +1,10 @@
 // server.js — relay WebSocket simples
 let uWS = null;
-try{ uWS = require('uWebSockets.js'); }catch(e){ uWS = null; }
 if(uWS){
-  const roomCounts = new Map();
-  function incRoom(r){ r = String(r||'').toUpperCase(); if(!r) return; roomCounts.set(r, (roomCounts.get(r)||0)+1); }
-  function decRoom(r){ r = String(r||'').toUpperCase(); if(!r) return; const n=(roomCounts.get(r)||0)-1; if(n>0) roomCounts.set(r,n); else roomCounts.delete(r); }
-  function getRooms(){ return Array.from(roomCounts.entries()).map(([room,count])=>({ room, count })); }
+  const roomsMap = new Map();
+  function addToRoom(ws, r){ r = String(r||'').toUpperCase(); if(!r) return; let set = roomsMap.get(r); if(!set){ set = new Set(); roomsMap.set(r, set); } set.add(ws); }
+  function removeFromRoom(ws){ const r = String(ws.room||'').toUpperCase(); if(!r) return; const set = roomsMap.get(r); if(set){ set.delete(ws); if(set.size===0) roomsMap.delete(r); } }
+  function getRooms(){ return Array.from(roomsMap.entries()).map(([room,set])=>({ room, count: set.size })); }
   const app = uWS.App();
   function getQueryParam(req, key){ try{ return req.getQuery(key)||null; }catch{ return null; } }
   app.ws('/*', {
@@ -16,20 +15,20 @@ if(uWS){
       const rawRoom = getQueryParam(req,'room');
       ws.room = rawRoom ? String(rawRoom).toUpperCase() : null;
       ws.side = (getQueryParam(req,'side')||'').toLowerCase() || null;
-      if(ws.room){ ws.subscribe(ws.room); incRoom(ws.room); }
+      if(ws.room){ ws.subscribe(ws.room); addToRoom(ws, ws.room); }
     },
     message(ws, message, isBinary){
       let data;
       try{ data = isBinary ? Buffer.from(message) : Buffer.from(message).toString('utf8'); }catch(e){ return; }
       try{
         const obj = typeof data === 'string' ? JSON.parse(data) : null;
-        if(obj && obj.type === 'join' && obj.room){ ws.room = String(obj.room).toUpperCase(); ws.subscribe(ws.room); incRoom(ws.room); }
+        if(obj && obj.type === 'join' && obj.room){ ws.room = String(obj.room).toUpperCase(); ws.subscribe(ws.room); addToRoom(ws, ws.room); }
         if(obj && obj.type === 'list'){ try{ ws.send(JSON.stringify({ type:'rooms', rooms: getRooms() })); }catch(e){} return; }
         if(obj && obj.type === 'ping'){ try{ ws.send(JSON.stringify({ type:'pong', now: Date.now() })); }catch(e){} return; }
       }catch(e){ /* ignore */ }
       if(ws.room){ try{ app.publish(ws.room, data); }catch(e){} }
     },
-    close(ws){ if(ws.room){ decRoom(ws.room); ws.room=null; } }
+    close(ws){ if(ws.room){ removeFromRoom(ws); ws.room=null; } }
   });
   app.get('/rooms', (res, req)=>{ try{ res.writeHeader('Content-Type','application/json; charset=utf-8').end(JSON.stringify({ time:new Date().toISOString(), rooms: getRooms() })); }catch(e){ try{ res.end('[]'); }catch(_){} } });
   app.listen(8080, (token)=>{ console.log(token ? 'uWS relay ON ws://localhost:8080' : 'uWS listen failed'); });
@@ -129,7 +128,9 @@ wss.on('connection', (ws, req) => {
     });
   });
 
-  ws.on('close', () => { console.log('WS closed', req.socket.remoteAddress, 'room=', ws.room); ws.room = null; broadcastRooms(); /* opcional: cleanup */});
+  ws.on('close', () => {
+    ws.room = null; broadcastRooms();
+  });
 });
 
 function getRooms(){

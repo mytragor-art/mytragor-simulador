@@ -81,7 +81,12 @@ wss.on('connection', (ws, req) => {
     }catch(e){}
     wss.clients.forEach(client=>{ try{ if(client!==ws && client.readyState===WebSocket.OPEN && client.room && ws.room && client.room===ws.room){ client.send(data); } }catch(e){} });
   });
-  ws.on('close', ()=>{ ws.room=null; broadcastRooms(); });
+  ws.on('close', ()=>{
+    try{
+      wss.clients.forEach(client=>{ try{ if(client!==ws && client.readyState===WebSocket.OPEN && client.room && ws.room && client.room===ws.room){ client.send(JSON.stringify({ type:'peer-left', side: ws.side||null })); } }catch(e){} });
+    }catch(e){}
+    ws.room=null; broadcastRooms();
+  });
 });
 
 function getRooms(){ const map={}; wss.clients.forEach(c=>{ try{ if(c && c.readyState===WebSocket.OPEN && c.room){ const r=(''+c.room).toUpperCase(); map[r]=(map[r]||0)+1; } }catch(e){} }); return Object.keys(map).map(r=>({room:r,count:map[r]})); }

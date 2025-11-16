@@ -4,8 +4,11 @@
 // - Methods: Net.start(), Net.sendAction(action), Net.publishState(state), Net.getStatus()
 ;(function(){
   var SERVER = localStorage.getItem('mpServer') || 'ws://localhost:8080';
+  var isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
+  var isLocal = (function(){ try{ var h = location.hostname; return (h === 'localhost' || /\.local$/.test(h)); }catch(e){ return false; } })();
   var CANDIDATES = (function(){ var list=[]; try{ var s = localStorage.getItem('mpServer'); if(s) list.push(s); }catch(e){}
-    list.push('ws://localhost:8080'); list.push('ws://localhost:5500/'); return list; })();
+    if(isLocal){ list.push('ws://localhost:8080'); list.push('ws://localhost:5500/'); }
+    return list; })();
   var curIdx = 0;
   var PARAMS = new URLSearchParams(location.search);
   var ROOM = (PARAMS.get('room') || 'TESTE123').trim().toUpperCase();
@@ -28,7 +31,7 @@
       if(SIDE === 'p2'){ setTimeout(function(){ safeSend({ type:'ready', from: SIDE }); }, 120); }
     };
 
-    ws.onclose = function(){ connected = false; log('ws close'); curIdx = (curIdx+1) % CANDIDATES.length; SERVER = CANDIDATES[curIdx]; setTimeout(start, 1200); };
+    ws.onclose = function(){ connected = false; log('ws close'); if(CANDIDATES.length){ curIdx = (curIdx+1) % CANDIDATES.length; SERVER = CANDIDATES[curIdx]; } setTimeout(start, 1200); };
     ws.onerror = function(e){ console.warn('[Net] ws error', e); };
 
     ws.onmessage = function(ev){

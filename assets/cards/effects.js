@@ -138,7 +138,7 @@ const MYTRAGOR_EFFECTS = (function() {
         }
 
         // IA: prefere banir carta do oponente
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           let choice = candidates.find(e => e.side !== side) || candidates[0];
           removeBannedCard(choice);
           STATE[choice.side].ban.push(choice.card);
@@ -204,7 +204,7 @@ const MYTRAGOR_EFFECTS = (function() {
         }
 
         // IA: prefere destruir equipamento do oponente
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           let choice = equips.find(e => e.side !== side) || equips[0];
           helpers.sendEquipToGrave(choice.side, choice.card);
           helpers.log(`IA: ${card.name} destruiu ${choice.card.name}.`);
@@ -244,7 +244,7 @@ const MYTRAGOR_EFFECTS = (function() {
         // prevent the source card from being selected
         if (card && card.name) q.excludeName = card.name;
 
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           helpers.searchDeck(side, q, card.max || 10, card.title || 'Buscar no deck', () => {});
         } else {
           helpers.searchDeck(side, q, card.max || 10, card.title || 'Buscar no deck', (chosenCard) => {
@@ -275,7 +275,7 @@ const MYTRAGOR_EFFECTS = (function() {
         const dmg = card.effectValue || 1;
 
         // IA: heurística - prefere não matar aliados
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           let choice = candidates.find(x => (x.obj.hp || 0) > dmg) || candidates[0];
           const target = choice.obj;
           const slot = choice.slot;
@@ -337,7 +337,7 @@ const MYTRAGOR_EFFECTS = (function() {
         }
 
         // IA: descarta aleatoriamente
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           const removed = discardRandomFromHand(foe, 1, {
             sourceSide: side,
             sourceCard: card,
@@ -534,7 +534,7 @@ const MYTRAGOR_EFFECTS = (function() {
         // Now allow the player/AI to choose a Martial ally from grave to special summon
         const q = { filiacao: 'Marcial', kind: 'ally' };
         // If AI: use first available
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           setTimeout(() => { specialSummonByConfig(side, { origem: ['grave'], filiacao: 'Marcial', kind: 'ally' }, 'Bem Treinado'); }, 10);
           helpers.log(`${card.name}: IA ativou e procura aliado Marcial no cemitério.`);
           helpers.render();
@@ -599,7 +599,7 @@ const MYTRAGOR_EFFECTS = (function() {
         }
 
         // AI: choose heuristic
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           // prefer highest damage ally, else leader
           let pick = options.find(o => o.type === 'ally');
           // choose by damage if multiple allies
@@ -654,13 +654,13 @@ const MYTRAGOR_EFFECTS = (function() {
           .filter(x => x.c && ['Religioso', 'Marcial', 'Arcana'].includes(x.c.filiacao));
 
         // If opponent has no cards and it's AI playing, nothing to do
-        if (!hand.length && side === 'ai') {
+        if (!hand.length && ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai'))) {
           helpers.log(`${card.name}: oponente não tem cartas na mão.`);
           return { discarded: 0 };
         }
 
         // For AI: choose among eligible cards only
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           if (!eligibleIdx.length) {
             helpers.log(`${card.name}: o oponente não possui cartas Religiosas, Marciais ou Arcana na mão (IA).`);
             return { discarded: 0 };
@@ -838,7 +838,7 @@ const MYTRAGOR_EFFECTS = (function() {
         if (!candidates.length) return;
 
         // IA: usa automaticamente se heurística simples aprovar
-        if (side === 'ai') {
+        if ((typeof window!=='undefined' && window.__IS_MP)? false : (side === 'ai')) {
           const pick = candidates[0];
           try {
             // delegate to reaction handler to remove card, pay cost and summon
