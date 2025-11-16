@@ -19,6 +19,18 @@
         const act = m.payload || m.action || null; if(!act) return; act._remote = true; try{ Dispatcher.apply(act); }catch(e){ console.warn('apply remote action failed', e); }
         return;
       }
+      // when peer signals ready, host (p1) publishes an authoritative snapshot
+      if(m.type === 'ready'){
+        if(this.side === 'p1' && window.Game && typeof Game.buildSnapshot === 'function'){
+          try{ const snap = Game.buildSnapshot(); this.sendSync(snap); }catch(e){ console.warn('send initial snapshot failed', e); }
+        }
+        return;
+      }
+      // seed synchronization (optional early RNG alignment)
+      if(m.type === 'seed' && m.payload && window.RNG && typeof window.RNG.setSeed === 'function'){
+        try{ window.RNG.setSeed(m.payload); }catch(e){}
+        return;
+      }
       // accept both legacy 'state-apply' and newer 'state-sync'
       if((m.type === 'state-apply' || m.type === 'state-sync') && Game.loadSnapshot){
         try{ Game.loadSnapshot(m.state || m.payload || m); }catch(e){ console.warn('Game.loadSnapshot failed', e); }

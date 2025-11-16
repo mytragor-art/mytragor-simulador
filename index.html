@@ -138,6 +138,7 @@
     // Simple client-side account system with export/import and per-user deck storage.
     // Not a production auth system — provides portability via Export/Import.
     (function(){
+      try{ const u = new URL(location.href); const mp = (u.searchParams.get('mode') === 'mp'); const dis = localStorage.getItem('disableFirebase') === '1'; if(mp || dis){ window._mytragor_firebase_init = 'skip'; return; } }catch(_){}
       const USERS_KEY = 'mt_users';
       const CUR_KEY = 'mt_current_user';
 
@@ -535,10 +536,10 @@
       <p class="lead">Escolha uma opção para começar</p>
 
       <nav class="menu" aria-label="Menu principal">
-  <a class="gold-btn primary disabled" href="#" id="btnMultiplayer" aria-disabled="true" title="Multiplayer (desabilitado)">Multiplayer <span class="ribbon">Em breve</span></a>
+        <a class="gold-btn primary" href="multiplayer.html" id="btnMultiplayer" title="Multiplayer">Multiplayer</a>
         <a class="gold-btn primary" id="btnVsAI" href="mytragor_simulador.html">VS IA</a>
         <a class="gold-btn primary" id="btnDeckBuilder" href="assets/ui/deckbuilder.html">Montar Deck</a>
-  <a class="gold-btn primary" id="btnGallery" href="gallery.html">Galeria</a>
+        <a class="gold-btn primary" id="btnGallery" href="gallery.html">Galeria</a>
       </nav>
       <!-- Quick test buttons: open simulator as p1 or p2 in room 123 -->
   <div style="display:flex;gap:10px;justify-content:center;margin-top:12px">
@@ -701,17 +702,7 @@
 
   // ligar o botão Multiplayer -> abrir modal de configuração
   const mpBtn = document.getElementById('btnMultiplayer');
-  if (mpBtn) {
-    // Do not attach multiplayer navigation while feature is not ready
-    const isDisabled = mpBtn.classList.contains('disabled') || mpBtn.getAttribute('aria-disabled') === 'true';
-    if (!isDisabled) {
-      mpBtn.addEventListener('click', (e) => { e.preventDefault(); location.href = 'multiplayer.html'; });
-    } else {
-      // ensure it doesn't navigate if clicked programmatically
-      mpBtn.addEventListener('click', (e) => { e.preventDefault(); });
-      mpBtn.style.cursor = 'default';
-    }
-  }
+  if (mpBtn) { mpBtn.addEventListener('click', (e) => { e.preventDefault(); location.href = 'multiplayer.html'; }); }
   // quick debug buttons to open simulator directly as p1/p2 in room 123
   const btnP1 = document.getElementById('btnP1');
   const btnP2 = document.getElementById('btnP2');

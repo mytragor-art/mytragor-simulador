@@ -85,6 +85,7 @@
 (() => {
   const $ = (s) => document.querySelector(s);
   const log = (msg) => { const el = $('#log'); const p = document.createElement('div'); p.textContent = msg; el.appendChild(p); el.scrollTop = el.scrollHeight; };
+  function normalizeRoom(s){ s = String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); if(s.length<3) s = (s+'XXXX').slice(0,3); return s.slice(0,12); }
 
   const roomInput = $('#room');
   const sideSelect = $('#side');
@@ -154,7 +155,7 @@
   // to the full simulator page which contains the game scripts and net bootstrap.
   // Create a new room as host (p1)
   btnConnect.onclick = () => {
-    ROOM = (roomInput.value.trim() || ('ROOM' + Math.floor(Math.random()*9000))).toUpperCase();
+    ROOM = normalizeRoom(roomInput.value.trim() || ('ROOM' + Math.floor(Math.random()*9000)));
     MY_SIDE = 'p1';
     const SERVER = srvInput.value.trim();
 
@@ -177,7 +178,7 @@
 
   // Join the room selected in the lobby (acts as p2)
   if(btnJoin) btnJoin.onclick = () => {
-    ROOM = roomInput.value.trim().toUpperCase();
+    ROOM = normalizeRoom(roomInput.value.trim());
     if(!ROOM) return log('Selecione uma sala antes de entrar');
     MY_SIDE = 'p2';
     const SERVER = srvInput.value.trim();

@@ -17,8 +17,9 @@ window.MytragorDecks = {
 };
 
 let unsubscribeSnapshot = null;
+function firebaseEnabled(){ try{ return localStorage.getItem('disableFirebase') !== '1'; }catch(e){ return true; } }
 
-onAuthStateChanged(auth, async (user) => {
+if(firebaseEnabled()) onAuthStateChanged(auth, async (user) => {
   try {
     if (user) {
       // attempt to migrate any anonymous local decks to user's server doc
@@ -47,6 +48,18 @@ onAuthStateChanged(auth, async (user) => {
     console.error('Decks init error', err);
   }
 });
+
+if(!firebaseEnabled()){
+  (async () => {
+    try{
+      const decks = await Decks.loadDecks();
+      window.__MYTRAGOR_DECKS = decks;
+      if (typeof window.onMytragorDecksChanged === 'function') {
+        try { window.onMytragorDecksChanged(decks); } catch(e){}
+      }
+    }catch(e){ console.warn('local decks init failed', e); }
+  })();
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

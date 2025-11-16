@@ -3501,6 +3501,10 @@ function startMatch(){
 
   // 2.2 Create only my local deck now
   try{
+    // Set an initial deterministic seed on host so both clients share RNG
+    if(MY_SIDE === 'p1' && window.RNG && typeof window.RNG.setSeed === 'function'){
+      try{ const s = (Date.now() % 2147483647); window.RNG.setSeed(s); }catch(e){}
+    }
     Game.createDeck(MY_SIDE, getDeckFor(MY_SIDE));
     Game.shuffle(MY_SIDE);
     Game.drawStartHand(MY_SIDE);

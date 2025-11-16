@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAA3bgJmOzxq-oHe8ODjk-28gSLUtIpdFQ",
@@ -20,4 +20,4 @@ if (firebaseConfig.storageBucket && !firebaseConfig.storageBucket.includes('apps
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });

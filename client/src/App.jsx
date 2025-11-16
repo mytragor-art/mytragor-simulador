@@ -9,6 +9,10 @@ function App() {
   const [decks, setDecks] = useState([]);
   const [selected, setSelected] = useState(0);
   const [status, setStatus] = useState("");
+  const [shareCode, setShareCode] = useState("");
+  const [codeMsg, setCodeMsg] = useState("");
+  const [view, setView] = useState("home");
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     let unsub = null;
@@ -42,8 +46,46 @@ function App() {
     }
   }
 
+  async function copyShareCode() {
+    setCodeMsg("");
+    try {
+      const res = await Decks.exportDeckToShared(decks[selected]);
+      const code = res.code;
+      try { await navigator.clipboard.writeText(code); setCodeMsg("código copiado"); } catch(e) { setCodeMsg(code); }
+    } catch (e) {
+      setCodeMsg("erro: " + (e.message || e));
+    }
+  }
+
+  async function importByCode() {
+    setStatus("importando...");
+    try {
+      await Decks.importDeckFromCode(shareCode);
+      const loaded = await Decks.loadDecks();
+      setDecks(loaded || []);
+      setStatus("importado");
+      setShareCode("");
+    } catch (e) {
+      setStatus("erro: " + (e.message || e));
+    }
+  }
+
+  function resolveStaticUrl(path){
+    try{
+      const u = new URL(window.location.href);
+      if(u.port === '5173' && u.hostname === 'localhost'){ return `http://localhost:5500/${path}`; }
+      const base = u.pathname.endsWith('/') ? u.pathname : u.pathname.substring(0, u.pathname.lastIndexOf('/') + 1);
+      return base + path;
+    }catch(_){ return '/' + path; }
+  }
+  function goVsIA(){ window.location.href = resolveStaticUrl('mytragor_simulador.html'); }
+  function goDeckBuilder(){ setView("decks"); }
+  function goGallery(){ window.location.href = resolveStaticUrl('gallery.html'); }
+  function goMultiplayer(){ if(!user){ setShowLogin(true); } else { window.location.href = resolveStaticUrl('multiplayer.html'); } }
+
   function handleLogin(u) {
     setUser(u);
+    setShowLogin(false);
   }
 
   function addDeck() {
@@ -71,8 +113,39 @@ function App() {
     setDecks([]);
   }
 
-  if (!user) {
-    return <Login onLogin={handleLogin} />;
+  if (view === "home") {
+    return (
+      <div className="wrap">
+        <header className="brand-header">
+          <div className="brandWrap">
+            <div className="brand">Mytragor</div>
+            <div className="subtitle">Trading card game</div>
+          </div>
+        </header>
+        <div style={{ position: "absolute", right: 18, top: 18, display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ color: "#cbd5e1", fontWeight: 700 }}>{user ? user.email : ""}</div>
+          <button className="auth-btn" onClick={()=> setShowLogin(true)}>{user?"Conta":"Entrar / Conta"}</button>
+        </div>
+        <main className="hero">
+          <p className="lead">Escolha uma opção para começar</p>
+          <nav className="menu" aria-label="Menu principal">
+            <button className="gold-btn primary" onClick={goMultiplayer}>Multiplayer</button>
+            <button className="gold-btn primary" onClick={goVsIA}>VS IA</button>
+            <button className="gold-btn primary" onClick={goDeckBuilder}>Montar Deck</button>
+            <button className="gold-btn primary" onClick={goGallery}>Galeria</button>
+          </nav>
+          <footer className="footer-medieval">do RPG de mesa para o Trading Card Game. Rola o D20.</footer>
+        </main>
+        <div className="mp-modal" style={{ display: showLogin? 'flex':'none' }}>
+          <div className="mp-card" role="document">
+            <div className="mp-header"><div className="mp-title">Conta Mytragor</div><div className="mp-actions"><button className="mp-btn ghost" onClick={()=> setShowLogin(false)}>Fechar</button></div></div>
+            <div className="mp-body">
+              <Login onLogin={handleLogin} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const current = decks[selected] || { id: "-", name: "(nenhum)", cards: [] };
@@ -89,6 +162,7 @@ function App() {
           <button onClick={addDeck} style={{ padding: "8px 12px" }}>+ Novo deck</button>
           <button onClick={handleSave} style={{ padding: "8px 12px" }}>Salvar decks</button>
           <button onClick={doLogout} style={{ padding: "8px 12px" }}>Sair</button>
+          <button onClick={()=> setView("home")} style={{ padding: "8px 12px" }}>Voltar</button>
         </div>
       </header>
 
@@ -123,6 +197,19 @@ function App() {
           <div style={{ marginTop: 12 }}>
             <label style={{ display: "block", marginBottom: 6 }}>Cartas (IDs separados por vírgula)</label>
             <textarea value={(current.cards||[]).join(",")} onChange={(e)=> updateDeck(selected, { cards: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })} style={{ width: "100%", minHeight: 120, padding: 8 }} />
+          </div>
+
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={copyShareCode} style={{ padding: "6px 10px" }}>Copiar código</button>
+            {codeMsg && <span style={{ color: "#9ca3af", fontSize: 13 }}>{codeMsg}</span>}
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", marginBottom: 6 }}>Importar por código</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={shareCode} onChange={(e)=> setShareCode(e.target.value)} placeholder="MTG:..." style={{ flex: 1, padding: 8 }} />
+              <button onClick={importByCode} style={{ padding: "8px 12px" }}>Importar</button>
+            </div>
           </div>
 
         </section>
