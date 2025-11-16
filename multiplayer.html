@@ -100,8 +100,13 @@
   function connectLobbyWS(serverOverride){
     // Prefer the explicit server input if present, then passed override, then localStorage, then a sensible default
     const inputVal = (document.getElementById('srv') && document.getElementById('srv').value) ? document.getElementById('srv').value.trim() : '';
-    const SERVER = inputVal || serverOverride || localStorage.getItem('mpServer') || 'ws://localhost:8080';
-    try{ lobbyWS = new WebSocket(SERVER); }catch(e){ console.warn('lobby ws failed to connect to', SERVER, e); return; }
+    let SERVER = inputVal || serverOverride || localStorage.getItem('mpServer') || 'ws://localhost:8080';
+    const fallback = `ws://${location.host}/`;
+    function tryConnect(url){
+      try{ lobbyWS = new WebSocket(url); }catch(e){ console.warn('[lobby] ws failed to connect to', url, e); return false; }
+      return true;
+    }
+    if(!tryConnect(SERVER)){ console.log('[lobby] trying fallback', fallback); tryConnect(fallback); }
     lobbyWS.onopen = ()=>{ console.log('[lobby] ws open, requesting rooms'); try{ lobbyWS.send(JSON.stringify({ type:'list' })); }catch(e){} };
     lobbyWS.onmessage = (ev)=>{
       // Debug: always show raw incoming data so we can inspect server replies
@@ -112,8 +117,16 @@
         renderRoomList(m.rooms);
       }
     };
-    lobbyWS.onclose = ()=>{ console.log('[lobby] ws close, reconnecting in 2s'); setTimeout(connectLobbyWS,2000); };
-    lobbyWS.onerror = (e)=>{ console.warn('[lobby] ws error', e); };
+    lobbyWS.onclose = ()=>{ console.log('[lobby] ws close, reconnecting in 2s'); setTimeout(()=> connectLobbyWS(SERVER),2000); };
+    lobbyWS.onerror = (e)=>{
+      console.warn('[lobby] ws error', e);
+      // If primary server was 8080 and errored, attempt fallback once
+      try{
+        const u = new URL(SERVER);
+        const is8080 = u.hostname==='localhost' && u.port==='8080';
+        if(is8080){ console.log('[lobby] switching to fallback', fallback); connectLobbyWS(fallback); }
+      }catch(_){ /* ignore */ }
+    };
   }
 
   function renderRoomList(list){
@@ -157,7 +170,8 @@
   btnConnect.onclick = () => {
     ROOM = normalizeRoom(roomInput.value.trim() || ('ROOM' + Math.floor(Math.random()*9000)));
     MY_SIDE = 'p1';
-    const SERVER = srvInput.value.trim();
+    let SERVER = srvInput.value.trim();
+    if(!SERVER){ SERVER = localStorage.getItem('mpServer') || `ws://${location.host}/`; }
 
     localStorage.setItem('mpServer', SERVER);
     localStorage.setItem('mpRoom', ROOM);
@@ -181,7 +195,8 @@
     ROOM = normalizeRoom(roomInput.value.trim());
     if(!ROOM) return log('Selecione uma sala antes de entrar');
     MY_SIDE = 'p2';
-    const SERVER = srvInput.value.trim();
+    let SERVER = srvInput.value.trim();
+    if(!SERVER){ SERVER = localStorage.getItem('mpServer') || `ws://${location.host}/`; }
     localStorage.setItem('mpServer', SERVER); localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
     log(`Entrando na sala ${ROOM} como p2...`);
     const url = new URL(location.href);
