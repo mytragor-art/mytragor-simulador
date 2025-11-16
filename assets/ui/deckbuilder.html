@@ -787,6 +787,34 @@
     }
     function saveSavedDecksLocal(arr){ localStorage.setItem('mytragor_decks', JSON.stringify(arr)); }
 
+    // Firestore compat helpers (safe no-op if FIREBASE_CONFIG missing)
+    function initFirebaseCompatLocal(){
+      try{
+        if(window._mytragor_firebase_init_local) return;
+        if(typeof FIREBASE_CONFIG === 'undefined') return;
+        if(window.firebase && firebase.initializeApp){
+          firebase.initializeApp(FIREBASE_CONFIG);
+          window._mytragor_firebase_init_local = true;
+        }
+      }catch(e){ console.warn('initFirebaseCompatLocal failed', e); }
+    }
+
+    async function saveDeckToFirestoreLocal(deck){
+      try{
+        initFirebaseCompatLocal();
+        if(!window.firebase || !firebase.auth) return null;
+        const user = firebase.auth().currentUser;
+        if(!user) return null;
+        const db = firebase.firestore();
+        if(deck._id){
+          await db.collection('users').doc(user.uid).collection('decks').doc(deck._id).set(deck, { merge: true });
+          return deck._id;
+        }
+        const ref = await db.collection('users').doc(user.uid).collection('decks').add(deck);
+        return ref.id;
+      }catch(e){ console.warn('saveDeckToFirestoreLocal failed', e); return null; }
+    }
+
     btnSalvar.onclick = function() {
       if (!chosenLeader || deck.length !== 40) return;
       const deckName = (deckNameInput && String(deckNameInput.value || '').trim()) || '';
@@ -800,7 +828,8 @@
         leaderKey: leaderKey,
         leaderImg: chosenLeader.img,
         cards: deck.map(c => c.name),
-        fragImg: chosenFragImg || null
+        fragImg: chosenFragImg || null,
+        tags: []
       };
       // migrate old single-deck key if present
       const all = getSavedDecksLocal();
@@ -825,6 +854,23 @@
       }
       all.push(deckData);
       saveSavedDecksLocal(all);
+
+      // Try to save to Firestore for signed-in users (non-blocking)
+      (async ()=>{
+        try{
+          initFirebaseCompatLocal();
+          if(window.firebase && firebase.auth && firebase.auth().currentUser){
+            const remoteId = await saveDeckToFirestoreLocal(deckData);
+            if(remoteId){
+              deckData._id = remoteId;
+              // update the saved local copy with _id
+              try{ const cur = getSavedDecksLocal(); cur[cur.length-1]._id = remoteId; saveSavedDecksLocal(cur); }catch(e){}
+              alert(`Deck salvo na conta: ${deckData.deckName || deckData.leaderName || deckData.leader}`);
+            }
+          }
+        }catch(e){ console.warn('remote save attempt failed', e); }
+      })();
+
       alert(`Deck salvo: ${deckData.deckName || deckData.leaderName}!`);
       // Optionally redirect to decks salvos page
       // leave on page by default; if user wants, they can click 'Ver decks salvos'

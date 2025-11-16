@@ -807,6 +807,12 @@
 
 </head>
 
+<!-- Firebase (compat) for optional per-user deck storage -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+
 <script>
 // Modal queue helpers: defer modal displays during sensitive UI refreshes (e.g., fragment renewal)
 // Usage: enqueueModal(function(done){ show modal UI; when modal closes call done(); })
@@ -2972,9 +2978,30 @@ function createCardFromName(cardName) {
   return TEMPLATES.ally_miliciano_vila();
 }
 
-function chooseLeader(){
-  // Verificar se há decks salvos
-  const savedDecks = getSavedDecks();
+async function chooseLeader(){
+  // 1) Prefer Firestore per-user decks when available
+  try{
+    const fb = await loadUserDecksFromFirestore();
+    if(Array.isArray(fb) && fb.length){
+      // normalize docs to simulator format
+      const mapped = fb.map(d => ({ id: d.id, deckName: d.deckName || d.name || '', leader: d.leader || d.leaderName || '', leaderImg: d.leaderImg || null, cards: Array.isArray(d.cards)? d.cards : (d.cardList || []), fragImg: d.fragImg || null }));
+      showDeckSelect(mapped);
+      return;
+    }
+  }catch(e){ console.warn('chooseLeader: loadUserDecksFromFirestore failed', e); }
+
+  // 2) Then try any global window.Auth helper
+  let savedDecks = [];
+  try{
+    if(window.Auth && typeof window.Auth.getUserDecks === 'function'){
+      const ud = window.Auth.getUserDecks();
+      if(Array.isArray(ud) && ud.length) savedDecks = ud.slice();
+    }
+  }catch(e){ console.warn('chooseLeader: Auth.getUserDecks failed', e); }
+  // 3) fallback para localStorage quando nenhum deck de usuário está disponível
+  if(!savedDecks.length){
+    try{ savedDecks = getSavedDecks() || []; }catch(e){ savedDecks = []; }
+  }
   if (savedDecks.length > 0) {
     showDeckSelect(savedDecks);
   } else {
@@ -3056,6 +3083,131 @@ function getSavedDecks() {
   try { return JSON.parse(raw); } catch { return []; }
 }
 
+// --- Firestore helpers (optional) ---------------------------------
+// Uses compat SDK (scripts added in head). These helpers try to read/write
+// decks under `users/{uid}/decks/{deckId}` and return arrays of deck objects
+// with fields compatible with the simulator (deckName, leader, leaderImg, cards, fragImg, id).
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAA3bgJmOzxq-oHe8ODjk-28gSLUtIpdFQ",
+  authDomain: "mytragor-simulador.firebaseapp.com",
+  projectId: "mytragor-simulador",
+  storageBucket: "mytragor-simulador.firebasestorage.app",
+  messagingSenderId: "1007200238881",
+  appId: "1:1007200238881:web:4de615fe910e815e0f9260"
+};
+
+function initFirebaseCompat(){
+  try{
+    if(window.firebase && firebase.initializeApp && !window._mytragor_firebase_init){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      window._mytragor_firebase_init = true;
+      // keep UI in sync when auth state changes and trigger migration when available
+      try{ firebase.auth().onAuthStateChanged(async (u)=>{ try{ if(u){ if(window.migrateLocalDecksToFirestore) await window.migrateLocalDecksToFirestore(); } if(typeof renderModalState==='function') renderModalState(); }catch(e){} }); }catch(e){}
+    }
+  }catch(e){ console.warn('initFirebaseCompat failed', e); }
+}
+
+// Migrate local saved decks (localStorage 'mytragor_decks') to Firestore under users/{uid}/decks
+window.migrateLocalDecksToFirestore = async function(){
+  try{
+    const raw = localStorage.getItem('mytragor_decks');
+    if(!raw) return { migrated: false, reason: 'no-local' };
+    let local = [];
+    try{ local = JSON.parse(raw) || []; }catch(e){ local = []; }
+    if(!Array.isArray(local) || local.length === 0) return { migrated: false, reason: 'empty' };
+
+    initFirebaseCompat();
+    if(!window.firebase || !firebase.auth) return { migrated:false, reason:'no-firebase' };
+    const user = firebase.auth().currentUser;
+    if(!user) return { migrated:false, reason:'not-signed' };
+
+    // Load remote decks to avoid duplicates
+    const remote = await loadUserDecksFromFirestore();
+    // Build quick lookup keys (leader + sorted cards)
+    const keyFor = (d) => {
+      const leader = (d.leader || d.leaderName || d.deckName || '').toString();
+      const cards = Array.isArray(d.cards) ? d.cards.slice().map(x=>String(x||'')).sort() : [];
+      return leader + '||' + cards.join('|');
+    };
+    const remoteKeys = new Set((remote||[]).map(r => keyFor(r)));
+
+    let added = 0;
+    for(const ld of local){
+      try{
+        const key = keyFor(ld);
+        if(remoteKeys.has(key)) continue; // already present
+        const payload = {
+          deckName: ld.deckName || ld.name || '',
+          leader: ld.leader || ld.leaderName || '',
+          leaderImg: ld.leaderImg || null,
+          cards: Array.isArray(ld.cards) ? ld.cards : (Array.isArray(ld.cardList) ? ld.cardList : []),
+          fragImg: ld.fragImg || null,
+          createdAt: (firebase.firestore && firebase.firestore.FieldValue) ? firebase.firestore.FieldValue.serverTimestamp() : null,
+          updatedAt: (firebase.firestore && firebase.firestore.FieldValue) ? firebase.firestore.FieldValue.serverTimestamp() : null
+        };
+        await saveDeckToFirestore(payload);
+        added++;
+      }catch(e){ console.warn('migrate item failed', e); }
+    }
+
+    // Backup old local value and remove
+    try{ localStorage.setItem('mytragor_decks_backup_' + Date.now(), raw); }catch(e){}
+    try{ localStorage.removeItem('mytragor_decks'); }catch(e){}
+
+    console.log('migrateLocalDecksToFirestore: migrated', added, 'decks');
+    return { migrated: true, count: added };
+  }catch(e){ console.warn('migrateLocalDecksToFirestore error', e); return { migrated:false, reason:'error' }; }
+};
+
+async function loadUserDecksFromFirestore(){
+  try{
+    initFirebaseCompat();
+    if(!window.firebase || !firebase.auth) return [];
+    const user = firebase.auth().currentUser;
+    if(!user) return [];
+    const db = firebase.firestore();
+    const col = db.collection('users').doc(user.uid).collection('decks');
+    const snap = await col.get();
+    const decks = [];
+    snap.forEach(d => { const data = d.data() || {}; decks.push(Object.assign({ id: d.id }, data)); });
+    return decks;
+  }catch(e){ console.warn('loadUserDecksFromFirestore failed', e); return []; }
+}
+
+async function saveDeckToFirestore(deck){
+  try{
+    initFirebaseCompat();
+    if(!window.firebase || !firebase.auth) throw new Error('firebase not initialized');
+    const user = firebase.auth().currentUser;
+    if(!user) throw new Error('not signed in');
+    const db = firebase.firestore();
+    const col = db.collection('users').doc(user.uid).collection('decks');
+    // if deck has id, use set, otherwise add
+    if(deck.id){
+      await col.doc(deck.id).set(deck, { merge: true });
+      return { id: deck.id };
+    } else {
+      const ref = await col.add(deck);
+      return { id: ref.id };
+    }
+  }catch(e){ console.warn('saveDeckToFirestore failed', e); throw e; }
+}
+
+async function deleteDeckFromFirestore(id){
+  try{
+    initFirebaseCompat();
+    if(!window.firebase || !firebase.auth) throw new Error('firebase not initialized');
+    const user = firebase.auth().currentUser;
+    if(!user) throw new Error('not signed in');
+    const db = firebase.firestore();
+    const docRef = db.collection('users').doc(user.uid).collection('decks').doc(id);
+    await docRef.delete();
+    return true;
+  }catch(e){ console.warn('deleteDeckFromFirestore failed', e); return false; }
+}
+
+
 function showDeckSelect(decks) {
   const modal = document.createElement('div');
   modal.id = 'deckSelectModal';
@@ -3111,6 +3263,29 @@ function showDeckSelect(decks) {
   container.appendChild(preview); container.appendChild(right);
   modal.appendChild(container); document.body.appendChild(modal);
 }
+// If another UI placed a temporary payload to play (key: mytragor_play_deck), apply it now
+function tryLoadPlayDeck(){
+  try{
+    const raw = localStorage.getItem('mytragor_play_deck');
+    if(!raw) return;
+    const payload = JSON.parse(raw);
+    if(payload && (payload.cards || payload.leader)){
+      // set leader if provided
+      if(payload.leader){
+        STATE.you.leader = { name: payload.leader, kind: 'leader', img: payload.leaderImg || CHOSEN_IMAGES[getLeaderKey(payload.leader)] };
+      }
+      if(Array.isArray(payload.cards) && payload.cards.length){
+        STATE.you.customDeck = payload.cards.slice();
+      }
+      if(payload.fragImg) STATE.you.fragImg = payload.fragImg;
+      // remove temporary payload to avoid reusing it repeatedly
+      try{ localStorage.removeItem('mytragor_play_deck'); }catch(e){}
+      render();
+      console.log('Applied play deck from localStorage:', payload.deckName || payload.leader || '(unnamed)');
+    }
+  }catch(e){ console.warn('tryLoadPlayDeck failed', e); }
+}
+
 
 function selectSavedDeck(deck) {
  
@@ -5908,6 +6083,9 @@ try {
     else if (k === 'r') { ev.preventDefault(); try { location.reload(); } catch { window.location.href = window.location.href; } }
   });
 } catch(e) { console.warn('Falha ao vincular botões', e); }
+
+// Apply temporary play deck payload if present (from deckbuilder/decks_salvos)
+try{ window.addEventListener('load', tryLoadPlayDeck); }catch(e){ tryLoadPlayDeck(); }
 
 // Wrap dispatcher to broadcast local actions in MP using Net.sendAction
 function wrapDispatcherForMP(){
