@@ -3510,14 +3510,15 @@ function startMatch(){
     Game.drawStartHand(MY_SIDE);
   }catch(e){ console.warn('startMatch create local deck error', e); }
 
-  // 2.3 If I'm p1 (host), build authoritative snapshot and publish
+  // 2.3 Send start handshake with my deck so host can publish snapshot when ambos começarem
   try{
-    if(MY_SIDE === 'p1' && window.Net && typeof window.Net.publishState === 'function'){
-      const snap = Game.buildSnapshot();
-      if(snap) Net.publishState(snap);
-      console.log('startMatch: host published snapshot');
+    if(window.NetPeer && typeof window.NetPeer.sendStart === 'function'){
+      const ls = (MY_SIDE==='p1'?'you':'ai');
+      const spec = (STATE[ls] && STATE[ls].customDeck) ? STATE[ls].customDeck : getDeckFor(MY_SIDE);
+      window.NetPeer.sendStart(spec);
+      console.log('startMatch: sent start handshake');
     }
-  }catch(e){ console.warn('startMatch publishState failed', e); }
+  }catch(e){ console.warn('startMatch sendStart failed', e); }
 
   // Note: we do NOT call beginTurn() here — wait for host/clients to apply snapshot and proceed.
 }

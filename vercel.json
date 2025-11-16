@@ -1,10 +1,6 @@
 {
-  "functions": {
-    "api/ws.js": { "runtime": "edge" },
-    "api/rooms.js": { "runtime": "edge" }
-  },
-  "routes": [
-    { "src": "/api/ws", "dest": "/api/ws.js" },
-    { "src": "/api/rooms", "dest": "/api/rooms.js" }
+  "rewrites": [
+    { "source": "/api/ws", "destination": "/api/ws.js" },
+    { "source": "/api/rooms", "destination": "/api/rooms.js" }
   ]
 }
