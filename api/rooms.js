@@ -1,5 +1,3 @@
-export const config = { runtime: 'edge' };
-
 export default function handler(){
   try{
     const ROOMS = globalThis.__WS_ROOMS__ || new Map();

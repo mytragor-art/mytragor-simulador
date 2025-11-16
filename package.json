@@ -1,18 +1,25 @@
 {
   "name": "simulador",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "description": "MyTragor Simulador com WebSocket multiplayer",
+  "main": "server-render.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server-render.js",
+    "dev": "node server.js",
+    "prod": "node server-render.js",
+    "start:render": "node server-render.js"
   },
-  "keywords": [],
+  "keywords": ["websocket", "multiplayer", "game", "simulador"],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
+    "express": "^4.18.2",
     "firebase": "^12.5.0",
-    "ws": "^8.18.3",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.51.0"
+    "ws": "^8.18.3"
   }
 }

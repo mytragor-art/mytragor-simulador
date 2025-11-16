@@ -1,5 +1,3 @@
-export const config = { runtime: 'edge' };
-
 const ROOMS = globalThis.__WS_ROOMS__ || (globalThis.__WS_ROOMS__ = new Map());
 
 function getRoomsList(){

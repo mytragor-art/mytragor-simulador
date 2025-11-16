@@ -3,13 +3,11 @@ services:
     name: mytragor-simulador
     env: node
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: npm run prod
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 8080
-    healthCheckPath: /rooms
+    healthCheckPath: /health
     disk:
       name: data
       mountPath: /data
