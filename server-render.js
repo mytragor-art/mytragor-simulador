@@ -8,7 +8,7 @@ const server = http.createServer(app);
 
 // Middlewares
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../')));
+app.use(express.static(__dirname)); // Serve arquivos da pasta atual
 
 // WebSocket setup
 const wss = new WebSocket.Server({ server });
@@ -144,7 +144,7 @@ app.get('/health', (req, res) => {
 
 // Rota principal
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Tratamento de erros
