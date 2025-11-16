@@ -1,16 +1,12 @@
+# Configuração do Render para MyTragor Simulador
 services:
   - type: web
     name: mytragor-simulador
     env: node
     buildCommand: npm install
-    startCommand: npm run prod
+    startCommand: node server-render-otimizado.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 8080
-    healthCheckPath: /health
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
+        value: 10000
