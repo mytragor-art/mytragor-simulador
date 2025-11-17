@@ -67,14 +67,68 @@
   NetController.prototype.sendSeed=function(seed){
     this.send({type:'seed',room:this.room,payload:seed});
   };
+  NetController.prototype.sendStart=function(deckSpec){
+    try{ 
+      console.log(`[NetController ${this.side}] Starting game with deck spec:`, deckSpec);
+      this._start[this.side] = true; 
+      this.send({type:'start',room:this.room,side:this.side,deck:deckSpec}); 
+      this.logMessage('Iniciando jogo sincronizado...');
+      
+      // If we're p1 (host), immediately create decks and sync state
+      if(this.side === 'p1'){
+        setTimeout(() => {
+          try {
+            const me = 'p1'; 
+            const opp = 'p2';
+            console.log(`[NetController ${this.side}] Host creating game state`);
+            // Create deck for host if not exists
+            if(window.Game && typeof Game.createDeck==='function'){
+              const lsMe = (me==='p1'?'you':'ai');
+              if(!(window.STATE && window.STATE[lsMe] && Array.isArray(window.STATE[lsMe].deck) && window.STATE[lsMe].deck.length)){
+                const specMe = (window.getDeckFor ? window.getDeckFor(me) : null);
+                if(specMe) { 
+                  Game.createDeck(me, specMe); 
+                  Game.shuffle(me); 
+                  Game.drawStartHand(me); 
+                  console.log(`[NetController ${this.side}] Host deck created`);
+                }
+              }
+              // Create deck for opponent
+              const specOpp = deckSpec || (window.getDeckFor ? window.getDeckFor(opp) : null);
+              if(specOpp) { 
+                Game.createDeck(opp, specOpp); 
+                Game.shuffle(opp); 
+                Game.drawStartHand(opp); 
+                console.log(`[NetController ${this.side}] Opponent deck created`);
+              }
+            }
+            // Send synchronized state immediately
+            if(window.Game && typeof Game.buildSnapshot==='function'){
+              const snap = Game.buildSnapshot(); 
+              this.sendSync(snap);
+              this.logMessage('Jogo iniciado! Criando decks e distribuindo cartas...');
+              console.log(`[NetController ${this.side}] Host sent initial state sync`);
+            }
+          } catch(e) { 
+            console.warn(`[NetController ${this.side}] Host immediate sync failed`, e); 
+          }
+        }, 100);
+      }
+    } catch(e) {}
+  };
+  NetController.prototype.logMessage=function(message){
+    // Add message to game log if available
+    if(window.addGameLog) {
+      window.addGameLog(message);
+    } else {
+      console.log(`[Game Log ${this.side}] ${message}`);
+    }
+  };
   NetController.prototype.onDetach=function(){
     if(this.ws) this.ws.close();
     if(this._orig) Dispatcher.apply=this._orig;
   };
+  NetController.prototype.onEvent=function(evt){ if(this._aiActive && this.ai && this.ai.onEvent) try{ this.ai.onEvent(evt); }catch(e){} };
   NetController.prototype.dispose=function(){this.onDetach();};
   window.NetController=NetController;
 })();
-      if(m.type === 'peer-left'){
-        try{ alert('Oponente saiu da sala'); }catch(e){}
-        return;
-      }
