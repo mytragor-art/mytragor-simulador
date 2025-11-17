@@ -861,8 +861,16 @@ try{
   </div>
 
 <!-- Topbar -->
-<div class="topbar" style="display: flex; align-items: center; justify-content: space-between;">
-  
+<div class="topbar">
+  <span class="pill" id="whoActive">Ativo —</span>
+  <span class="pill" id="phasePill">Fase: —</span>
+  <span class="pill" id="fragPill">Frags: 0/10 (turno)</span>
+  <!-- phaseBar moved down between arenas to make it more visible and less crowded in the topbar -->
+  <label class="pill" style="display:flex;align-items:center;gap:6px">
+    Zoom <input id="zoomRange" type="range" min="0.9" max="1.35" step="0.01" value="1.12" style="width:140px">
+  </label>
+  <button id="btnBackMenu" class="btn btn-coin" title="Voltar ao menu" style="margin-left:8px;background:linear-gradient(135deg,#facc15 0%,#f59e0b 100%);color:#111;font-weight:700;">Voltar ao menu</button>
+  <button id="btnTutorial" class="btn" title="Abrir tutorial" style="margin-left:6px;background:linear-gradient(135deg,#facc15 0%,#e6a600 100%);color:#111;font-weight:700;">Tutorial</button>
   <div class="brandWrap" aria-hidden="true">
     <div class="brand"><span>Mytragor</span>
       <i class="spark" aria-hidden="true"></i>
@@ -870,10 +878,6 @@ try{
     <div class="subtitle"><span>Simulador</span>
       <i class="spark" aria-hidden="true"></i>
     </div>
-  </div>
-  <div>
-    <button id="btnBackMenu" class="btn btn-coin" title="Voltar ao menu" style="margin-left:8px;background:linear-gradient(135deg,#facc15 0%,#f59e0b 100%);color:#111;font-weight:700;">Voltar ao menu</button>
-    <button id="btnTutorial" class="btn" title="Abrir tutorial" style="margin-left:6px;background:linear-gradient(135deg,#facc15 0%,#e6a600 100%);color:#111;font-weight:700;">Tutorial</button>
   </div>
 </div>
 
