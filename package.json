@@ -5,12 +5,9 @@
   "main": "server-render.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server-render-fix.js",
+    "start": "node server-render-otimizado.js",
     "dev": "node server.js",
     "prod": "node server-render-fix.js"
-  },"dev": "node server.js",
-    "prod": "node server-render.js",
-    "start:render": "node server-render.js"
   },
   "keywords": ["websocket", "multiplayer", "game", "simulador"],
   "author": "",
