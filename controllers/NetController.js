@@ -130,5 +130,11 @@
   };
   NetController.prototype.onEvent=function(evt){ if(this._aiActive && this.ai && this.ai.onEvent) try{ this.ai.onEvent(evt); }catch(e){} };
   NetController.prototype.dispose=function(){this.onDetach();};
-  window.NetController=NetController;
+  try{
+    var params = null;
+    try{ params = new URLSearchParams(location.search); }catch(e){ params = null; }
+    var modeIsMp = params && typeof params.get === 'function' && params.get('mode') === 'mp';
+    if(!modeIsMp){ window.NetController = NetController; }
+    else { try{ console.log('NetController: not attaching in mp mode'); }catch(e){} }
+  }catch(e){ try{ window.NetController=NetController; }catch(_){} }
 })();
