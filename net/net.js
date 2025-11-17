@@ -3,11 +3,13 @@
 // - Queueing of outgoing messages while disconnected
 // - Methods: Net.start(), Net.sendAction(action), Net.publishState(state), Net.getStatus()
 ;(function(){
-  var SERVER = localStorage.getItem('mpServer') || 'ws://localhost:8080';
   var isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
   var isLocal = (function(){ try{ var h = location.hostname; return (h === 'localhost' || /\.local$/.test(h)); }catch(e){ return false; } })();
+  // LÓGICA DE AUTO-DETECÇÃO PARA RENDER
+  var defaultServer = isHttps && !isLocal ? 'wss://mytragor-simulador.onrender.com' : 'ws://localhost:3002';
+  var SERVER = localStorage.getItem('mpServer') || defaultServer;
   var CANDIDATES = (function(){ var list=[]; try{ var s = localStorage.getItem('mpServer'); if(s) list.push(s); }catch(e){}
-    if(isLocal){ list.push('ws://localhost:8080'); list.push('ws://localhost:5500/'); }
+    if(isLocal){ list.push('ws://localhost:3002'); } else if(isHttps){ try{ list.push('wss://mytragor-simulador.onrender.com'); }catch(e){} }
     return list; })();
   var curIdx = 0;
   var PARAMS = new URLSearchParams(location.search);
