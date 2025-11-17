@@ -196,7 +196,12 @@
     if(!ROOM) return log('Selecione uma sala antes de entrar');
     MY_SIDE = 'p2';
     let SERVER = srvInput.value.trim();
-    if(!SERVER){ SERVER = localStorage.getItem('mpServer') || `ws://${location.host}/`; }
+    if(!SERVER){ 
+      // Lógica de auto-detecção para produção
+      const isHttps = location.protocol === 'https:';
+      const isLocal = location.hostname === 'localhost' || location.hostname.endsWith('.local');
+      SERVER = isHttps && !isLocal ? 'wss://mytragor-simulador.onrender.com' : 'ws://localhost:3002';
+    }
     localStorage.setItem('mpServer', SERVER); localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
     log(`Entrando na sala ${ROOM} como p2...`);
     const url = new URL(location.href);
