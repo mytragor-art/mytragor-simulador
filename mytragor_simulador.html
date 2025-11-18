@@ -6755,7 +6755,17 @@ window.__tour_startDemo = function(){ try{
 <script src="ai/brain.js"></script>
 <script src="controllers/HumanController.js"></script>
 <script src="controllers/AIController.js"></script>
-<script src="controllers/NetController.js"></script>
+<script>
+(function(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const mode = p.get('mode') || 'vsia';
+    if(mode !== 'mp'){
+      const s = document.createElement('script'); s.src = 'controllers/NetController.js'; s.async = false; document.head.appendChild(s);
+    } else { try{ console.log('Skipping legacy NetController include in mp mode'); }catch(e){} }
+  }catch(e){ /* ignore */ }
+})();
+</script>
 <script src="net/bootstrap.js"></script>
 <script src="net/net.js"></script>
 <script src="mp_intercept.js"></script>
