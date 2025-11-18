@@ -8,7 +8,8 @@ html,body{ -webkit-text-size-adjust:100%; font-size:16px; }
 .app > .col { min-height:0; }
 
 /* Show mobile toggles */
-#btnTogglePreview, #btnToggleLogMobile { display:inline-block !important; }
+#btnToggleLogMobile { display:inline-block !important; }
+#btnTogglePreview { display:none !important; }
 
 /* Collapse preview and log by default — JS will toggle .expanded to show them */
 #previewCol .inspector, #previewCol .meta, #logCol .log{ display:none; }
@@ -120,3 +121,316 @@ body{ padding-bottom: 12px; }
 
 /* If badges were using absolute large sizes, clip their max-width to the card width */
 .board .badge { max-width: calc(var(--cardW,75px) - 12px) !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+/* --- Interface Flutuante Mobile --- */
+/* Preview flutuante no canto direito superior */
+@media (max-width: 880px) {
+  #previewCol {
+    position: fixed !important;
+    top: 90px !important;
+    right: 10px !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: 45vw !important;
+    background: rgba(14, 26, 43, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(250, 204, 21, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+    z-index: 100 !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    margin: 0 !important;
+    padding: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    animation: floatIn 0.4s ease-out !important;
+  }
+
+  #previewCol:not(.expanded) {
+    width: 60px !important;
+    height: 60px !important;
+    padding: 8px !important;
+    cursor: pointer !important;
+    animation: minimizePreview 0.3s ease-out !important;
+  }
+
+  #previewCol:not(.expanded)::before {
+    content: "👁️ Prévia" !important;
+    font-size: 16px !important;
+    display: block !important;
+    text-align: center !important;
+    line-height: 30px !important;
+    color: var(--gold1, #facc15) !important;
+    animation: pulseEye 2s infinite !important;
+  }
+
+  #previewCol:not(.expanded) .inspector,
+  #previewCol:not(.expanded) .meta,
+  #previewCol:not(.expanded) h3,
+  #previewCol:not(.expanded) > div:first-child {
+    display: none !important;
+  }
+
+  #previewCol.expanded > div:first-child {
+    display: none !important;
+  }
+
+  #previewCol.expanded .inspector,
+  #previewCol.expanded .meta {
+    display: block !important;
+    animation: fadeInContent 0.3s ease-out 0.1s both !important;
+  }
+
+  #previewCol.expanded {
+    min-height: unset !important;
+    height: auto !important;
+    max-height: none !important;
+    max-width: none !important;
+    width: auto !important;
+    top: 90px !important;
+    right: 10px !important;
+    left: auto !important;
+    bottom: auto !important;
+    padding: 20px !important;
+  }
+
+  #previewCol.expanded .inspector img {
+    max-width: 200px !important;
+    height: auto !important;
+    max-height: 280px !important;
+    border-radius: 8px !important;
+    transition: transform 0.2s ease !important;
+  }
+
+  #previewCol.expanded .inspector img:hover {
+    transform: scale(1.05) !important;
+  }
+
+  #previewCol h3 {
+    margin: 0 0 8px 0 !important;
+    font-size: 14px !important;
+    color: #e2e8f0 !important;
+    text-align: center !important;
+    font-weight: 600 !important;
+  }
+
+  #previewCol .meta {
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+    margin-top: 8px !important;
+    max-height: 20vh !important;
+    overflow-y: auto !important;
+    line-height: 1.4 !important;
+  }
+
+  #previewCol.expanded::after {
+    content: "✕" !important;
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    font-size: 16px !important;
+    color: #94a3b8 !important;
+    cursor: pointer !important;
+    width: 20px !important;
+    height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  #previewCol.expanded::after:hover {
+    color: #facc15 !important;
+    background: rgba(250, 204, 21, 0.2) !important;
+    transform: scale(1.1) !important;
+  }
+
+  #previewCol:hover {
+    border-color: rgba(250, 204, 21, 0.4) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8) !important;
+  }
+
+  #previewCol.dragging {
+    transition: none !important;
+    cursor: grabbing !important;
+    opacity: 0.9 !important;
+  }
+
+  /* Animações */
+  @keyframes floatIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes minimizePreview {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes fadeInContent {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulseEye {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.1);
+    }
+  }
+
+  /* Ajustes para telas muito pequenas */
+@media (max-width: 480px) {
+  #previewCol {
+    right: 5px !important;
+    width: auto !important;
+    max-width: 50vw !important;
+    top: 5px !important;
+  }
+
+  #logCol {
+    margin: 15px 0 !important;
+    padding: 12px !important;
+  }
+
+  #logCol .log {
+    max-height: 120px !important;
+    font-size: 13px !important;
+  }
+
+  #logCol.expanded .log {
+    max-height: 150px !important;
+  }
+
+    #previewCol:not(.expanded) {
+      width: 50px !important;
+      height: 50px !important;
+    }
+
+    #previewCol:not(.expanded)::before {
+      font-size: 20px !important;
+      line-height: 34px !important;
+    }
+
+    #previewCol h3 {
+      font-size: 13px !important;
+    }
+
+    #previewCol .meta {
+      font-size: 11px !important;
+    }
+  }
+
+  /* Ajustes para orientação paisagem */
+  @media (max-width: 880px) and (orientation: landscape) {
+    #previewCol {
+      width: auto !important;
+      max-width: 26vw !important;
+      top: 8px !important;
+      right: 10px !important;
+    }
+
+    #logCol {
+      margin: 10px 0 !important;
+      padding: 10px !important;
+    }
+
+    #logCol .log {
+      max-height: 100px !important;
+      font-size: 13px !important;
+    }
+
+    #logCol.expanded .log {
+      max-height: 120px !important;
+    }
+
+    #previewCol:not(.expanded) {
+      width: 55px !important;
+      height: 55px !important;
+    }
+
+    #previewCol .meta {
+      max-height: 25vh !important;
+    }
+  }
+
+  /* Ajustes para orientação retrato */
+  @media (max-width: 880px) and (orientation: portrait) {
+    #previewCol {
+      width: auto !important;
+      max-width: 40vw !important;
+    }
+
+    #logCol {
+      margin: 25px 0 !important;
+      padding: 18px !important;
+    }
+
+    #logCol .log {
+      max-height: 180px !important;
+      font-size: 14px !important;
+    }
+
+    #logCol.expanded .log {
+      max-height: 220px !important;
+    }
+
+    #previewCol .meta {
+      max-height: 15vh !important;
+    }
+  }
+
+  /* Modo escuro/claro automático */
+  @media (prefers-color-scheme: light) {
+    #previewCol {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border-color: rgba(59, 130, 246, 0.3) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    #previewCol h3 {
+      color: #1e293b !important;
+    }
+
+    #previewCol .meta {
+      color: #475569 !important;
+    }
+
+    #previewCol:not(.expanded)::before {
+      color: #3b82f6 !important;
+    }
+
+    #previewCol.expanded::after {
+      color: #64748b !important;
+    }
+
+    #previewCol:hover {
+      border-color: rgba(59, 130, 246, 0.5) !important;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25) !important;
+    }
+  }
+}

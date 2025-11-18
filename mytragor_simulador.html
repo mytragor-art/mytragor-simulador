@@ -755,8 +755,8 @@
     .boardWrap { min-height: 0; }
     /* ensure preview, arena and log occupy full width and the arena sits in the middle row */
     #previewCol { grid-column: 1; grid-row: 1; }
-    .col.right { grid-column: 1; grid-row: 2; }
-    #logCol { grid-column: 1; grid-row: 3; }
+    #logCol { grid-column: 1; grid-row: 2; }
+    .col.right { grid-column: 1; grid-row: 3; }
 
     /* reduce inspector/preview size on mobile */
     .inspector { padding: 8px; }
@@ -784,6 +784,9 @@
 
     /* make the log reasonably tall but not dominant; allow it to shrink */
     #logCol .log { max-height: 34vh; padding-bottom: 48px; overflow:auto; }
+    
+    /* espaçamento quando o log está acima da arena */
+    #logCol { margin: 0; }
 
      /* board wrapper should allow the board to take the remaining vertical space */
      .col.right { display:flex; flex-direction:column; }
@@ -996,8 +999,8 @@ try{
   <div class="col" id="previewCol">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
       <h3 style="margin:0">Prévia</h3>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button id="btnTogglePreview" class="panelToggle" aria-expanded="false" title="Abrir/Fechar prévia" style="display:none">Abrir</button>
+      <div style="display:flex;gap:6px;align-items:center;display:none">
+        <button id="btnTogglePreview" class="panelToggle" aria-expanded="false" title="Abrir/Fechar prévia" style="display:none"></button>
       </div>
     </div>
     <div class="inspector"><div class="big"><img id="bigImg" src="" alt=""></div></div>
