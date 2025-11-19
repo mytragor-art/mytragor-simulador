@@ -32,8 +32,8 @@
     console.log('[syncManager] enqueueAndSend:', actionType, payload);
     const id = uuid(); 
     
-    // Para ATTACK, não aplicar otimisticamente - esperar confirmação do servidor
-    if(actionType === 'ATTACK') {
+    // Para ATTACK e END_TURN, não aplicar otimisticamente - esperar confirmação do servidor
+    if(actionType === 'ATTACK' || actionType === 'END_TURN') {
       pending.set(id, { actionType, payload, before: null }); 
       if(window.wsClient) wsClient.sendAction(matchId, playerId, id, actionType, payload); 
       return id; 
@@ -47,6 +47,7 @@
   }
 
   function onActionAccepted(rec){ 
+    try{ console.log('[MP] actionAccepted', rec); }catch(e){}
     if(typeof rec.serverSeq==='number' && rec.serverSeq <= lastServerSeq) return; 
     lastServerSeq = Number(rec.serverSeq)||lastServerSeq; 
     const id = String(rec.actionId||''); 
@@ -62,6 +63,13 @@
         }
         return;
       }
+      // Para END_TURN, avançar turno pelo servidor
+      if(pendingAction.actionType === 'END_TURN' && rec.actionType === 'END_TURN') {
+        captureOriginals();
+        try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
+        if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
+        return;
+      }
       
       return; 
     } 
@@ -72,7 +80,13 @@
         Game.applyResolvedAttack(rec.payload);
       }
     } else {
-      applyRemote(rec.actionType, rec.payload||{}); 
+      if(rec.actionType === 'END_TURN'){
+        captureOriginals();
+        try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
+        if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
+      } else {
+        applyRemote(rec.actionType, rec.payload||{}); 
+      }
     }
   }
 

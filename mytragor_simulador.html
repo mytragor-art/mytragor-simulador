@@ -3654,7 +3654,7 @@ function beginTurn(){
   valbrakComprouTurno[side] = false;
   STATE.maxPool[side] = (STATE.turnCount[side]===1)?((side===STATE.first)?1:2):clamp(STATE.maxPool[side]+2,0,10);
   STATE.pool[side]=STATE.maxPool[side];
-  draw(side);
+  if(!window.IS_MULTIPLAYER) draw(side);
   try { applyEnvEffectsOnTurnStart(side); } catch(e) { console.error('applyEnvEffectsOnTurnStart error', e); log('⚠️ Erro em ambiente: '+(e?.message||e)); }
   // Desvirar: respeita _skipNextUntap (ex.: Constrição)
   STATE[side].allies.forEach(c=>{
@@ -3670,7 +3670,7 @@ function beginTurn(){
   }
   // Resetar usos por turno (ex: Agiota)
   STATE[side].allies.forEach(a => { if(a) a._agiotaUsed = false; });
-  log(`${side==='you'?'Seu':'IA'} turno começou. Fragmentos: ${STATE.pool[side]}/${STATE.maxPool[side]}.`); render();
+  log(`${side==='you'?'Seu':'Oponente'} turno começou. Fragmentos: ${STATE.pool[side]}/${STATE.maxPool[side]}.`); render();
   // allow any deferred modals to run after the turn refresh completes
   try{ window.__BEGIN_TURN_IN_PROGRESS = false; }catch(e){}
   try{ setTimeout(function(){ if(window.processModalQueue) window.processModalQueue(); }, 60); }catch(e){}
@@ -3699,12 +3699,14 @@ function efeitoCervoGalhosBrancos(side) {
     log('Cervo de Galhos Brancos: nenhum Animal para curar.');
   }
 }
-function endTurn(){ STATE.phase='main'; STATE.active=(STATE.active==='you')?'ai':'you'; beginTurn(); }
+function endTurn(){ STATE.phase='main'; STATE.active=(STATE.active==='you')?'ai':'you'; if(!window.IS_MULTIPLAYER) beginTurn(); else renderHUD(); }
 
   // (Removido: efeito agora é ao entrar em campo)
 
 /* ============== Ações básicas ============== */
 function draw(side){ const c=STATE[side].deck.pop(); if(!c) return; STATE[side].hand.push(c); STATE[side].hand=STATE[side].hand.filter(Boolean); renderSide(side); console.log(`${side==='you'?'Você':'IA'} comprou uma carta.`); }
+// Em MP, expor chamada segura de compra para sincronização
+window.safeDraw = function(side, count){ try{ count = Number(count)||1; for(let i=0;i<count;i++){ draw(side); } }catch(e){} };
 function pay(side,c){ if(STATE.pool[side]<c){ alert('Fragmentos insuficientes!'); return false; } STATE.pool[side]-=c; renderHUD(); renderFrags(side); return true; }
 // Solicita pagamento em HP de um aliado ou líder quando a carta possui `costHp`
 function requestHpPayment(side, index, c){

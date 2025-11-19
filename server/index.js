@@ -53,21 +53,27 @@ wss.on('connection', (ws, req) => {
 
     if (msg.type === 'list') { send(ws, { type:'rooms', rooms: roomsList() }); return; }
 
-    if (msg.type === 'join') {
-      const matchId = String(msg.matchId || '').trim();
-      const playerId = String(msg.playerId || '').trim();
-      if (!matchId || !playerId) { send(ws, { type: 'error', code: 'invalid_join' }); return; }
-      const info = matchMgr.join(matchId, playerId, ws);
-      joined = { matchId, playerId };
-      send(ws, { type: 'snapshot', matchId, serverSeq: info.serverSeq, snapshot: info.snapshot });
-      const since = typeof msg.sinceSeq === 'number' ? msg.sinceSeq : null;
-      if (since !== null) {
-        const actions = matchMgr.actionsSince(matchId, since);
-        if (actions && actions.length) send(ws, { type: 'replay', matchId, fromSeq: since, toSeq: info.serverSeq, actions });
-      }
-      broadcastRooms();
-      return;
+  if (msg.type === 'join') {
+    const matchId = String(msg.matchId || '').trim();
+    const playerId = String(msg.playerId || '').trim();
+    if (!matchId || !playerId) { send(ws, { type: 'error', code: 'invalid_join' }); return; }
+    const info = matchMgr.join(matchId, playerId, ws);
+    joined = { matchId, playerId };
+    send(ws, { type: 'snapshot', matchId, serverSeq: info.serverSeq, snapshot: info.snapshot });
+    const since = typeof msg.sinceSeq === 'number' ? msg.sinceSeq : null;
+    if (since !== null) {
+      const actions = matchMgr.actionsSince(matchId, since);
+      if (actions && actions.length) send(ws, { type: 'replay', matchId, fromSeq: since, toSeq: info.serverSeq, actions });
     }
+    // Informar jogadores da partida sobre novo participante
+    try {
+      const m = matchMgr.getOrCreateMatch(matchId);
+      const notice = { type: 'playerJoined', matchId, playerId, timestamp: Date.now() };
+      broadcast(m, notice, ws);
+    } catch {}
+    broadcastRooms();
+    return;
+  }
 
     if (msg.type === 'action') {
       if (!joined) { send(ws, { type: 'error', code: 'not_joined' }); return; }
@@ -83,7 +89,18 @@ wss.on('connection', (ws, req) => {
     }
   });
 
-  ws.on('close', () => { if (joined) matchMgr.removePlayer(joined.matchId, joined.playerId); broadcastRooms(); });
+  ws.on('close', () => { 
+    if (joined) {
+      const mid = joined.matchId; const pid = joined.playerId;
+      matchMgr.removePlayer(mid, pid);
+      try {
+        const m = matchMgr.getOrCreateMatch(mid);
+        const notice = { type: 'playerLeft', matchId: mid, playerId: pid, timestamp: Date.now() };
+        broadcast(m, notice, null);
+      } catch {}
+    }
+    broadcastRooms(); 
+  });
 });
 
 server.listen(PORT, () => { console.log('[ws-server] listening', PORT); });

@@ -67,6 +67,14 @@
       return; 
     }
     if(msg.type === 'actionRejected'){ try{ if(window.syncManager && syncManager.onActionRejected) syncManager.onActionRejected(msg.actionId, msg.reason); }catch(e){} return; }
+    if(msg.type === 'playerJoined'){
+      try{ if(typeof window.appendLogLine==='function') appendLogLine(`Jogador ${msg.playerId} entrou na sala ${msg.matchId}`,'effect'); else console.log('[MP] playerJoined', msg); }catch(e){}
+      return;
+    }
+    if(msg.type === 'playerLeft'){
+      try{ if(typeof window.appendLogLine==='function') appendLogLine(`Jogador ${msg.playerId} saiu da sala ${msg.matchId}`,'effect'); else console.log('[MP] playerLeft', msg); }catch(e){}
+      return;
+    }
     if(msg.type === 'pong'){ return; }
   }
 

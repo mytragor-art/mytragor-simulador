@@ -9,6 +9,17 @@
   window.localSide=playerId
   window.remoteSide=playerId==='p1'?'p2':'p1'
 
+  // Ensure the simulator reads mode=mp so bootstrap.js does NOT attach AI
+  ;(function ensureMpModeInUrl(){
+    try{
+      const u=new URL(location.href);
+      u.searchParams.set('mode','mp');
+      u.searchParams.set('side',playerId);
+      u.searchParams.set('room',matchId);
+      history.replaceState(null,'',u.toString());
+    }catch(e){}
+  })()
+
   function loadEngine(cb){
     fetch('mytragor_simulador.html').then(r=>r.text()).then(html=>{
       var parser = new DOMParser();
