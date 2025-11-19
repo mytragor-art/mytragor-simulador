@@ -963,6 +963,7 @@ try{
         <!-- single action button that mirrors Start / Next / End actions -->
         <div style="display:flex;align-items:center;justify-content:center;margin:6px 0 12px 0;">
           <button id="phaseActionBtn" class="btn btn-start" style="min-width:120px;">Iniciar</button>
+          <button id="testStartBtn" class="btn" style="min-width:120px; margin-left:10px; background: orange;">Testar Iniciar</button>
         </div>
 
         <!-- Você -->
@@ -1646,6 +1647,17 @@ const STATE = {
 // Track whether a match has been started via UI (used to change the phase action button)
 window.__MATCH_STARTED = false;
 
+// Garante que STATE esteja disponível globalmente
+if (typeof STATE === 'undefined') {
+  console.error('❌ CRÍTICO: STATE não foi inicializado corretamente!');
+  window.STATE = {
+    first:'you', active:'you', phase:'main',
+    turnCount:{you:0, ai:0}, maxPool:{you:0, ai:0}, pool:{you:0, ai:0},
+    you:{ leader:null, env:null, allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[], tokens:[] },
+    ai:{  leader:null, env:null, allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[], tokens:[] }
+  };
+}
+
 // Minimal Game API used by NetController: load a full snapshot and apply to local STATE
 window.Game = window.Game || {};
 window.Game.loadSnapshot = function(snapshot){
@@ -2300,15 +2312,19 @@ function renderFrags(side){
 }
 
 function renderHUD(){
-  $('#whoActive').textContent = `Ativo — ${STATE.active==='you'?'Você':'Oponente'}`;
+  try { $('#whoActive').textContent = `Ativo — ${STATE.active==='you'?'Você':'Oponente'}`; } catch(e) { console.warn('Erro ao atualizar whoActive:', e); }
   const phaseName = STATE.phase==='main'?'Principal':STATE.phase==='battle'?'Combate':'Final';
-  $('#phasePill').textContent = `Fase: ${phaseName}`;
+  try { $('#phasePill').textContent = `Fase: ${phaseName}`; } catch(e) { console.warn('Erro ao atualizar phasePill:', e); }
   const rest = STATE.pool[STATE.active];
   const max = STATE.maxPool[STATE.active];
   const spent = Math.max(0, max - rest);
-  const fragEl = $('#fragPill');
-  fragEl.textContent = `Frags: ${rest}/${max} (turno)`;
-  fragEl.title = `Restantes: ${rest} | Gastos: ${spent} | Max: ${max}`;
+  try { 
+    const fragEl = $('#fragPill');
+    if (fragEl) {
+      fragEl.textContent = `Frags: ${rest}/${max} (turno)`;
+      fragEl.title = `Restantes: ${rest} | Gastos: ${spent} | Max: ${max}`;
+    }
+  } catch(e) { console.warn('Erro ao atualizar fragPill:', e); }
 
   // Atualiza a barra de fases
   try {
@@ -2329,7 +2345,7 @@ function renderHUD(){
         if(!window.__MATCH_STARTED){
           btn.textContent = 'Iniciar';
           btn.className = 'btn btn-start';
-          btn.onclick = startMatch;
+          btn.onclick = safeStartMatch;
           btn.disabled = false;
         } else if (STATE.phase === 'main'){
           btn.textContent = 'Próxima Fase';
@@ -3466,6 +3482,35 @@ function selectAiSavedDeck(deck){
 
 /* ============== Fluxo / FRAGMENTOS ============== */
 function coin(){ STATE.first=(Math.random()<0.5)?'you':'ai'; STATE.active=STATE.first; STATE.turnCount.you=STATE.turnCount.ai=0; STATE.maxPool.you=STATE.maxPool.ai=0; STATE.pool.you=STATE.pool.ai=0; console.log(`${STATE.first==='you'?'Você':'IA'} começa!`); renderHUD(); }
+function safeStartMatch() {
+  console.log('=== TENTANDO INICIAR PARTIDA ===');
+  
+  try {
+    // Verifica se todos os componentes necessários estão disponíveis
+    if (typeof STATE === 'undefined') {
+      throw new Error('Estado do jogo (STATE) não está definido');
+    }
+    
+    if (!window.Game || !window.Game.createDeck) {
+      throw new Error('Sistema de jogo (Game.createDeck) não está disponível');
+    }
+    
+    if (!window.beginTurn) {
+      throw new Error('Função beginTurn não está disponível');
+    }
+    
+    console.log('Todos os componentes estão disponíveis, iniciando partida...');
+    
+    // Chama a função original com try-catch adicional
+    startMatch();
+    
+  } catch (error) {
+    console.error('ERRO CRÍTICO ao iniciar partida:', error);
+    console.error('Stack:', error.stack);
+    alert('Erro ao iniciar partida: ' + error.message + '\n\nVerifique o console para mais detalhes (F12).');
+  }
+}
+
 function startMatch(){
   try{ window.__MATCH_STARTED = true; }catch(e){}
   // Offline / VS IA: behave as before
@@ -6768,8 +6813,52 @@ window.__tour_startDemo = function(){ try{
 </script>
 <script src="net/bootstrap.js"></script>
 <script src="net/net.js"></script>
-
+<script src="mp_intercept.js"></script>
 
 <script src="assets/mobile.js"></script>
+<script>
+// Botão de teste para diagnosticar o problema do iniciar
+document.addEventListener('DOMContentLoaded', function() {
+  const testBtn = document.getElementById('testStartBtn');
+  if (testBtn) {
+    testBtn.addEventListener('click', function() {
+      console.log('=== TESTE DE INICIALIZAÇÃO DO JOGO ===');
+      console.log('Estado atual:');
+      console.log('- window.__MATCH_STARTED:', window.__MATCH_STARTED);
+      console.log('- IS_MP:', window.IS_MP);
+      console.log('- MY_SIDE:', window.MY_SIDE);
+      console.log('- STATE (typeof):', typeof STATE);
+      console.log('- window.STATE (typeof):', typeof window.STATE);
+      
+      // Verifica se STATE existe
+      if (typeof STATE === 'undefined') {
+        console.error('❌ STATE não está definido! Verificando ordem de carregamento...');
+        alert('Erro: O estado do jogo (STATE) não foi inicializado. Recarregando a página...');
+        location.reload();
+        return;
+      }
+      
+      try {
+        // Testa se as funções necessárias existem
+        console.log('Funções disponíveis:');
+        console.log('- startMatch existe:', typeof startMatch === 'function');
+        console.log('- Game.createDeck existe:', typeof Game?.createDeck === 'function');
+        console.log('- getDeckFor existe:', typeof getDeckFor === 'function');
+        console.log('- beginTurn existe:', typeof beginTurn === 'function');
+        
+        // Tenta executar o startMatch
+        console.log('Tentando executar safeStartMatch...');
+        safeStartMatch();
+        console.log('safeStartMatch executado com sucesso!');
+        
+      } catch (error) {
+        console.error('ERRO ao executar startMatch:', error);
+        console.error('Stack:', error.stack);
+        alert('Erro ao iniciar jogo: ' + error.message + '\nVeja o console para mais detalhes.');
+      }
+    });
+  }
+});
+</script>
 </body>
 </html>
