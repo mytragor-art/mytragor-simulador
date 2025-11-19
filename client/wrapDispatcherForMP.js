@@ -15,6 +15,7 @@
     const origPFH = window.playFromHand;
     const origET = window.endTurn;
     const origRAO = window.resolveAttackOn;
+    const origSSM = window.safeStartMatch;
     
     if(typeof origPFH === 'function'){
       window.playFromHand = function(side, index){ 
@@ -58,6 +59,14 @@
         
         // Enviar ação e não executar localmente (aguardar confirmação do servidor)
         syncManager.enqueueAndSend('ATTACK', payload);
+      };
+    }
+    if(typeof origSSM === 'function'){
+      window.safeStartMatch = function(){
+        console.log('[wrapDispatcherForMP] safeStartMatch called');
+        if(!window.IS_MULTIPLAYER){ return origSSM(); }
+        // Enviar START_MATCH ao servidor e aguardar aceite
+        syncManager.enqueueAndSend('START_MATCH', {});
       };
     }
   }

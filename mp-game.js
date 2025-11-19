@@ -3,11 +3,14 @@
     const u=new URL(location.href);return u.searchParams.get(k)
   }
   const matchId=(getParam('match')||getParam('room')||'TESTE')+''
-  const playerId=((getParam('player')||getParam('side')||'p1')+'').toLowerCase()==='p2'?'p2':'p1'
+  const sideParam=(getParam('player')||getParam('side')||'p1')+''
+  const playerId=sideParam.toLowerCase()==='p2'?'p2':'p1'
+  const playerName=(getParam('name')||('Jogador '+playerId)).toString()
   window.IS_MULTIPLAYER=true
   window.__IS_MP=true
   window.localSide=playerId
   window.remoteSide=playerId==='p1'?'p2':'p1'
+  window.PLAYER_NAME=playerName
 
   // Ensure the simulator reads mode=mp so bootstrap.js does NOT attach AI
   ;(function ensureMpModeInUrl(){
@@ -17,6 +20,13 @@
       u.searchParams.set('side',playerId);
       u.searchParams.set('room',matchId);
       history.replaceState(null,'',u.toString());
+    }catch(e){}
+  })()
+
+  ;(function updateTitles(){
+    try{
+      const top = document.querySelector('.sideTitle'); if(top && window.OPPONENT_NAME) top.textContent = `Oponente — ${window.OPPONENT_NAME}`;
+      const bottom = document.querySelector('.sideTitle.bottom'); if(bottom) bottom.textContent = `Você — ${window.PLAYER_NAME}`;
     }catch(e){}
   })()
 

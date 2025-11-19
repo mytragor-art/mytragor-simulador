@@ -26,14 +26,31 @@
     return before;
   }
 
-  function applyRemote(actionType, payload){ captureOriginals(); try{ window.__APPLY_REMOTE = true; if(actionType==='PLAY_CARD' && orig.playFromHand){ orig.playFromHand('ai', payload.index); } else if(actionType==='END_TURN' && orig.endTurn){ orig.endTurn(); } } finally { window.__APPLY_REMOTE = false; } }
+  function applyRemote(actionType, payload){
+    captureOriginals();
+    try{ window.__APPLY_REMOTE = true;
+      if(actionType==='PLAY_CARD' && orig.playFromHand){ orig.playFromHand('ai', payload.index); }
+      else if(actionType==='END_TURN' && orig.endTurn){ orig.endTurn(); }
+      else if(actionType==='SET_LEADER'){
+        try{
+          const mpSide = String(payload.side||'p1');
+          const engineSide = (window.localSide === mpSide) ? 'you' : 'ai';
+          const leader = payload.leader || {};
+          if(window.STATE && window.STATE[engineSide]){
+            window.STATE[engineSide].leader = { ...leader, kind:'leader', img: leader.img || (leader.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[leader.key]) : null) };
+            renderSide(engineSide);
+          }
+        }catch(e){ console.warn('applyRemote SET_LEADER failed', e); }
+      }
+    } finally { window.__APPLY_REMOTE = false; }
+  }
 
   function enqueueAndSend(actionType, payload){ 
     console.log('[syncManager] enqueueAndSend:', actionType, payload);
     const id = uuid(); 
     
-    // Para ATTACK e END_TURN, não aplicar otimisticamente - esperar confirmação do servidor
-    if(actionType === 'ATTACK' || actionType === 'END_TURN') {
+    // Para ATTACK, END_TURN e START_MATCH, não aplicar otimisticamente
+    if(actionType === 'ATTACK' || actionType === 'END_TURN' || actionType === 'START_MATCH') {
       pending.set(id, { actionType, payload, before: null }); 
       if(window.wsClient) wsClient.sendAction(matchId, playerId, id, actionType, payload); 
       return id; 
@@ -70,6 +87,11 @@
         if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
         return;
       }
+      // Para START_MATCH, iniciar partida sincronizada
+      if(pendingAction.actionType === 'START_MATCH' && rec.actionType === 'START_MATCH') {
+        try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
+        return;
+      }
       
       return; 
     } 
@@ -84,6 +106,8 @@
         captureOriginals();
         try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
         if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
+      } else if(rec.actionType === 'START_MATCH'){
+        try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
       } else {
         applyRemote(rec.actionType, rec.payload||{}); 
       }

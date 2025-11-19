@@ -118,7 +118,7 @@
             </div>
 
             <div style="display:flex;align-items:center;justify-content:center;margin:6px 0 12px 0;">
-              <button id="phaseActionBtn" class="btn btn-start" style="min-width:120px;">Iniciar</button>
+              <div id="mpStatus" style="font-size:13px;color:#94a3b8;">Escolha seu baralho e líder. Aguardando ambos…</div>
             </div>
 
             <div class="arena" id="youArena">
@@ -237,10 +237,33 @@
 <script src="client/multiplayer/syncManager.js"></script>
 <script src="client/wrapDispatcherForMP.js"></script>
 <script src="assets/mobile.js"></script>
-<script src="client/net/wsClient.js"></script>
-<script src="client/multiplayer/syncManager.js"></script>
-<script src="client/wrapDispatcherForMP.js"></script>
 <script src="mp-game.js"></script>
+<script>
+;(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  function hasBoth(){ try{ return !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader); }catch(e){ return false; } }
+  function tryStart(){
+    try{
+      var el = document.getElementById('mpStatus');
+      if(hasBoth()){
+        if(el) el.textContent = 'Ambos escolheram. Iniciando…';
+        if(typeof window.safeStartMatch==='function') window.safeStartMatch();
+        return true;
+      } else {
+        var you = !!(window.STATE && STATE.you && STATE.you.leader);
+        var ai  = !!(window.STATE && STATE.ai && STATE.ai.leader);
+        if(el){ el.textContent = you && !ai ? 'Você escolheu. Aguardando o oponente…' : (!you && ai ? 'Oponente escolheu. Aguardando você…' : 'Escolha seu baralho e líder. Aguardando ambos…'); }
+        return false;
+      }
+    }catch(e){ return false; }
+  }
+  ready(function(){
+    try{ if(typeof window.chooseLeader==='function') window.chooseLeader(); }catch(e){}
+    tryStart();
+    setInterval(tryStart, 500);
+  });
+})();
+</script>
 
 </body>
 </html>

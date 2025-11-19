@@ -58,6 +58,7 @@ wss.on('connection', (ws, req) => {
     const playerId = String(msg.playerId || '').trim();
     if (!matchId || !playerId) { send(ws, { type: 'error', code: 'invalid_join' }); return; }
     const info = matchMgr.join(matchId, playerId, ws);
+    try{ ws.playerId = playerId; ws.playerName = (typeof msg.playerName==='string' && msg.playerName.trim().length)? String(msg.playerName).trim() : playerId; }catch{}
     joined = { matchId, playerId };
     send(ws, { type: 'snapshot', matchId, serverSeq: info.serverSeq, snapshot: info.snapshot });
     const since = typeof msg.sinceSeq === 'number' ? msg.sinceSeq : null;
@@ -68,7 +69,7 @@ wss.on('connection', (ws, req) => {
     // Informar jogadores da partida sobre novo participante
     try {
       const m = matchMgr.getOrCreateMatch(matchId);
-      const notice = { type: 'playerJoined', matchId, playerId, timestamp: Date.now() };
+      const notice = { type: 'playerJoined', matchId, playerId, playerName: ws.playerName, timestamp: Date.now() };
       broadcast(m, notice, ws);
     } catch {}
     broadcastRooms();
@@ -85,6 +86,17 @@ wss.on('connection', (ws, req) => {
       const m = matchMgr.getOrCreateMatch(matchId);
       const out = { type: 'actionAccepted', matchId, serverSeq: res.applied.serverSeq, actionId: res.applied.actionId, actionType: res.applied.actionType, payload: res.applied.payload, by: playerId };
       broadcast(m, out, null);
+      // Auto iniciar quando ambos definirem o líder
+      if(res.applied.actionType === 'SET_LEADER'){
+        try{
+          if(matchMgr.hasBothLeaders(matchId)){
+            const seq = m.serverSeq + 1; m.serverSeq = seq;
+            const startAction = { type:'actionAccepted', matchId, serverSeq: seq, actionId: String(Date.now())+'-start', actionType:'START_MATCH', payload:{ seed: Date.now() }, by: 'server' };
+            m.log.push({ serverSeq: seq, actionId: startAction.actionId, playerId: 'server', actionType:'START_MATCH', payload: startAction.payload, ts: Date.now() });
+            broadcast(m, startAction, null);
+          }
+        }catch{}
+      }
       return;
     }
   });
@@ -95,7 +107,7 @@ wss.on('connection', (ws, req) => {
       matchMgr.removePlayer(mid, pid);
       try {
         const m = matchMgr.getOrCreateMatch(mid);
-        const notice = { type: 'playerLeft', matchId: mid, playerId: pid, timestamp: Date.now() };
+        const notice = { type: 'playerLeft', matchId: mid, playerId: pid, playerName: ws.playerName || pid, timestamp: Date.now() };
         broadcast(m, notice, null);
       } catch {}
     }

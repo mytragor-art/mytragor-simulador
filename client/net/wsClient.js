@@ -68,11 +68,16 @@
     }
     if(msg.type === 'actionRejected'){ try{ if(window.syncManager && syncManager.onActionRejected) syncManager.onActionRejected(msg.actionId, msg.reason); }catch(e){} return; }
     if(msg.type === 'playerJoined'){
-      try{ if(typeof window.appendLogLine==='function') appendLogLine(`Jogador ${msg.playerId} entrou na sala ${msg.matchId}`,'effect'); else console.log('[MP] playerJoined', msg); }catch(e){}
+      try{ if(typeof window.appendLogLine==='function') appendLogLine(`${msg.playerName||msg.playerId} entrou na sala ${msg.matchId}`,'effect'); else console.log('[MP] playerJoined', msg); }catch(e){}
+      try{
+        window.OPPONENT_NAME = msg.playerName || msg.playerId;
+        const top = document.querySelector('.sideTitle'); if(top) top.textContent = `Oponente — ${window.OPPONENT_NAME}`;
+        const bottom = document.querySelector('.sideTitle.bottom'); if(bottom) bottom.textContent = `Você — ${window.PLAYER_NAME || (lastJoin && lastJoin.playerId) || ''}`;
+      }catch(e){}
       return;
     }
     if(msg.type === 'playerLeft'){
-      try{ if(typeof window.appendLogLine==='function') appendLogLine(`Jogador ${msg.playerId} saiu da sala ${msg.matchId}`,'effect'); else console.log('[MP] playerLeft', msg); }catch(e){}
+      try{ if(typeof window.appendLogLine==='function') appendLogLine(`${msg.playerName||msg.playerId} saiu da sala ${msg.matchId}`,'effect'); else console.log('[MP] playerLeft', msg); }catch(e){}
       return;
     }
     if(msg.type === 'pong'){ return; }
@@ -85,7 +90,10 @@
       playerId: String(playerId||'p1'), 
       sinceSeq: typeof sinceSeq==='number'? sinceSeq : lastServerSeq 
     };
-    send({ type:'join', matchId: lastJoin.matchId, playerId: lastJoin.playerId, sinceSeq: lastJoin.sinceSeq }); 
+    // Opcional: enviar nome do jogador
+    let playerName = null; 
+    try{ playerName = params.get('name') || (lastJoin.playerId.toUpperCase()); }catch(e){}
+    send({ type:'join', matchId: lastJoin.matchId, playerId: lastJoin.playerId, playerName: playerName, sinceSeq: lastJoin.sinceSeq }); 
   }
   function requestPing(){ send({ type:'ping' }); }
   function sendAction(matchId, playerId, actionId, actionType, payload){ send({ type:'action', matchId:String(matchId), playerId:String(playerId), actionId:String(actionId), actionType:String(actionType), payload: payload||{} }); }

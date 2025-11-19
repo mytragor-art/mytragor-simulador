@@ -9,7 +9,7 @@ function createMatch(matchId) {
     id: String(matchId),
     serverSeq: 0,
     players: new Map(),
-    state: { active: 'p1' },
+    state: { active: 'p1', leaders: { p1: null, p2: null }, started: false },
     log: [],
   };
 }
@@ -209,6 +209,8 @@ class MatchManager {
     if (!m) return null;
     return { matchId: m.id, serverSeq: m.serverSeq, players: Array.from(m.players.keys()), state: m.state, recent: m.log.slice(-50) };
   }
+
+  hasBothLeaders(matchId){ const m = this.getOrCreateMatch(matchId); const s = m.state && m.state.leaders; return !!(s && s.p1 && s.p2); }
 }
 
 module.exports = { MatchManager };
