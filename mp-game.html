@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mytragor — Partida Multiplayer</title>
+  <style>
+  :root{ --bg:#0b1220; --panel:#0e1a2b; --line:#2a3b5c; --ink:#e2e8f0; --cardW:75px; --cardH:106px; --hand-scale:.8; --cardW-base:75px; --cardH-base:106px; --scale:1; --left-w:260px; --right-w:240px; --arena-w:1600; --arena-h:900; --radius:8px; --gap:8px; --zoom:1 }
+  html,body{height:100%}
+  body{margin:0; background-color:#071025; background-image:radial-gradient(1200px 700px at 15% 10%, rgba(255,255,255,0.04), rgba(255,255,255,0) 45%), url("assets/bgambientes/campos_bg.png"), repeating-radial-gradient(circle at 15% 35%, rgba(0,0,0,.03) 0 1px, transparent 1px 12px); background-size:cover,cover,auto; background-position:center center,center center,0 0; background-attachment:fixed,fixed,scroll; color:var(--ink); font:14px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial }
+  .app{ display:grid; grid-template-columns: var(--left-w) 1fr var(--right-w); gap:12px; align-items:start; padding:12px; box-sizing:border-box }
+  #logCol{ grid-column:1; grid-row:1 / span 2; max-width: var(--left-w); overflow:auto }
+  .col.right{ grid-column:2; grid-row:1 / span 2 }
+  #previewCol{ grid-column:3; grid-row:1 / span 2; max-width: var(--right-w); overflow:auto }
+  .btn{background:#13223a;border:1px solid var(--line);color:#c9d4e7;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:14px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.2);margin:4px 4px 4px 0;transition:all .2s ease;min-width:80px;text-align:center}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.3);opacity:.9}
+  .btn-start{background:linear-gradient(135deg,#38bdf8 0%,#0ea5e9 100%);color:#fff;font-weight:600}
+  .btn-next{background:linear-gradient(135deg,#f472b6 0%,#be185d 100%);color:#fff;font-weight:600}
+  .btn-end{background:linear-gradient(135deg,#f87171 0%,#b91c1c 100%);color:#fff;font-weight:600}
+  .log{padding:10px 12px 64px 12px; max-height:36vh; overflow:auto; background: rgba(0,0,0,.75); border-radius: 10px}
+  .boardWrap{display:flex;justify-content:center;align-items:center;overflow:auto;padding:4px;flex:1;min-height:0}
+  .scaler{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; pointer-events:auto }
+  .boardStage{ width: calc(var(--arena-w) * 1px); height: calc(var(--arena-h) * 1px); transform-origin: top left; pointer-events:auto; margin:0 auto; display:block }
+  .boardZoom{ transform-origin: 0 0 }
+  .board{ padding:6px; margin:0 auto; min-width:640px; max-width:1100px; width:100%; box-sizing:border-box }
+  .arena{ position:relative; isolation:isolate; border:1px solid var(--line); border-radius:12px; padding:10px; padding-left: calc(10px + 72px); background:transparent; margin-bottom:12px; box-sizing:border-box; overflow:visible }
+  .arenaEnvBg{ position:absolute; inset:0; border-radius:12px; opacity:.08 }
+  .sideTitle{ position:relative; z-index:4 }
+  .sideTitle.bottom{ position:relative; z-index:4 }
+  .fragDock{ position:relative; z-index:4 }
+  .aiHand{display:flex;gap:6px;justify-content:center;padding:4px 0}
+  .aiBack{width:34px;height:50px;border-radius:5px;border:1px solid #2b3b5c;overflow:hidden;background:#1b2a46}
+  .aiBack img{width:100%;height:100%;display:block;object-fit:cover}
+  .lane{ display:flex; gap:8px; min-height: 60px }
+  .leaderBar{ display:flex; gap:8px; align-items:center }
+  .slot{ position:relative; min-width:60px; min-height:60px; border:1px dashed rgba(255,255,255,.06); border-radius:8px; display:flex; align-items:center; justify-content:center }
+  .slotLabel{ position:absolute; top:4px; left:6px; font-size:11px; color:#94a3b8 }
+  .slotCount{ position:absolute; bottom:4px; right:6px; font-size:11px; color:#94a3b8 }
+  .hand{display:flex;gap:8px;justify-content:center;padding:10px}
+  .phaseBar{display:flex;align-items:center;gap:8px;background:#0e1a2b;border:1px solid #2a3b5c;border-radius:999px;padding:4px 8px;margin:8px auto;font-size:12px;max-width:520px;justify-content:center}
+  .phaseItem{display:flex;align-items:center;gap:6px;color:#b7c3da;font-size:12px;opacity:.7}
+  .phaseSep{width:22px;height:2px;background:#2a3b5c;opacity:.6;border-radius:2px}
+  .inspector{ background: rgba(0,0,0,.5); border-radius:10px; padding:10px }
+  </style>
+  <link rel="stylesheet" href="assets/mobile.css" media="(max-width:880px)">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brandWrap">
+    <h1 class="brand"><span>Mytragor</span></h1>
+    <div class="subtitle">SIMULADOR</div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button id="btnBackMenu" class="btn gold-btn" onclick="location.href='index.html'">Voltar ao menu</button>
+    <button id="btnTutorial" class="btn gold-btn">Tutorial</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="col" id="logCol">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Log</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button id="btnToggleLog" class="panelToggle" aria-expanded="true">▸</button>
+        <button id="btnToggleLogMobile" class="panelToggle" aria-expanded="false" style="display:none">Abrir</button>
+      </div>
+    </div>
+    <div class="logControls" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
+      <button class="btn btn-choose" id="btnChoose">Escolher Baralho</button>
+      <button class="btn" id="btnRestart" title="Reiniciar">Reiniciar</button>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="col right">
+    <button id="btnToggleRight" class="panelToggle rightToggle" aria-expanded="true">◂</button>
+    <div class="boardWrap">
+      <div class="scaler">
+        <div class="boardStage" id="boardStage">
+          <div class="board boardZoom">
+
+            <div class="arena" id="opArena">
+              <div class="arenaEnvBg" id="opEnvBg" aria-hidden="true"></div>
+              <div class="aiHand" id="aiHand"></div>
+              <div class="fragDock" id="ai-frags" aria-label="Fragmentos do Oponente"></div>
+              <div class="sideTitle">Oponente</div>
+              <div class="arenaGrid">
+                <div class="mainArea">
+                  <div class="lane" id="ai-spells"></div>
+                  <div class="lane" id="ai-allies"></div>
+                  <div class="leaderBar">
+                    <div class="slot" id="ai-leader"></div>
+                    <div class="slot" id="ai-env"><span class="slotLabel">Amb</span></div>
+                  </div>
+                </div>
+                <div class="pilesCol">
+                  <div class="slot" id="ai-ban"><span class="slotLabel">Banidas</span><span class="slotCount" id="ai-ban-count">0</span></div>
+                  <div class="slot" id="ai-grave"><span class="slotLabel">Cemitério</span><span class="slotCount" id="ai-grave-count">0</span></div>
+                  <div class="slot" id="ai-deck"><span class="slotLabel">Deck</span><span class="slotCount" id="ai-deck-count">0</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0;">
+              <span id="whoActive"></span>
+              <span id="phasePill"></span>
+              <span id="fragPill"></span>
+            </div>
+            <div class="phaseBar" id="phaseBar" aria-label="Barra de fases" style="display:flex;align-items:center;gap:8px;background:#0e1a2b;border:1px solid #2b3b5c;border-radius:999px;padding:4px 8px;margin:8px auto;font-size:12px;max-width:520px;justify-content:center">
+              <div class="phaseItem" data-phase="start"><span class="dot" aria-hidden="true"></span><span>Início</span></div>
+              <div class="phaseSep" aria-hidden="true" style="width:22px;height:2px;background:#2a3b55;opacity:.6;border-radius:2px"></div>
+              <div class="phaseItem" data-phase="main"><span class="dot" aria-hidden="true"></span><span>Principal</span></div>
+              <div class="phaseSep" aria-hidden="true" style="width:22px;height:2px;background:#2a3b55;opacity:.6;border-radius:2px"></div>
+              <div class="phaseItem" data-phase="battle"><span class="dot" aria-hidden="true"></span><span>Combate</span></div>
+              <div class="phaseSep" aria-hidden="true" style="width:22px;height:2px;background:#2a3b55;opacity:.6;border-radius:2px"></div>
+              <div class="phaseItem" data-phase="end"><span class="dot" aria-hidden="true"></span><span>Final</span></div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:center;margin:6px 0 12px 0;">
+              <button id="phaseActionBtn" class="btn btn-start" style="min-width:120px;">Iniciar</button>
+            </div>
+
+            <div class="arena" id="youArena">
+              <div class="arenaEnvBg" id="youEnvBg" aria-hidden="true"></div>
+              <div class="fragDock" id="you-frags" aria-label="Seus Fragmentos"></div>
+              <div class="sideTitle bottom">Você</div>
+              <div class="arenaGrid">
+                <div class="mainArea">
+                  <div class="leaderBar">
+                    <div class="slot" id="you-leader"></div>
+                    <div class="slot" id="you-env"><span class="slotLabel">Amb</span></div>
+                  </div>
+                  <div class="lane" id="you-allies"></div>
+                  <div class="lane" id="you-spells"></div>
+                </div>
+                <div class="pilesCol">
+                  <div class="slot" id="you-ban"><span class="slotLabel">Banidas</span><span class="slotCount" id="you-ban-count">0</span></div>
+                  <div class="slot" id="you-grave"><span class="slotLabel">Cemitério</span><span class="slotCount" id="you-grave-count">0</span></div>
+                  <div class="slot" id="you-deck"><span class="slotLabel">Deck</span><span class="slotCount" id="you-deck-count">0</span></div>
+                </div>
+              </div>
+              <div class="hand" id="youHand"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col" id="previewCol">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Prévia</h3>
+    </div>
+    <div class="inspector"><div class="big"><img id="bigImg" src="" alt=""></div></div>
+    <div class="meta" id="bigMeta">Passe o mouse sobre uma carta…</div>
+  </div>
+</div>
+
+<!-- Modal de Seleção de Personagem (necessário para chooseLeader/showCharSelect) -->
+<div id="charSelect" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:980px;display:flex;gap:18px;align-items:flex-start;">
+    <div style="flex:0 0 320px;background:linear-gradient(180deg,#070709,#0b0b10);border:1px solid rgba(250,204,21,0.08);border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,0.6),0 0 28px rgba(250,190,40,0.03);">
+      <button onclick="hideCharSelect()" style="position:absolute;right:34px;top:24px;background:none;border:none;color:#cbd5e1;font-size:22px;cursor:pointer;padding:4px">&times;</button>
+      <div style="text-align:center;margin-bottom:12px;color:#facc15;font-weight:800;font-size:18px">Pré-visualização do Líder</div>
+      <div id="charPreview" style="display:flex;flex-direction:column;align-items:center;gap:10px;color:#e2e8f0">
+        <img id="charPreviewImg" src="assets/chosens/valbrak.png" alt="preview" style="width:220px;height:300px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 8px 22px rgba(0,0,0,0.6)" />
+        <div id="charPreviewName" style="color:#facc15;font-weight:900"></div>
+        <div id="charPreviewStats" style="color:#aab9d3;font-size:13px;text-align:center"></div>
+      </div>
+    </div>
+    <div style="flex:1;background:linear-gradient(180deg,#07121b,#07111a);border:1px solid rgba(255,255,255,0.02);border-radius:12px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,0.7);">
+      <h2 style="margin:0 0 12px 0;color:#facc15;font-size:20px">Escolha seu Escolhido</h2>
+      <div id="charGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px;margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="pileModal" style="display:none">
+  <div class="modalBox">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 id="pileTitle" style="margin:0">—</h3>
+      <button class="btn" onclick="hidePile()">Fechar</button>
+    </div>
+    <div class="gridMini" id="pileGrid"></div>
+  </div>
+</div>
+
+<div id="cardChoiceModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:100">
+  <div class="modalBox" style="max-width:800px;width:90vw">
+    <h3 id="cardChoiceTitle" style="margin:0 0 16px 0;font-size:18px;color:#e2e8f0;font-weight:bold;text-align:center">Escolha uma carta</h3>
+    <div id="cardChoiceGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(48px,1fr));gap:6px;justify-content:center;"></div>
+    <button class="btn" id="cardChoiceCancel" style="width:100%">Cancelar</button>
+  </div>
+</div>
+
+<div id="conversaFiadaModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:100">
+  <div class="modalBox" style="max-width:600px;width:90vw;padding:20px 18px;display:flex;flex-direction:column;align-items:center;">
+    <h3 style="margin:0 0 12px 0;font-size:18px;color:#e2e8f0;font-weight:bold;text-align:center">Conversa Fiada</h3>
+    <div style="display:flex;gap:14px;align-items:center;width:100%;margin-bottom:12px;">
+      <div id="cfTargetPreview" style="display:flex;gap:12px;align-items:center;">
+        <img id="cfTargetImg" src="assets/ui/card-back.png" alt="alvo" style="width:64px;height:90px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,0.6);object-fit:cover;" onerror="this.src='assets/ui/card-back.png'">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div id="cfTargetName" style="font-size:15px;color:#e2e8f0;font-weight:700;">Carta do oponente</div>
+          <div id="cfTargetSubtitle" style="font-size:13px;color:#94a3b8;">Você pode anular esta magia ou truque</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:14px;color:#e2e8f0;text-align:center;margin-bottom:12px;width:100%;">Ativar <b style="color:#facc15">Conversa Fiada</b> para anular a magia/truque em resposta?</div>
+    <div style="font-size:13px;margin-bottom:10px;color:#94a3b8;">Custo: <b style="color:#facc15" id="cfCusto">0</b> fragmento(s).</div>
+    <div style="display:flex;gap:12px;justify-content:center;width:100%">
+      <button id="btnConversaSim" class="btn" style="flex:1;background:#facc15;color:#1f2937;font-weight:700;">Ativar</button>
+      <button id="btnConversaNao" class="btn" style="flex:1;background:#334155;color:#e2e8f0;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="victoryModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:200">
+  <div class="modalBox" style="max-width:480px;width:90vw;text-align:center;padding:22px;display:flex;flex-direction:column;align-items:center;gap:12px">
+    <div style="font-size:48px">🏆</div>
+    <h2 id="victoryTitle" style="margin:0;font-size:22px;color:#facc15">—</h2>
+    <img id="victoryImg" src="assets/ui/card-back.png" style="width:120px;height:170px;border-radius:10px;object-fit:cover;box-shadow:0 8px 30px rgba(0,0,0,0.6)" onerror="this.src='assets/ui/card-back.png'" />
+    <div id="victoryText" style="color:#e2e8f0;font-size:15px;max-width:360px"></div>
+    <div style="display:flex;gap:12px;width:100%;justify-content:center;margin-top:6px">
+      <button id="victoryBtnClose" class="btn" style="flex:1;background:#334155;color:#e2e8f0;">Fechar</button>
+      <button id="victoryBtnReload" class="btn" style="flex:1;background:linear-gradient(135deg,#facc15 0%,#fde68a 100%);color:#7c2d12;font-weight:700;">Jogar de novo</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/cards/cartas.js?v=2"></script>
+<script src="assets/cards/effects.js"></script>
+<script src="game/dispatcher.js"></script>
+<script src="controllers/HumanController.js"></script>
+<script src="assets/mobile.js"></script>
+<script src="client/net/wsClient.js"></script>
+<script src="client/multiplayer/syncManager.js"></script>
+<script src="client/wrapDispatcherForMP.js"></script>
+<script src="mp-game.js"></script>
+
+</body>
+</html>

@@ -94,8 +94,10 @@ F
   // Lobby websocket (to list active rooms)
   let lobbyWS = null;
   function connectLobbyWS(){
-    // SEMPRE usar o domínio do Render para WebSocket
-    const SERVER = 'wss://mytragor-simulador.onrender.com';
+    const isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
+    const proto = isHttps ? 'wss' : 'ws';
+    const host = location.hostname;
+    const SERVER = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
     log(`Conectando ao servidor: ${SERVER}`);
     function tryConnect(url){
       try{ lobbyWS = new WebSocket(url); }catch(e){ console.warn('[lobby] ws failed to connect to', url, e); return false; }
@@ -115,7 +117,6 @@ F
     lobbyWS.onclose = ()=>{ console.log('[lobby] ws close, reconnecting in 2s'); setTimeout(()=> connectLobbyWS(),2000); };
     lobbyWS.onerror = (e)=>{
       console.warn('[lobby] ws error', e);
-      // Sempre tentar reconectar com o mesmo servidor do Render
       setTimeout(()=> connectLobbyWS(), 2000);
     };
   }
@@ -161,10 +162,10 @@ F
   btnConnect.onclick = () => {
     ROOM = normalizeRoom(roomInput.value.trim() || ('ROOM' + Math.floor(Math.random()*9000)));
     MY_SIDE = 'p1';
-    // SEMPRE usar o domínio do Render
-    const SERVER = 'wss://mytragor-simulador.onrender.com';
-
-    localStorage.setItem('mpServer', SERVER);
+    const isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
+    const proto = isHttps ? 'wss' : 'ws';
+    const host = location.hostname;
+    const SERVER = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
     localStorage.setItem('mpRoom', ROOM);
     localStorage.setItem('mpSide', MY_SIDE);
 
@@ -172,10 +173,9 @@ F
     log(targetUrlMsg);
     const url = new URL(location.href);
     const base = url.pathname.endsWith('/') ? url.pathname : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
-    url.pathname = base + 'mytragor_simulador.html';
-    url.searchParams.set('mode', 'mp');
-    url.searchParams.set('room', ROOM);
-    url.searchParams.set('side', MY_SIDE);
+    url.pathname = base + 'mp-game.html';
+    url.searchParams.set('match', ROOM);
+    url.searchParams.set('player', MY_SIDE);
     // show debug link then navigate
     try{ const dbg = document.getElementById('debugLink'); const a = document.getElementById('directOpen'); a.href = url.toString(); a.textContent = url.toString(); dbg.style.display = 'block'; }catch(e){}
     setTimeout(()=>{ location.href = url.toString(); }, 200);
@@ -188,12 +188,12 @@ F
     MY_SIDE = 'p2';
     // SEMPRE usar o domínio do Render
     const SERVER = 'wss://mytragor-simulador.onrender.com';
-    localStorage.setItem('mpServer', SERVER); localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
+    localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
     log(`Entrando na sala ${ROOM} como p2...`);
     const url = new URL(location.href);
     const base = url.pathname.endsWith('/') ? url.pathname : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
-    url.pathname = base + 'mytragor_simulador.html';
-    url.searchParams.set('mode', 'mp'); url.searchParams.set('room', ROOM); url.searchParams.set('side', MY_SIDE);
+    url.pathname = base + 'mp-game.html';
+    url.searchParams.set('match', ROOM); url.searchParams.set('player', MY_SIDE);
     setTimeout(()=>{ location.href = url.toString(); }, 120);
   };
 

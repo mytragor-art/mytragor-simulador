@@ -2,9 +2,11 @@
   function AIController(side){this.side=side;this._t=null;}
   AIController.prototype.onAttach=function(){};
   AIController.prototype.onEvent=function(evt){
+    if(window.IS_MULTIPLAYER || window.__IS_MP) return;
     if(evt.type==='TURN_START'&&evt.side===this.side){this._loop();}
   };
   AIController.prototype._loop=function(){
+    if(window.IS_MULTIPLAYER || window.__IS_MP) return;
     clearTimeout(this._t);
     const state=Game.viewFor?Game.viewFor(this.side):{};
     const action=(window.AIBrain&&AIBrain.next)?AIBrain.next(state):null;

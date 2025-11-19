@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mytragor — Multiplayer Local</title>
+  <link rel="stylesheet" href="assets/mobile.css" media="(max-width:880px)">
+  <style>
+  :root{ --left-w:260px; --right-w:240px; --line:#2a3b5c; --ink:#e2e8f0 }
+  html,body{height:100%}
+  body{ margin:0; background:#071025; color:var(--ink); font:14px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial }
+  .app{ display:grid; grid-template-columns: var(--left-w) 1fr var(--right-w); gap:12px; align-items:start; padding:12px; box-sizing:border-box }
+  #logCol{ grid-column:1; grid-row:1 / span 2; max-width: var(--left-w); overflow:auto }
+  .col.right{ grid-column:2; grid-row:1 / span 2 }
+  #previewCol{ grid-column:3; grid-row:1 / span 2; max-width: var(--right-w); overflow:auto }
+  .log{padding:10px 12px 64px 12px; max-height:36vh; overflow:auto; background: rgba(0,0,0,0.75); border-radius: 10px}
+  .boardWrap{display:flex;justify-content:center;align-items:center;overflow:auto;padding:4px;flex:1;min-height:0}
+  .scaler{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; pointer-events:auto }
+  .boardStage{ width: calc(1600px); height: calc(900px); transform-origin: top left; pointer-events:auto; margin:0 auto; display:block }
+  .boardZoom{ transform-origin: 0 0 }
+  .board{ padding:6px; margin:0 auto; min-width:640px; max-width:1100px; width:100%; box-sizing:border-box }
+  .btn{background:#13223a;border:1px solid var(--line);color:#c9d4e7;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:14px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.2);margin:4px 4px 4px 0;transition:all 0.2s ease;min-width:80px;text-align:center}
+  .btn-start{background:linear-gradient(135deg,#38bdf8 0%,#0ea5e9 100%);color:#fff;font-weight:600}
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <div class="col" id="logCol">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Log</h3>
+      <button id="btnRestart" class="btn" title="Reiniciar">Reiniciar</button>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="col right">
+    <div class="boardWrap">
+      <div class="scaler">
+        <div class="boardStage" id="boardStage">
+          <div class="board boardZoom">
+            <div class="arena" id="opArena">
+              <div class="arenaEnvBg" id="opEnvBg" aria-hidden="true"></div>
+              <div class="aiHand" id="aiHand"></div>
+              <div class="fragDock" id="ai-frags" aria-label="Fragmentos do Oponente"></div>
+              <div class="sideTitle">Oponente</div>
+              <div class="arenaGrid">
+                <div class="mainArea">
+                  <div class="lane" id="ai-spells"></div>
+                  <div class="lane" id="ai-allies"></div>
+                  <div class="leaderBar">
+                    <div class="slot" id="ai-leader"></div>
+                    <div class="slot" id="ai-env"><span class="slotLabel">Amb</span></div>
+                  </div>
+                </div>
+                <div class="pilesCol">
+                  <div class="slot" id="ai-ban"><span class="slotLabel">Banidas</span><span class="slotCount" id="ai-ban-count">0</span></div>
+                  <div class="slot" id="ai-grave"><span class="slotLabel">Cemitério</span><span class="slotCount" id="ai-grave-count">0</span></div>
+                  <div class="slot" id="ai-deck"><span class="slotLabel">Deck</span><span class="slotCount" id="ai-deck-count">0</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="phaseBar" id="phaseBar" style="display:flex;align-items:center;gap:8px;background:#0e1a2b;border:1px solid #2b3b5c;border-radius:999px;padding:4px 8px;margin:8px auto;font-size:12px;max-width:520px;justify-content:center">
+              <div class="phaseItem" data-phase="start"><span class="dot" aria-hidden="true"></span><span>Início</span></div>
+              <div class="phaseSep" aria-hidden="true" style="width:22px;height:2px;background:#2a3b5c;opacity:.6;border-radius:2px"></div>
+              <div class="phaseItem" data-phase="main"><span class="dot" aria-hidden="true"></span><span>Principal</span></div>
+              <div class="phaseSep" aria-hidden="true" style="width:22px;height:2px;background:#2a3b5c;opacity:.6;border-radius:2px"></div>
+              <div class="phaseItem" data-phase="battle"><span class="dot" aria-hidden="true"></span><span>Combate</span></div>
+              <div class="phaseSep" aria-hidden="true" style="width:22px;height:2px;background:#2a3b5c;opacity:.6;border-radius:2px"></div>
+              <div class="phaseItem" data-phase="end"><span class="dot" aria-hidden="true"></span><span>Final</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;margin:6px 0 12px 0;">
+              <button id="phaseActionBtn" class="btn btn-start" style="min-width:120px;">Iniciar</button>
+            </div>
+            <div class="arena" id="youArena">
+              <div class="arenaEnvBg" id="youEnvBg" aria-hidden="true"></div>
+              <div class="fragDock" id="you-frags" aria-label="Seus Fragmentos"></div>
+              <div class="sideTitle bottom">Você</div>
+              <div class="arenaGrid">
+                <div class="mainArea">
+                  <div class="leaderBar">
+                    <div class="slot" id="you-leader"></div>
+                    <div class="slot" id="you-env"><span class="slotLabel">Amb</span></div>
+                  </div>
+                  <div class="lane" id="you-allies"></div>
+                  <div class="lane" id="you-spells"></div>
+                </div>
+                <div class="pilesCol">
+                  <div class="slot" id="you-ban"><span class="slotLabel">Banidas</span><span class="slotCount" id="you-ban-count">0</span></div>
+                  <div class="slot" id="you-grave"><span class="slotLabel">Cemitério</span><span class="slotCount" id="you-grave-count">0</span></div>
+                  <div class="slot" id="you-deck"><span class="slotLabel">Deck</span><span class="slotCount" id="you-deck-count">0</span></div>
+                </div>
+              </div>
+              <div class="hand" id="youHand"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col" id="previewCol">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Prévia</h3>
+    </div>
+    <div class="inspector"><div class="big"><img id="bigImg" src="" alt=""></div></div>
+    <div class="meta" id="bigMeta">Passe o mouse sobre uma carta…</div>
+  </div>
+</div>
+
+<script src="assets/cards/cartas.js?v=2"></script>
+<script src="assets/cards/effects.js"></script>
+<script src="game/dispatcher.js"></script>
+<script src="controllers/HumanController.js"></script>
+<script src="assets/mobile.js"></script>
+<script src="local-mp.js"></script>
+
+</body>
+</html>

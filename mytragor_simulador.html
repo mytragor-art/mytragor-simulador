@@ -1100,6 +1100,8 @@ const __URLP = QS;
 const __MODE = (__URLP.get('mode') || (IS_MP ? 'mp' : 'vsia'));
 const __IS_MP = IS_MP;
 const __SIDE = MY_SIDE;
+// Flag global padronizada para multiplayer autoritativo
+window.IS_MULTIPLAYER = IS_MP || (QS.get('match') !== null);
 
 // Utilitário: conta cartas de um tipo em pilhas específicas
 function contarCartasTipo(side, tipo, pilhas=['grave']) {
@@ -1795,6 +1797,85 @@ window.Game.applySnapshot = function(snap, { remote=false } = {}){
   }catch(e){ console.warn('applySnapshot error', e); }
 };
 
+window.Game.applyResolvedAttack = function(resolved){
+  try{
+    if(!resolved || !resolved.attacker || !resolved.target) {
+      console.warn('[applyResolvedAttack] Invalid payload', resolved);
+      return;
+    }
+    
+    console.log('[applyResolvedAttack] Applying resolved attack:', resolved);
+    
+    // Limpar contexto de ataque
+    if(window.ATTACK_CTX) window.ATTACK_CTX = { attacker: null, side: null };
+    
+    // Aplicar tap no atacante se necessário
+    if(resolved.tapAttacker && resolved.attacker) {
+      const attackerSide = resolved.attacker.side || resolved.fromSide;
+      const attackerCard = resolved.attacker.leader ? 
+        STATE[attackerSide].leader : 
+        STATE[attackerSide].allies[resolved.attacker.index];
+      if(attackerCard) attackerCard.tapped = true;
+    }
+    
+    // Aplicar dano ao alvo
+    if(resolved.hit && resolved.damage != null) {
+      const target = resolved.target;
+      const targetSide = target.side;
+      
+      if(target.type === 'leader') {
+        if(STATE[targetSide].leader) {
+          STATE[targetSide].leader.hp = resolved.leaderDamageAfter;
+          logAttackResult(true, `Ataque acertou! ${resolved.damage} de dano ao Líder. HP: ${resolved.leaderDamageAfter}`);
+        }
+      } else if(target.type === 'ally') {
+        const ally = STATE[targetSide].allies[target.index];
+        if(ally) {
+          ally.hp = resolved.allyHpAfter;
+          logAttackResult(true, `Ataque acertou! ${resolved.damage} de dano a ${ally.name}. HP: ${resolved.allyHpAfter}`);
+          
+          // Verificar se o aliado morreu
+          if(resolved.kill && ally.hp <= 0) {
+            log(`💀 ${ally.name} foi destruído!`);
+            // Mover para cemitério e limpar equipamentos
+            STATE[targetSide].grave.push(ally);
+            STATE[targetSide].allies[target.index] = null;
+            // Limpar equipamentos do aliado destruído
+            STATE[targetSide].allies.forEach((eq, i) => {
+              if(eq && eq.equippedTo && eq.equippedTo.index === target.index) {
+                STATE[targetSide].grave.push(eq);
+                STATE[targetSide].allies[i] = null;
+              }
+            });
+          }
+        }
+      }
+    } else if(!resolved.hit) {
+      logAttackResult(false, 'Ataque errou!');
+    }
+    
+    // Aplicar overkill se houver
+    if(resolved.overkill && resolved.overkill > 0) {
+      const targetSide = resolved.target.side;
+      if(STATE[targetSide].leader) {
+        STATE[targetSide].leader.hp -= resolved.overkill;
+        log(`Overkill: ${resolved.overkill} de dano adicional ao Líder!`);
+      }
+    }
+    
+    // Aplicar efeitos especiais
+    if(resolved.effectsApplied && resolved.effectsApplied.length > 0) {
+      resolved.effectsApplied.forEach(effect => {
+        logEffect(`Efeito aplicado: ${effect}`);
+      });
+    }
+    
+    render();
+  }catch(e){ 
+    console.warn('[applyResolvedAttack] Error:', e); 
+  }
+};
+
 // helper used by startMatch: choose deck spec for side (uses STATE customDeck if present)
 function getDeckFor(side){ try{ return STATE[side] && STATE[side].customDeck ? STATE[side].customDeck : null; }catch(e){ return null; } }
 
@@ -2149,7 +2230,7 @@ function renderSide(side){
   $(`#${side}-ban-count`).textContent=String(STATE[side].ban.length);
 
   const L=$(`#${side}-leader`);L.innerHTML=''; const E=$(`#${side}-env`);E.innerHTML='';
-  if(STATE[side].leader) L.appendChild(cardEl(STATE[side].leader,{onClick:()=> side==='you'&&selectLeaderAttacker(side), canAttack: canAttackCardQuiet(side, STATE[side].leader)}));
+  if(STATE[side].leader) L.appendChild(cardEl(STATE[side].leader,{onClick:()=> (window.LOCAL_MP? selectLeaderAttacker(side) : (side==='you'&&selectLeaderAttacker(side))), canAttack: canAttackCardQuiet(side, STATE[side].leader)}));
   if(STATE[side].env) E.appendChild(cardEl(STATE[side].env));
 
   // Deck — show a full-size back that exactly fills the slot
@@ -2233,7 +2314,7 @@ function renderSide(side){
       const blockerReady = hasKw(c,'bloquear') && !c.tapped && c.hp>0;
       const tauntProne = hasKw(c,'provocar') && !!c.tapped && c.hp>0;
       const canAtk = canAttackCardQuiet(side, c);
-      s.appendChild(cardEl({...c, tapped: !!c.tapped},{onClick:()=> side==='you'&&selectAttacker('you',i), blockerReady, tauntProne, canAttack: canAtk}));
+      s.appendChild(cardEl({...c, tapped: !!c.tapped},{onClick:()=> (window.LOCAL_MP? selectAttacker(side,i) : (side==='you'&&selectAttacker('you',i))), blockerReady, tauntProne, canAttack: canAtk}));
     }
     A.appendChild(s);
   }
@@ -2249,7 +2330,11 @@ function renderSide(side){
     });
   } else {
     const AH=$('#aiHand'); AH.innerHTML='';
-    (STATE.ai.hand||[]).forEach(()=>{ const b=document.createElement('div'); b.className='aiBack'; const img=document.createElement('img'); img.src=CARD_BACK; img.onerror=()=>img.src=FALLBACK_BACK; b.appendChild(img); AH.appendChild(b); });
+    if(window.LOCAL_MP){
+      (STATE.ai.hand||[]).forEach((c,i)=>{ const canPlay = (STATE.pool.ai >= (c.cost||0)); AH.appendChild(cardEl(c,{hand:true,onClick:()=>playFromHand('ai',i),canPlay})); });
+    } else {
+      (STATE.ai.hand||[]).forEach(()=>{ const b=document.createElement('div'); b.className='aiBack'; const img=document.createElement('img'); img.src=CARD_BACK; img.onerror=()=>img.src=FALLBACK_BACK; b.appendChild(img); AH.appendChild(b); });
+    }
   }
 }
 
@@ -2311,19 +2396,13 @@ function renderFrags(side){
 }
 
 function renderHUD(){
-  try { $('#whoActive').textContent = `Ativo — ${STATE.active==='you'?'Você':'Oponente'}`; } catch(e) { console.warn('Erro ao atualizar whoActive:', e); }
+  const whoEl = $('#whoActive'); if(whoEl) whoEl.textContent = `Ativo — ${STATE.active==='you'?'Você':'Oponente'}`;
   const phaseName = STATE.phase==='main'?'Principal':STATE.phase==='battle'?'Combate':'Final';
-  try { $('#phasePill').textContent = `Fase: ${phaseName}`; } catch(e) { console.warn('Erro ao atualizar phasePill:', e); }
+  const phaseEl = $('#phasePill'); if(phaseEl) phaseEl.textContent = `Fase: ${phaseName}`;
   const rest = STATE.pool[STATE.active];
   const max = STATE.maxPool[STATE.active];
   const spent = Math.max(0, max - rest);
-  try { 
-    const fragEl = $('#fragPill');
-    if (fragEl) {
-      fragEl.textContent = `Frags: ${rest}/${max} (turno)`;
-      fragEl.title = `Restantes: ${rest} | Gastos: ${spent} | Max: ${max}`;
-    }
-  } catch(e) { console.warn('Erro ao atualizar fragPill:', e); }
+  const fragEl = $('#fragPill'); if (fragEl) { fragEl.textContent = `Frags: ${rest}/${max} (turno)`; fragEl.title = `Restantes: ${rest} | Gastos: ${spent} | Max: ${max}`; }
 
   // Atualiza a barra de fases
   try {
@@ -6139,6 +6218,7 @@ try{ window.addEventListener('load', tryLoadPlayDeck); }catch(e){ tryLoadPlayDec
 function wrapDispatcherForMP(){
   // If we're not in MP mode, do nothing
   if (!IS_MP) return;
+  if (window.__WS_MP_INSTALLED) return;
   // If a NetController exists it will install its own wrapper and handle sends.
   if (window.NetController) {
     console.log('MP: NetController present, skipping inline dispatcher wrapper');
@@ -6859,5 +6939,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+<script src="./client/net/wsClient.js"></script>
+<script src="./client/multiplayer/syncManager.js"></script>
+<script src="./client/wrapDispatcherForMP.js"></script>
 </body>
 </html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Teste — Multiplayer Local</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+  <iframe id="game" src="../local-game.html" style="width:100%;height:80vh;border:1px solid #ccc"></iframe>
+  <pre id="out"></pre>
+  <script>
+    const out = document.getElementById('out');
+    function log(x){ out.textContent += String(x) + '\n'; }
+    const frame = document.getElementById('game');
+    frame.addEventListener('load', ()=>{
+      const win = frame.contentWindow;
+      function ok(name, cond){ log((cond? 'OK ':'FAIL ')+name); }
+      setTimeout(()=>{
+        try{
+          ok('LOCAL_MP flag', !!win.LOCAL_MP);
+          ok('Render disponível', typeof win.render === 'function');
+          ok('playFromHand disponível', typeof win.playFromHand === 'function');
+          ok('endTurn disponível', typeof win.endTurn === 'function');
+        }catch(e){ log('Exceção: '+e); }
+      }, 400);
+    });
+  </script>
+</body>
+</html>

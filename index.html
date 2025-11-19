@@ -703,6 +703,12 @@
   // ligar o botão Multiplayer -> abrir modal de configuração
   const mpBtn = document.getElementById('btnMultiplayer');
   if (mpBtn) { mpBtn.addEventListener('click', (e) => { e.preventDefault(); location.href = 'multiplayer.html'; }); }
+  
+  // Se estiver na rota /multiplayer mas estiver no index.html, redirecionar para multiplayer.html
+  if (window.location.pathname === '/multiplayer') {
+    console.log('[index] Redirecionando para multiplayer.html');
+    window.location.replace('/multiplayer.html');
+  }
   // quick debug buttons to open simulator directly as p1/p2 in room 123
   const btnP1 = document.getElementById('btnP1');
   const btnP2 = document.getElementById('btnP2');
