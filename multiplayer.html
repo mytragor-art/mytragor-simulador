@@ -186,8 +186,8 @@ F
     ROOM = normalizeRoom(roomInput.value.trim());
     if(!ROOM) return log('Selecione uma sala antes de entrar');
     MY_SIDE = 'p2';
-    // SEMPRE usar o domínio do Render
-    const SERVER = 'wss://mytragor-simulador.onrender.com';
+    // Usar domínio da Vercel
+    const SERVER = 'wss://mytragor-simulador.vercel.app';
     localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
     log(`Entrando na sala ${ROOM} como p2...`);
     const url = new URL(location.href);
