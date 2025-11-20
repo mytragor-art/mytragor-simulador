@@ -20,6 +20,7 @@
   let lastJoin = null;
   let seenActionIds = new Set();
   let heartbeat = null;
+  let lastPingTs = 0; let lastRTT = null;
 
   function sanitizeLeader(leader){
     try{
@@ -102,7 +103,16 @@
   }
 
   function handle(msg){
-    if(msg.type === 'snapshot'){ lastServerSeq = Number(msg.serverSeq)||0; try{ console.log('[wsClient] snapshot seq=', lastServerSeq, 'leaders=', msg.snapshot && msg.snapshot.leaders); }catch(e){} try{ if(typeof window.appendLogLine==='function'){ var ls = (msg.snapshot && msg.snapshot.leaders)||{}; appendLogLine(`[MP] Snapshot recebido — p1:${ls.p1?'ok':'—'} p2:${ls.p2?'ok':'—'}`,'effect'); } }catch(e){} try{ if(window.syncManager && syncManager.onSnapshot) syncManager.onSnapshot(msg.snapshot, lastServerSeq); }catch(e){} return; }
+    if(msg.type === 'snapshot'){ lastServerSeq = Number(msg.serverSeq)||0; try{ console.log('[wsClient] snapshot seq=', lastServerSeq, 'leaders=', msg.snapshot && msg.snapshot.leaders); }catch(e){} try{ if(typeof window.appendLogLine==='function'){ var ls = (msg.snapshot && msg.snapshot.leaders)||{}; appendLogLine(`[MP] Snapshot recebido — p1:${ls.p1?'ok':'—'} p2:${ls.p2?'ok':'—'}`,'effect'); } }catch(e){} try{ 
+        var names = msg.snapshot && msg.snapshot.playerNames; 
+        if(names){ 
+          var me = lastJoin && lastJoin.playerId; 
+          if(me==='p1'){ window.PLAYER_NAME = names.p1 || window.PLAYER_NAME; window.OPPONENT_NAME = names.p2 || window.OPPONENT_NAME; }
+          else if(me==='p2'){ window.PLAYER_NAME = names.p2 || window.PLAYER_NAME; window.OPPONENT_NAME = names.p1 || window.OPPONENT_NAME; }
+          const top = document.querySelector('.sideTitle'); if(top) top.textContent = `Oponente — ${window.OPPONENT_NAME||''}`;
+          const bottom = document.querySelector('.sideTitle.bottom'); if(bottom) bottom.textContent = `Você — ${window.PLAYER_NAME||''}`;
+        }
+      }catch(e){} try{ if(window.syncManager && syncManager.onSnapshot) syncManager.onSnapshot(msg.snapshot, lastServerSeq); }catch(e){} return; }
     if(msg.type === 'replay'){ var arr = Array.isArray(msg.actions)?msg.actions:[]; try{ console.log('[wsClient] replay from', msg.fromSeq, 'to', msg.toSeq, 'count=', arr.length); }catch(e){} arr.sort((a,b)=>a.serverSeq-b.serverSeq).forEach(function(r){ try{ if(window.syncManager && syncManager.onActionAccepted) syncManager.onActionAccepted(r); }catch(e){} }); lastServerSeq = Number(msg.toSeq)||lastServerSeq; return; }
     if(msg.type === 'actionAccepted'){ 
       // Ignorar ações duplicadas
@@ -130,7 +140,7 @@
       try{ if(typeof window.appendLogLine==='function') appendLogLine(`${msg.playerName||msg.playerId} saiu da sala ${msg.matchId}`,'effect'); else console.log('[MP] playerLeft', msg); }catch(e){}
       return;
     }
-    if(msg.type === 'pong'){ return; }
+    if(msg.type === 'pong'){ try{ lastRTT = Math.max(0, Date.now() - (lastPingTs||Date.now())); var s=document.getElementById('mpStatus'); if(s){ var base=s.textContent||''; if(/Conectado/.test(base)) s.textContent = 'Conectado ao servidor (' + lastRTT + ' ms)'; } }catch(e){} return; }
   }
 
   function join(matchId, playerId, sinceSeq){ 
@@ -142,10 +152,20 @@
     };
     // Opcional: enviar nome do jogador
     let playerName = null; 
-    try{ playerName = params.get('name') || (lastJoin.playerId.toUpperCase()); }catch(e){}
+    try{ 
+      var usersRaw = localStorage.getItem('mt_users');
+      var curRaw = localStorage.getItem('mt_current_user');
+      var users = []; try{ users = usersRaw ? (JSON.parse(usersRaw)||[]) : []; }catch(e){ users = []; }
+      var curEmail = null; var curName = null;
+      if(curRaw){ try{ var obj = JSON.parse(curRaw); if(obj){ curEmail = obj.email||null; curName = obj.username||obj.name||obj.email||null; } }catch(e){ curEmail = curRaw; curName = curRaw; } }
+      var found = null; if(curEmail && Array.isArray(users)){ found = users.find(u=> String(u.email||'')===String(curEmail)); }
+      if(found){ playerName = String(found.username||found.name||found.email||''); }
+      if(!playerName && curName){ playerName = String(curName); }
+      if(!playerName) playerName = params.get('name') || (lastJoin.playerId.toUpperCase());
+    }catch(e){}
     send({ type:'join', matchId: lastJoin.matchId, playerId: lastJoin.playerId, playerName: playerName, sinceSeq: lastJoin.sinceSeq }); 
   }
-  function requestPing(){ send({ type:'ping' }); }
+  function requestPing(){ try{ lastPingTs = Date.now(); }catch(e){} send({ type:'ping' }); }
   function sendAction(matchId, playerId, actionId, actionType, payload){ 
     const v = validateActionPayload(actionType, payload||{});
     if(!v.ok){ try{ console.warn('[wsClient] invalid payload', actionType, v.reason); if(typeof window.appendLogLine==='function') appendLogLine(`Falha ao enviar ${actionType}: ${v.reason}`,'effect'); }catch(e){} return; }

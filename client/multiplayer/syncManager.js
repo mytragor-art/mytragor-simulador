@@ -88,6 +88,7 @@
         const cards  = (payload && payload.cards) || (window.STATE && STATE.you && STATE.you.customDeck) || null;
         const fragImg= (payload && payload.fragImg) || (window.STATE && STATE.you && STATE.you.fragImg) || null;
         payload = { side, leader, cards: Array.isArray(cards)? cards.slice() : null, fragImg: (typeof fragImg==='string'&&fragImg)? String(fragImg) : null };
+        try{ persistChoice('you'); pushHistory({ t: Date.now(), type:'SET_LEADER(send)', by: side, side:'you', leader }); }catch(e){}
       }catch(e){ console.warn('[syncManager] normalize SET_LEADER failed', e); }
     }
     
@@ -188,9 +189,8 @@
       if(snap && snap.leaders){
         const mpYou = String(window.localSide||'p1');
         const l1 = snap.leaders.p1 || null; const l2 = snap.leaders.p2 || null;
-        if(l1){ const es = (mpYou==='p1')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; window.STATE[es].leader = { ...l1, kind:'leader', img: l1.img || (l1.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[l1.key]) : null) }; }
-        if(l2){ const es = (mpYou==='p2')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; window.STATE[es].leader = { ...l2, kind:'leader', img: l2.img || (l2.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[l2.key]) : null) }; }
-        try{ persistChoice('you'); persistChoice('ai'); }catch(e){}
+        if(l1){ const es = (mpYou==='p1')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; window.STATE[es].leader = { ...l1, kind:'leader', img: l1.img || (l1.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[l1.key]) : null) }; try{ persistChoice(es); }catch(e){} }
+        if(l2){ const es = (mpYou==='p2')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; window.STATE[es].leader = { ...l2, kind:'leader', img: l2.img || (l2.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[l2.key]) : null) }; try{ persistChoice(es); }catch(e){} }
         try{ if(typeof renderSide==='function'){ renderSide('you'); renderSide('ai'); } }catch(e){}
         try{ if(typeof window.render==='function') render(); }catch(e){}
       }
@@ -200,13 +200,17 @@
 
   function persistChoice(side){ try{
     if(!window.STATE || !matchId) return;
+    const key = storageKeyBase + matchId + '_' + side;
+    let prev = null; try{ const raw=localStorage.getItem(key); if(raw) prev=JSON.parse(raw); }catch(e){}
     const dat = {
-      leader: window.STATE[side] && window.STATE[side].leader ? { key: window.STATE[side].leader.key, name: window.STATE[side].leader.name, img: window.STATE[side].leader.img, filiacao: window.STATE[side].leader.filiacao } : null,
-      fragImg: window.STATE[side] && window.STATE[side].fragImg || null,
-      cards: window.STATE[side] && Array.isArray(window.STATE[side].customDeck) ? window.STATE[side].customDeck.slice() : null
+      leader: window.STATE[side] && window.STATE[side].leader ? { key: window.STATE[side].leader.key, name: window.STATE[side].leader.name, img: window.STATE[side].leader.img, filiacao: window.STATE[side].leader.filiacao } : (prev ? prev.leader || null : null),
+      fragImg: (window.STATE[side] && window.STATE[side].fragImg) || (prev ? prev.fragImg || null : null),
+      cards: (window.STATE[side] && Array.isArray(window.STATE[side].customDeck) ? window.STATE[side].customDeck.slice() : (prev && Array.isArray(prev.cards) ? prev.cards.slice() : null))
     };
-    localStorage.setItem(storageKeyBase + matchId + '_' + side, JSON.stringify(dat));
+    localStorage.setItem(key, JSON.stringify(dat));
   }catch(e){} }
+
+  function persistAll(){ try{ persistChoice('you'); persistChoice('ai'); }catch(e){} }
 
   function restoreChoices(){ try{
     if(!matchId) return;
@@ -230,5 +234,5 @@
     if(matchId) localStorage.setItem('mp_hist_'+matchId, JSON.stringify(history));
   }catch(e){} }
 
-  window.syncManager = { setContext, enqueueAndSend, onActionAccepted, onActionRejected, onSnapshot, getStatus: function(){ return { lastServerSeq, pending: Array.from(pending.keys()) }; }, getHistory: function(){ return history.slice(); } };
+  window.syncManager = { setContext, enqueueAndSend, onActionAccepted, onActionRejected, onSnapshot, getStatus: function(){ return { lastServerSeq, pending: Array.from(pending.keys()) }; }, getHistory: function(){ return history.slice(); }, persistChoice, persistAll, restoreChoices };
 })();

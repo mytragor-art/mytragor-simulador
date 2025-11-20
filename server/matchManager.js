@@ -9,7 +9,7 @@ function createMatch(matchId) {
     id: String(matchId),
     serverSeq: 0,
     players: new Map(),
-    state: { active: 'p1', leaders: { p1: null, p2: null }, started: false },
+    state: { active: 'p1', leaders: { p1: null, p2: null }, playerNames: { p1: null, p2: null }, started: false },
     log: [],
   };
 }
@@ -40,6 +40,7 @@ class MatchManager {
   join(matchId, playerId, ws) {
     const m = this.getOrCreateMatch(matchId);
     m.players.set(String(playerId), ws);
+    try{ const nm = (ws && ws.playerName) ? String(ws.playerName) : String(playerId); if(!m.state.playerNames) m.state.playerNames = { p1:null, p2:null }; m.state.playerNames[String(playerId)] = nm; }catch{}
     return { snapshot: m.state, serverSeq: m.serverSeq };
   }
 

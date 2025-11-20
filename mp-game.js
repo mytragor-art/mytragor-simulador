@@ -11,6 +11,23 @@
   window.localSide=playerId
   window.remoteSide=playerId==='p1'?'p2':'p1'
   window.PLAYER_NAME=playerName
+  ;(function readUserNames(){
+    try{
+      var usersRaw = localStorage.getItem('mt_users');
+      var curRaw = localStorage.getItem('mt_current_user');
+      var users = []; try{ users = usersRaw ? (JSON.parse(usersRaw)||[]) : []; }catch(e){ users = []; }
+      var curEmail = null; var curName = null;
+      if(curRaw){
+        try{ var obj = JSON.parse(curRaw); if(obj){ curEmail = obj.email||null; curName = obj.username||obj.name||obj.email||null; } }
+        catch(e){ curEmail = curRaw; curName = curRaw; }
+      }
+      if(!curName){ curName = params.get('name') || ('Jogador '+playerId); }
+      var found = null; if(curEmail && Array.isArray(users)){ found = users.find(u=> String(u.email||'')===String(curEmail)); }
+      if(found){ window.PLAYER_NAME = String(found.username||found.name||found.email||window.PLAYER_NAME); }
+      else { window.PLAYER_NAME = String(curName||window.PLAYER_NAME); }
+      if(!window.OPPONENT_NAME){ window.OPPONENT_NAME = (playerId==='p1'?'P2':'P1'); }
+    }catch(e){}
+  })()
 
   // Ensure the simulator reads mode=mp so bootstrap.js does NOT attach AI
   ;(function ensureMpModeInUrl(){

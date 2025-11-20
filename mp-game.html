@@ -339,11 +339,15 @@
                 }
                 if(Array.isArray(cards)) window.STATE[engineSide].customDeck = cards.slice();
                 if(fragImg) window.STATE[engineSide].fragImg = fragImg;
+                try{ if(window.syncManager && typeof syncManager.setContext==='function'){ /* context already set */ } }catch(e){}
+                try{ if(window.syncManager && typeof syncManager.persistChoice==='function'){ syncManager.persistChoice(engineSide); } }catch(e){}
+                try{ if(window.syncManager && typeof syncManager.getHistory==='function'){ var entry={ t: Date.now(), type:'SET_LEADER(applied)', by: mpSide, side: engineSide, leader: leader }; var h=syncManager.getHistory(); h.push(entry); localStorage.setItem('mp_hist_'+(window.room||window.matchId||'TESTE123'), JSON.stringify(h)); } }catch(e){}
                 try{ console.log('[mp-game] apply SET_LEADER', { localSide: window.localSide, mpSide, engineSide, leaderKey: leader && (leader.key||leader.name), hasImg: !!(leader && leader.img) }); }catch(e){}
                 try{ renderSide(engineSide); }catch(e){ console.warn('[mp-game] renderSide failed', e); }
                 try{ if(typeof updateArenaTheme==='function') updateArenaTheme(); }catch(e){}
                 try{ if(typeof updateEnvArenaBackgrounds==='function') updateEnvArenaBackgrounds(); }catch(e){}
                 try{ if(typeof renderFrags==='function'){ renderFrags('you'); renderFrags('ai'); } }catch(e){}
+                try{ if(window.IS_MULTIPLAYER && window.syncManager && typeof syncManager.persistAll==='function') syncManager.persistAll(); }catch(e){}
                 try{ if(typeof window.render==='function') render(); }catch(e){ console.warn('[mp-game] render failed', e); }
                 try{
                   var slot = document.querySelector('#'+engineSide+'-leader');

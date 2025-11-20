@@ -73,8 +73,8 @@ wss.on('connection', (ws, req) => {
     const matchId = String(msg.matchId || '').trim();
     const playerId = String(msg.playerId || '').trim();
     if (!matchId || !playerId) { send(ws, { type: 'error', code: 'invalid_join' }); return; }
-    const info = matchMgr.join(matchId, playerId, ws);
     try{ ws.playerId = playerId; ws.playerName = (typeof msg.playerName==='string' && msg.playerName.trim().length)? String(msg.playerName).trim() : playerId; }catch{}
+    const info = matchMgr.join(matchId, playerId, ws);
     joined = { matchId, playerId };
     send(ws, { type: 'snapshot', matchId, serverSeq: info.serverSeq, snapshot: info.snapshot });
     const since = typeof msg.sinceSeq === 'number' ? msg.sinceSeq : null;

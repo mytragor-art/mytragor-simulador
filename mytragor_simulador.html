@@ -1738,7 +1738,8 @@ function serializeBoardFor(side){
 function restoreBoardFor(side, boardObj){
   const s = STATE[side]; if(!s) return;
   try{
-    s.leader = null; s.env = null; s.allies = [null,null,null,null,null]; s.spells = [null,null,null,null,null];
+    if(!window.IS_MULTIPLAYER){ s.leader = null; } // no clear in MP to avoid dropping remote leader on partial snapshots
+    s.env = null; s.allies = [null,null,null,null,null]; s.spells = [null,null,null,null,null];
     if(boardObj.leader){ const c = createCardFromName(boardObj.leader.name); if(c){ c.id = boardObj.leader.id; c.hp = boardObj.leader.hp; c.tapped = boardObj.leader.tapped; s.leader = c; } }
     if(boardObj.env){ const c = createCardFromName(boardObj.env.name); if(c){ c.id = boardObj.env.id; s.env = c; } }
     (boardObj.allies||[]).forEach((slot,i)=>{ if(slot){ const c=createCardFromName(slot.name); if(c){ c.id = slot.id; c.hp = slot.hp; c.tapped = slot.tapped; s.allies[i]=c; } } });
@@ -2207,6 +2208,11 @@ function checkLeafaeOnAllyHealed(side, healedObj){
 
 // Chama ao renderizar o lado
 function renderSide(side){
+  if((window.IS_MULTIPLAYER || window.__IS_MP) && (!STATE[side] || !STATE[side].leader)){
+    try{ var mk=null; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i)||''; if(/^mp_choice_/.test(k) && k.endsWith('_'+side)){ mk=k; break; } }
+      if(mk){ var raw=localStorage.getItem(mk); if(raw){ var dat=JSON.parse(raw); if(dat && dat.leader){ STATE[side]=STATE[side]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; STATE[side].leader={ kind:'leader', key:dat.leader.key, name:dat.leader.name, img:dat.leader.img, filiacao:dat.leader.filiacao }; } } }
+    }catch(e){}
+  }
   // Aplica efeito do Orbe de Observação
   STATE[side].allies.concat([STATE[side].leader]).forEach(target => {
     if (!target || !target.equipments) return;
@@ -2553,7 +2559,7 @@ function chooseFragmentsFor(side){
   box.style.background = '#0e1a2b'; box.style.border = '2px solid #2a3b55'; box.style.borderRadius = '16px';
   box.style.padding = '20px'; box.style.maxWidth = '760px'; box.style.color = '#e2e8f0';
 
-  const h = document.createElement('h3'); h.textContent = side==='you' ? 'Escolha seus Fragmentos' : 'Escolha os Fragmentos da IA'; h.style.marginTop='0'; h.style.color='#facc15';
+  const h = document.createElement('h3'); h.textContent = side==='you' ? 'Escolha seus Fragmentos' : ((window.IS_MULTIPLAYER || window.__IS_MP) ? 'Escolha os Fragmentos do Oponente' : 'Escolha os Fragmentos da IA'); h.style.marginTop='0'; h.style.color='#facc15';
   const p = document.createElement('p'); p.textContent = 'Selecione o estilo/afilição dos seus fragmentos. Apenas estética.'; p.style.marginTop='4px'; p.style.opacity='0.9';
 
   const grid = document.createElement('div');
@@ -2565,7 +2571,7 @@ function chooseFragmentsFor(side){
     const cap = document.createElement('div'); cap.textContent = label; cap.style.textAlign='center'; cap.style.marginTop='6px'; cap.style.color='#cbd5e1';
     card.onmouseover = ()=> card.style.borderColor = '#facc15';
     card.onmouseout  = ()=> card.style.borderColor = 'transparent';
-  card.onclick = ()=>{ STATE[side].fragImg = imgPath; console.log(`${side==='you'?'Você':'IA'} selecionou fragmentos: ${label}.`); try{ document.body.removeChild(modal);}catch{} renderFrags(side); };
+  card.onclick = ()=>{ STATE[side].fragImg = imgPath; console.log(`${side==='you'?'Você':((window.IS_MULTIPLAYER||window.__IS_MP)?'Oponente':'IA')} selecionou fragmentos: ${label}.`); try{ document.body.removeChild(modal);}catch{} renderFrags(side); try{ if(window.syncManager && typeof syncManager.persistChoice==='function') syncManager.persistChoice(side); }catch(e){} };
     card.appendChild(img); card.appendChild(cap); return card;
   };
 
@@ -2584,12 +2590,14 @@ function chooseFragmentsFor(side){
 function render(){
     // Recalcula auras e buffs dependentes do estado do campo (ex: O Protetor)
     recomputeAuras();
+  try{ if(window.IS_MULTIPLAYER && window.syncManager && typeof syncManager.restoreChoices==='function') syncManager.restoreChoices(); }catch(e){}
   // Atualiza temas de arena de acordo com a filiação dos líderes
   try { updateArenaTheme(); } catch(e) { /* ignore */ }
   // Aplica o BG dos ambientes na arena, se houver
   try { updateEnvArenaBackgrounds(); } catch(e) { /* ignore */ }
   // Render fragment stacks according to chosen images
   try { renderFrags('you'); renderFrags('ai'); } catch(e) { /* ignore */ }
+  try{ if(window.IS_MULTIPLAYER && window.syncManager && typeof syncManager.persistAll==='function') syncManager.persistAll(); }catch(e){}
     // Kornex Ronin effect: self-only, only atkBonus
     ['you','ai'].forEach(side => {
       (STATE[side].allies||[]).forEach(card => {
@@ -3161,7 +3169,9 @@ function selectLeader(idx, opts){
   }catch(e){}
   // Limpar deck customizado quando usar seleção manual
   STATE.you.customDeck = null;
+  try{ if(window.IS_MULTIPLAYER && window.syncManager && typeof syncManager.restoreChoices==='function') syncManager.restoreChoices(); }catch(e){}
   render();
+  try{ if(window.IS_MULTIPLAYER && window.syncManager && typeof syncManager.persistAll==='function') syncManager.persistAll(); }catch(e){}
   // Perguntar fragmentos do jogador
   try { chooseFragmentsFor('you'); } catch(e) { console.warn('chooseFragmentsFor you failed', e); }
   // If multiplayer, let p1 broadcast the chosen initial state to the room
