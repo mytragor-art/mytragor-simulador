@@ -84,6 +84,9 @@ F
   const log = (msg) => { const el = $('#log'); const p = document.createElement('div'); p.textContent = msg; el.appendChild(p); el.scrollTop = el.scrollHeight; };
   function normalizeRoom(s){ s = String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); if(s.length<3) s = (s+'XXXX').slice(0,3); return s.slice(0,12); }
 
+  const params = new URLSearchParams(location.search);
+  const MP_SERVER_OVERRIDE = params.get('mpServer') || localStorage.getItem('mpServer') || null;
+
   const roomInput = $('#room');
   const sideSelect = $('#side');
   const btnConnect = $('#connect');
@@ -97,7 +100,8 @@ F
     const isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
     const proto = isHttps ? 'wss' : 'ws';
     const host = location.hostname;
-    const SERVER = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
+    const defaultServer = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
+    const SERVER = MP_SERVER_OVERRIDE || defaultServer;
     log(`Conectando ao servidor: ${SERVER}`);
     function tryConnect(url){
       try{ lobbyWS = new WebSocket(url); }catch(e){ console.warn('[lobby] ws failed to connect to', url, e); return false; }
@@ -117,6 +121,12 @@ F
     lobbyWS.onclose = ()=>{ console.log('[lobby] ws close, reconnecting in 2s'); setTimeout(()=> connectLobbyWS(),2000); };
     lobbyWS.onerror = (e)=>{
       console.warn('[lobby] ws error', e);
+      try{
+        if(!/localhost|127\.0\.0\.1|\.local$/i.test(host)){
+          const fallback = 'wss://mytragor-simulador.onrender.com';
+          if(SERVER !== fallback){ console.log('[lobby] tentando fallback', fallback); localStorage.setItem('mpServer', fallback); setTimeout(()=> connectLobbyWS(), 500); return; }
+        }
+      }catch(_){}
       setTimeout(()=> connectLobbyWS(), 2000);
     };
   }
@@ -165,9 +175,11 @@ F
     const isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
     const proto = isHttps ? 'wss' : 'ws';
     const host = location.hostname;
-    const SERVER = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
+    const defaultServer = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
+    const SERVER = MP_SERVER_OVERRIDE || defaultServer;
     localStorage.setItem('mpRoom', ROOM);
     localStorage.setItem('mpSide', MY_SIDE);
+    localStorage.setItem('mpServer', SERVER);
 
     const targetUrlMsg = `Abrindo simulador como host — sala ${ROOM}`;
     log(targetUrlMsg);
@@ -176,6 +188,7 @@ F
     url.pathname = base + 'mp-game.html';
     url.searchParams.set('match', ROOM);
     url.searchParams.set('player', MY_SIDE);
+    url.searchParams.set('mpServer', SERVER);
     // show debug link then navigate
     try{ const dbg = document.getElementById('debugLink'); const a = document.getElementById('directOpen'); a.href = url.toString(); a.textContent = url.toString(); dbg.style.display = 'block'; }catch(e){}
     setTimeout(()=>{ location.href = url.toString(); }, 200);
@@ -189,11 +202,13 @@ F
     // Usar domínio da Vercel
     const SERVER = 'wss://mytragor-simulador.vercel.app';
     localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
+    localStorage.setItem('mpServer', SERVER);
     log(`Entrando na sala ${ROOM} como p2...`);
     const url = new URL(location.href);
     const base = url.pathname.endsWith('/') ? url.pathname : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
     url.pathname = base + 'mp-game.html';
     url.searchParams.set('match', ROOM); url.searchParams.set('player', MY_SIDE);
+    url.searchParams.set('mpServer', SERVER);
     setTimeout(()=>{ location.href = url.toString(); }, 120);
   };
 
