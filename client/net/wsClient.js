@@ -3,14 +3,13 @@
   const params = new URLSearchParams(location.search);
   function computeDefaultServer(){
     try{
-      const proto = isHttps ? 'wss' : 'ws';
-      const host = location.hostname;
       const override = params.get('mpServer');
       if(override) return override;
+      const host = location.hostname;
       if(host === 'localhost' || host === '127.0.0.1' || /\.(local)$/i.test(host)){
-        return `${proto}://localhost:8081`;
+        return (isHttps? 'wss':'ws') + '://localhost:8081';
       }
-      return `${proto}://${location.host}`;
+      return 'wss://mytragor-simulador.onrender.com';
     }catch(e){ return (isHttps? 'wss':'ws') + '://localhost:8081'; }
   }
   let SERVER = computeDefaultServer();
