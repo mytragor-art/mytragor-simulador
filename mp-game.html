@@ -242,15 +242,24 @@
 ;(function(){
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   function hasBoth(){ try{ return !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader); }catch(e){ return false; } }
+  var startRequested = false;
+  var tryStartInterval = null;
   function tryStart(){
     try{
       var el = document.getElementById('mpStatus');
       if(hasBoth()){
-        if(el) el.textContent = 'Ambos escolheram. Iniciando…';
-        // Solicitar início ONLY via ação autoritativa
-        try{ if(window.syncManager) syncManager.enqueueAndSend('START_MATCH', {}); }catch(e){}
+        if(!startRequested){
+          startRequested = true;
+          if(el) el.textContent = 'Ambos escolheram. Iniciando…';
+          // Solicitar início ONLY via ação autoritativa (uma única vez)
+          try{ if(window.syncManager) syncManager.enqueueAndSend('START_MATCH', {}); }catch(e){}
+          try{ if(tryStartInterval){ clearInterval(tryStartInterval); tryStartInterval = null; } }catch(e){}
+        } else {
+          if(el) el.textContent = 'Aguardando início da partida…';
+        }
         return true;
       } else {
+        startRequested = false;
         var you = !!(window.STATE && STATE.you && STATE.you.leader);
         var ai  = !!(window.STATE && STATE.ai && STATE.ai.leader);
         if(el){ el.textContent = you && !ai ? 'Você escolheu. Aguardando o oponente…' : (!you && ai ? 'Oponente escolheu. Aguardando você…' : 'Escolha seu baralho e líder. Aguardando ambos…'); }
@@ -261,7 +270,7 @@
   ready(function(){
     try{ if(typeof window.chooseLeader==='function') window.chooseLeader(); }catch(e){}
     tryStart();
-    setInterval(tryStart, 500);
+    tryStartInterval = setInterval(tryStart, 500);
   });
   // Wrap deck/leader selection de forma robusta (espera a engine carregar)
   ready(function(){
