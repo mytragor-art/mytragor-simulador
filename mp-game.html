@@ -339,9 +339,15 @@
                 if(leader){ 
                   try{ 
                     var L = Object.assign({}, leader);
-                    if(!L.filiacao){ 
-                      var k = L.key || L.name; 
-                      if(k && Array.isArray(window.CARD_DEFS)){ var def = window.CARD_DEFS.find(d=> (d.key&&d.key===k) || (d.name&&d.name===k)); if(def && def.filiacao) L.filiacao = def.filiacao; }
+                    var k = L.key || L.name; 
+                    var def = null;
+                    if(k && Array.isArray(window.CARD_DEFS)){ def = window.CARD_DEFS.find(d=> (d.key&&d.key===k) || (d.name&&d.name===k)); }
+                    if(def){
+                      if(!L.filiacao && def.filiacao) L.filiacao = def.filiacao;
+                      if(L.ac==null && def.ac!=null) L.ac = def.ac;
+                      if(L.hp==null && def.hp!=null) { L.hp = def.hp; L.maxHp = def.maxHp!=null?def.maxHp:def.hp; }
+                      if(L.damage==null && def.damage!=null) L.damage = def.damage;
+                      if(L.atkBonus==null && def.atkBonus!=null) L.atkBonus = def.atkBonus;
                     }
                     window.STATE[engineSide].leader = { ...L, kind:'leader', img: L.img || (L.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[L.key]) : null) }; 
                   }catch(e){ window.STATE[engineSide].leader = { ...leader, kind:'leader', img: leader.img || (leader.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[leader.key]) : null) }; }

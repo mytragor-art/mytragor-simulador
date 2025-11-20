@@ -43,7 +43,15 @@ function validateAction(action){
       if(!leader || (typeof leader !== 'object')) return { ok:false, reason:'missing_leader' };
       const hasKeyOrName = !!(leader.key || leader.name);
       if(!hasKeyOrName) return { ok:false, reason:'leader_id_missing' };
-      const out = { side: String(payload.side||action.playerId||''), leader: { key: leader.key||undefined, name: leader.name||undefined, img: leader.img||undefined, kind:'leader', ac: leader.ac, hp: leader.hp, maxHp: leader.maxHp, atkBonus: leader.atkBonus, damage: leader.damage, filiacao: leader.filiacao }, cards: Array.isArray(payload.cards)? payload.cards.slice() : null, fragImg: (typeof payload.fragImg==='string' && payload.fragImg) ? String(payload.fragImg) : null };
+      const map = {
+        katsu: { name:'Katsu, o Vingador', ac:12, hp:20, maxHp:20, atkBonus:4, damage:4, filiacao:'Marcial' },
+        valbrak: { name:'Valbrak, Herói do Povo', ac:10, hp:20, maxHp:20, atkBonus:2, damage:2, filiacao:'Arcana' },
+        leafae: { name:'Leafae, Guardião', ac:10, hp:20, maxHp:20, atkBonus:2, damage:1, filiacao:'Religioso' },
+        ademais: { name:'Ademais, Aranha Negra', ac:11, hp:20, maxHp:20, atkBonus:3, damage:3, filiacao:'Sombras' }
+      };
+      const k = String(leader.key||leader.name||'').toLowerCase();
+      const base = map[k] || {};
+      const out = { side: String(payload.side||action.playerId||''), leader: { key: leader.key||undefined, name: leader.name||base.name||undefined, img: leader.img||undefined, kind:'leader', ac: leader.ac!=null?leader.ac:base.ac, hp: leader.hp!=null?leader.hp:base.hp, maxHp: leader.maxHp!=null?leader.maxHp:base.maxHp, atkBonus: leader.atkBonus!=null?leader.atkBonus:base.atkBonus, damage: leader.damage!=null?leader.damage:base.damage, filiacao: leader.filiacao||base.filiacao }, cards: Array.isArray(payload.cards)? payload.cards.slice() : null, fragImg: (typeof payload.fragImg==='string' && payload.fragImg) ? String(payload.fragImg) : null };
       return { ok:true, payload: out };
     }
     return { ok:true, payload };
@@ -108,6 +116,16 @@ wss.on('connection', (ws, req) => {
     try{ console.log('[ws-server] accepted', matchId, 'seq=', res.applied.serverSeq, 'type=', res.applied.actionType); }catch{}
     broadcast(m, out, null);
     // START_MATCH será solicitado pelo cliente MP quando ambos escolherem
+    return;
+  }
+
+  if (msg.type === 'clientSnapshot') {
+    if (!joined) { send(ws, { type: 'error', code: 'not_joined' }); return; }
+    const m = matchMgr.getOrCreateMatch(joined.matchId);
+    const snap = msg.snapshot || null;
+    if (!snap) return;
+    const out = { type: 'snapshot', matchId: joined.matchId, serverSeq: m.serverSeq, snapshot: snap };
+    broadcast(m, out, null);
     return;
   }
   });

@@ -173,7 +173,14 @@
     try{ console.log('[wsClient] send', out.actionType, { keys:Object.keys(out.payload||{}), side: out.payload && out.payload.side }); }catch(e){}
     send(out);
   }
+  function sendClientSnapshot(snapshot){
+    try{
+      if(!lastJoin || !lastJoin.matchId || !lastJoin.playerId) return;
+      const out = { type:'clientSnapshot', matchId: String(lastJoin.matchId), playerId: String(lastJoin.playerId), snapshot: snapshot };
+      send(out);
+    }catch(e){}
+  }
   try{ const _origSendAction = sendAction; window.wsClientSendActionDebug = function(m,p,id,t,pl){ console.log('[wsClient] sendAction', { matchId:m, playerId:p, actionId:id, type:t, keys:Object.keys(pl||{}) }); return _origSendAction(m,p,id,t,pl); }; }catch(e){}
 
-  window.wsClient = { connect, join, requestPing, sendAction, getStatus: function(){ return { connected, server: SERVER, lastServerSeq }; } };
+  window.wsClient = { connect, join, requestPing, sendAction, sendClientSnapshot, getStatus: function(){ return { connected, server: SERVER, lastServerSeq }; } };
 })();

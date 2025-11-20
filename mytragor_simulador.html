@@ -2337,6 +2337,8 @@ function renderSide(side){
     const AH=$('#aiHand'); AH.innerHTML='';
     if(window.LOCAL_MP){
       (STATE.ai.hand||[]).forEach((c,i)=>{ const canPlay = (STATE.pool.ai >= (c.cost||0)); AH.appendChild(cardEl(c,{hand:true,onClick:()=>playFromHand('ai',i),canPlay})); });
+    } else if(window.IS_MULTIPLAYER){
+      (STATE.ai.hand||[]).forEach((c)=>{ AH.appendChild(cardEl(c,{hand:true,canPlay:false})); });
     } else {
       (STATE.ai.hand||[]).forEach(()=>{ const b=document.createElement('div'); b.className='aiBack'; const img=document.createElement('img'); img.src=CARD_BACK; img.onerror=()=>img.src=FALLBACK_BACK; b.appendChild(img); AH.appendChild(b); });
     }
@@ -3009,7 +3011,7 @@ function buildDeck(side){
 
   // ensure every card has a stable id
   d.forEach(c=>{ try{ ensureCardId(c); }catch(e){} });
-  for(let i=d.length-1;i>0;i--){ const j=rnd(i+1); [d[i],d[j]]=[d[j],d[i]]; }
+  try{ if(!window.IS_MULTIPLAYER){ for(let i=d.length-1;i>0;i--){ const j=rnd(i+1); [d[i],d[j]]=[d[j],d[i]]; } } }catch(e){}
   STATE[side].deck = d;
   // Diagnostic log to help verify AI deck building rules in the browser console
   try{
@@ -3648,16 +3650,8 @@ function startMatch(){
   // 2.1 Render empty layout for both sides
   try{ Game.renderEmptyBoard('p1'); Game.renderEmptyBoard('p2'); }catch(e){ console.warn('renderEmptyBoard error', e); }
 
-  // 2.2 Create only my local deck now
-  try{
-    // Set an initial deterministic seed on host so both clients share RNG
-    if(MY_SIDE === 'p1' && window.RNG && typeof window.RNG.setSeed === 'function'){
-      try{ const s = (Date.now() % 2147483647); window.RNG.setSeed(s); }catch(e){}
-    }
-    Game.createDeck(MY_SIDE, getDeckFor(MY_SIDE));
-    Game.shuffle(MY_SIDE);
-    Game.drawStartHand(MY_SIDE);
-  }catch(e){ console.warn('startMatch create local deck error', e); }
+  // 2.2 Create decks para ambos os lados de forma determinística
+  try{ Game.createDeck('you', getDeckFor('you')); Game.createDeck('ai', getDeckFor('ai')); Game.drawStartHands(); }catch(e){ console.warn('startMatch create local deck error', e); }
 
   // 2.3 Send start handshake with my deck so host can publish snapshot when ambos começarem
   try{

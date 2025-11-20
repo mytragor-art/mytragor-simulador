@@ -136,6 +136,13 @@
       // Para START_MATCH, iniciar partida sincronizada
       if(pendingAction.actionType === 'START_MATCH' && rec.actionType === 'START_MATCH') {
         try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
+        try{
+          var isHost = String(window.localSide||'p1') === 'p1';
+          if(isHost && window.Game && typeof Game.buildSnapshot==='function' && window.wsClient && typeof wsClient.sendClientSnapshot==='function'){
+            var snap = Game.buildSnapshot();
+            wsClient.sendClientSnapshot(snap);
+          }
+        }catch(e){}
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoritativa)','effect'); }catch(e){}
         return;
       }
@@ -186,11 +193,16 @@
     try{
       lastServerSeq = Number(seq)||0; pending.clear();
       if(!window.STATE){ window.STATE = { you:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, ai:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] } }; }
+      if(snap && (snap.p1 || snap.p2)){
+        try{ if(window.Game && typeof Game.applySnapshot==='function') Game.applySnapshot(snap, { remote:true }); }catch(e){}
+        try{ if(typeof window.render==='function') render(); }catch(e){}
+        return;
+      }
       if(snap && snap.leaders){
         const mpYou = String(window.localSide||'p1');
         const l1 = snap.leaders.p1 || null; const l2 = snap.leaders.p2 || null;
-        if(l1){ const es = (mpYou==='p1')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; window.STATE[es].leader = { ...l1, kind:'leader', img: l1.img || (l1.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[l1.key]) : null) }; try{ persistChoice(es); }catch(e){} }
-        if(l2){ const es = (mpYou==='p2')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; window.STATE[es].leader = { ...l2, kind:'leader', img: l2.img || (l2.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[l2.key]) : null) }; try{ persistChoice(es); }catch(e){} }
+        if(l1){ const es = (mpYou==='p1')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; var k1 = l1.key || l1.name; var def1 = (Array.isArray(window.CARD_DEFS)?window.CARD_DEFS.find(d=> (d.key&&d.key===k1) || (d.name&&d.name===k1)):null); var L1 = Object.assign({}, l1); if(def1){ if(L1.filiacao==null && def1.filiacao!=null) L1.filiacao = def1.filiacao; if(L1.ac==null && def1.ac!=null) L1.ac = def1.ac; if(L1.hp==null && def1.hp!=null){ L1.hp = def1.hp; L1.maxHp = def1.maxHp!=null?def1.maxHp:def1.hp; } if(L1.damage==null && def1.damage!=null) L1.damage = def1.damage; if(L1.atkBonus==null && def1.atkBonus!=null) L1.atkBonus = def1.atkBonus; } window.STATE[es].leader = { ...L1, kind:'leader', img: L1.img || (L1.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[L1.key]) : null) }; try{ persistChoice(es); }catch(e){} }
+        if(l2){ const es = (mpYou==='p2')?'you':'ai'; window.STATE[es] = window.STATE[es]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; var k2 = l2.key || l2.name; var def2 = (Array.isArray(window.CARD_DEFS)?window.CARD_DEFS.find(d=> (d.key&&d.key===k2) || (d.name&&d.name===k2)):null); var L2 = Object.assign({}, l2); if(def2){ if(L2.filiacao==null && def2.filiacao!=null) L2.filiacao = def2.filiacao; if(L2.ac==null && def2.ac!=null) L2.ac = def2.ac; if(L2.hp==null && def2.hp!=null){ L2.hp = def2.hp; L2.maxHp = def2.maxHp!=null?def2.maxHp:def2.hp; } if(L2.damage==null && def2.damage!=null) L2.damage = def2.damage; if(L2.atkBonus==null && def2.atkBonus!=null) L2.atkBonus = def2.atkBonus; } window.STATE[es].leader = { ...L2, kind:'leader', img: L2.img || (L2.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[L2.key]) : null) }; try{ persistChoice(es); }catch(e){} }
         try{ if(typeof renderSide==='function'){ renderSide('you'); renderSide('ai'); } }catch(e){}
         try{ if(typeof window.render==='function') render(); }catch(e){}
       }
