@@ -1754,6 +1754,7 @@ window.Game.buildSnapshot = function(){
     ['p1','p2'].forEach(p => {
       const ls = localSideFromP(p);
       const s = STATE[ls];
+      try{ ensureLeaderStats(ls); }catch(e){}
       const obj = {};
       obj.life = s.leader ? s.leader.hp : 0;
       obj.mana = s.pool || 0;
@@ -2213,6 +2214,7 @@ function renderSide(side){
       if(mk){ var raw=localStorage.getItem(mk); if(raw){ var dat=JSON.parse(raw); if(dat && dat.leader){ STATE[side]=STATE[side]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; STATE[side].leader={ kind:'leader', key:dat.leader.key, name:dat.leader.name, img:dat.leader.img, filiacao:dat.leader.filiacao }; } } }
     }catch(e){}
   }
+  try{ ensureLeaderStats(side); }catch(e){}
   // Aplica efeito do Orbe de Observação
   STATE[side].allies.concat([STATE[side].leader]).forEach(target => {
     if (!target || !target.equipments) return;
@@ -2488,6 +2490,28 @@ function ensureDefaultFrag(side){
     const aff = STATE[side]?.leader?.filiacao;
     STATE[side].fragImg = (aff && FRAG_IMAGES[aff]) ? FRAG_IMAGES[aff] : (FRAG_IMAGES.Arcana || 'assets/fragments/FRAGMENTOS.png');
   } catch(e) { console.warn('ensureDefaultFrag failed', e); }
+}
+
+function ensureLeaderStats(side){
+  try{
+    var s = STATE[side]; if(!s || !s.leader) return;
+    var L = s.leader;
+    var k = L.key || L.name || '';
+    var def = null; try{ if(Array.isArray(window.CARD_DEFS)){ def = CARD_DEFS.find(d=> (d.key&&d.key===k) || (d.name&&d.name===k)); } }catch(e){}
+    if(def){
+      if(L.filiacao==null && def.filiacao!=null) L.filiacao = def.filiacao;
+      if(L.ac==null && def.ac!=null) L.ac = def.ac;
+      if(L.hp==null && def.hp!=null) L.hp = def.hp;
+      if(L.maxHp==null && (def.maxHp!=null || def.hp!=null)) L.maxHp = (def.maxHp!=null?def.maxHp:def.hp);
+      if(L.damage==null && def.damage!=null) L.damage = def.damage;
+      if(L.atkBonus==null && def.atkBonus!=null) L.atkBonus = def.atkBonus;
+    } else {
+      if(L.hp==null) L.hp = 20;
+      if(L.maxHp==null) L.maxHp = 20;
+      if(L.ac==null) L.ac = 12;
+      if(L.damage==null) L.damage = 2;
+    }
+  }catch(e){}
 }
 
 // ===== Imagem de fundo para Ambientes na Arena =====
