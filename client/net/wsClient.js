@@ -72,6 +72,7 @@
       connected = true; 
       log('open', SERVER); 
       console.log('[wsClient] connected'); 
+      try{ var s=document.getElementById('mpStatus'); if(s) s.textContent='Conectado ao servidor'; }catch(e){}
       try{ if(heartbeat) clearInterval(heartbeat); heartbeat = setInterval(()=>{ try{ requestPing(); }catch(e){} }, 8000); }catch(e){}
       // Reenviar join se houver uma sessão anterior
       if(lastJoin) {
@@ -83,6 +84,8 @@
       connected = false; 
       log('close'); 
       console.log('[wsClient] disconnected, reconnecting...'); 
+      try{ var s=document.getElementById('mpStatus'); if(s) s.textContent='Desconectado. Reconectando…'; }catch(e){}
+      try{ if(window.syncManager && typeof syncManager.getHistory==='function'){ const h = syncManager.getHistory(); h.push({ t: Date.now(), type:'disconnect', server: SERVER }); localStorage.setItem('mp_hist_'+(lastJoin && lastJoin.matchId || 'TESTE123'), JSON.stringify(h)); } }catch(e){}
       try{ if(heartbeat) clearInterval(heartbeat); heartbeat=null; }catch(e){}
       setTimeout(connect, 1000); 
     };

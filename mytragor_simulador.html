@@ -1119,8 +1119,7 @@ function contarCartasTipo(side, tipo, pilhas=['grave']) {
 }
 const $ = s => document.querySelector(s);
 const logEl = $('#log');
-// Logging helpers
-function appendLogLine(text, cls){ try{ const d=document.createElement('div'); d.className='logLine' + (cls? ' '+cls : ''); d.innerHTML = `[${STATE && STATE.active==='you'?'Você':'IA'}] ${text}`; if(logEl) logEl.prepend(d); }catch(e){ console.warn('appendLogLine error', e); } }
+function appendLogLine(text, cls){ try{ const d=document.createElement('div'); d.className='logLine' + (cls? ' '+cls : ''); var actor = (STATE && STATE.active==='you') ? 'Você' : ((window.__IS_MP || window.IS_MULTIPLAYER) ? 'Oponente' : 'IA'); d.innerHTML = '[' + actor + '] ' + text; if(logEl) logEl.prepend(d); }catch(e){ console.warn('appendLogLine error', e); } }
 function logDice(text){ appendLogLine(text, 'dice'); console.log('[dice]', text); }
 function logEffect(text){ appendLogLine(text, 'effect'); console.log('[effect]', text); }
 function logAttackResult(hit, text){ appendLogLine(text, hit? 'hit':'miss'); console.log('[attack]', hit? 'HIT':'MISS', text); }

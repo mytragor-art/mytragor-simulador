@@ -323,12 +323,34 @@
               var leader = rec.payload && rec.payload.leader;
               var cards = rec.payload && rec.payload.cards;
               var fragImg = rec.payload && rec.payload.fragImg;
-              if(window.STATE && window.STATE[engineSide]){
-                if(leader){ window.STATE[engineSide].leader = { ...leader, kind:'leader', img: leader.img || (leader.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[leader.key]) : null) }; }
+              if(window.STATE){
+                if(!window.STATE[engineSide]){
+                  window.STATE[engineSide] = { allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[], customDeck: null };
+                }
+                if(leader){ 
+                  try{ 
+                    var L = Object.assign({}, leader);
+                    if(!L.filiacao){ 
+                      var k = L.key || L.name; 
+                      if(k && Array.isArray(window.CARD_DEFS)){ var def = window.CARD_DEFS.find(d=> (d.key&&d.key===k) || (d.name&&d.name===k)); if(def && def.filiacao) L.filiacao = def.filiacao; }
+                    }
+                    window.STATE[engineSide].leader = { ...L, kind:'leader', img: L.img || (L.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[L.key]) : null) }; 
+                  }catch(e){ window.STATE[engineSide].leader = { ...leader, kind:'leader', img: leader.img || (leader.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[leader.key]) : null) }; }
+                }
                 if(Array.isArray(cards)) window.STATE[engineSide].customDeck = cards.slice();
                 if(fragImg) window.STATE[engineSide].fragImg = fragImg;
-                try{ renderSide(engineSide); }catch(e){}
-                try{ if(typeof window.render==='function') render(); }catch(e){}
+                try{ console.log('[mp-game] apply SET_LEADER', { localSide: window.localSide, mpSide, engineSide, leaderKey: leader && (leader.key||leader.name), hasImg: !!(leader && leader.img) }); }catch(e){}
+                try{ renderSide(engineSide); }catch(e){ console.warn('[mp-game] renderSide failed', e); }
+                try{ if(typeof updateArenaTheme==='function') updateArenaTheme(); }catch(e){}
+                try{ if(typeof updateEnvArenaBackgrounds==='function') updateEnvArenaBackgrounds(); }catch(e){}
+                try{ if(typeof renderFrags==='function'){ renderFrags('you'); renderFrags('ai'); } }catch(e){}
+                try{ if(typeof window.render==='function') render(); }catch(e){ console.warn('[mp-game] render failed', e); }
+                try{
+                  var slot = document.querySelector('#'+engineSide+'-leader');
+                  var hasChild = !!(slot && slot.children && slot.children.length>0);
+                  console.log('[mp-game] leader slot check', { engineSide, hasChild });
+                  if(slot && !hasChild && window.STATE[engineSide].leader){ slot.appendChild(cardEl(window.STATE[engineSide].leader,{})); console.log('[mp-game] leader slot appended fallback'); }
+                }catch(e){ console.warn('[mp-game] fallback append failed', e); }
                 try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
                 tryStart();
                 return;
