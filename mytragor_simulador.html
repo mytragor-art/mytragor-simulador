@@ -2339,8 +2339,6 @@ function renderSide(side){
     const AH=$('#aiHand'); AH.innerHTML='';
     if(window.LOCAL_MP){
       (STATE.ai.hand||[]).forEach((c,i)=>{ const canPlay = (STATE.pool.ai >= (c.cost||0)); AH.appendChild(cardEl(c,{hand:true,onClick:()=>playFromHand('ai',i),canPlay})); });
-    } else if(window.IS_MULTIPLAYER){
-      (STATE.ai.hand||[]).forEach((c)=>{ AH.appendChild(cardEl(c,{hand:true,canPlay:false})); });
     } else {
       (STATE.ai.hand||[]).forEach(()=>{ const b=document.createElement('div'); b.className='aiBack'; const img=document.createElement('img'); img.src=CARD_BACK; img.onerror=()=>img.src=FALLBACK_BACK; b.appendChild(img); AH.appendChild(b); });
     }
