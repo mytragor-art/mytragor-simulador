@@ -36,9 +36,16 @@
           const mpSide = String(payload.side||'p1');
           const engineSide = (window.localSide === mpSide) ? 'you' : 'ai';
           const leader = payload.leader || {};
+          const cards = Array.isArray(payload.cards) ? payload.cards.slice() : null;
+          const fragImg = payload.fragImg || null;
           if(window.STATE && window.STATE[engineSide]){
             window.STATE[engineSide].leader = { ...leader, kind:'leader', img: leader.img || (leader.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[leader.key]) : null) };
-            renderSide(engineSide);
+            if(cards) window.STATE[engineSide].customDeck = cards;
+            if(fragImg) window.STATE[engineSide].fragImg = fragImg;
+            try{ renderSide(engineSide); }catch(e){}
+            try{ if(typeof window.render==='function') render(); }catch(e){}
+            try{ if(typeof window.tryStart==='function') tryStart(); }catch(e){}
+            try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
           }
         }catch(e){ console.warn('applyRemote SET_LEADER failed', e); }
       }
@@ -48,6 +55,16 @@
   function enqueueAndSend(actionType, payload){ 
     console.log('[syncManager] enqueueAndSend:', actionType, payload);
     const id = uuid(); 
+
+    if(actionType === 'SET_LEADER'){
+      try{
+        const side = String((window.localSide||playerId||'p1'));
+        const leader = (payload && payload.leader) || (window.STATE && STATE.you && STATE.you.leader) || null;
+        const cards  = (payload && payload.cards) || (window.STATE && STATE.you && STATE.you.customDeck) || null;
+        const fragImg= (payload && payload.fragImg) || (window.STATE && STATE.you && STATE.you.fragImg) || null;
+        payload = { side, leader, cards: Array.isArray(cards)? cards.slice() : null, fragImg: (typeof fragImg==='string'&&fragImg)? String(fragImg) : null };
+      }catch(e){ console.warn('[syncManager] normalize SET_LEADER failed', e); }
+    }
     
     // Para ATTACK, END_TURN e START_MATCH, não aplicar otimisticamente
     if(actionType === 'ATTACK' || actionType === 'END_TURN' || actionType === 'START_MATCH') {
@@ -78,6 +95,7 @@
         if(window.Game && typeof Game.applyResolvedAttack === 'function') {
           Game.applyResolvedAttack(rec.payload);
         }
+        try{ if(typeof window.appendLogLine==='function'){ var rp=rec.payload||{}; var tgt=rp.target||{}; window.appendLogLine(`Ataque aceito: ${rp.fromSide} contra ${tgt.type||''}/${tgt.side||''} — dano ${rp.damage||0}`,'effect'); } }catch(e){}
         return;
       }
       // Para END_TURN, avançar turno pelo servidor
@@ -85,11 +103,13 @@
         captureOriginals();
         try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
         if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
+        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Turno encerrado por ${rec.playerId||''}`,'effect'); }catch(e){}
         return;
       }
       // Para START_MATCH, iniciar partida sincronizada
       if(pendingAction.actionType === 'START_MATCH' && rec.actionType === 'START_MATCH') {
         try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
+        try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoritativa)','effect'); }catch(e){}
         return;
       }
       
@@ -101,15 +121,19 @@
       if(window.Game && typeof Game.applyResolvedAttack === 'function') {
         Game.applyResolvedAttack(rec.payload);
       }
+      try{ if(typeof window.appendLogLine==='function'){ var rp=rec.payload||{}; var tgt=rp.target||{}; window.appendLogLine(`Oponente atacou: ${rp.fromSide} contra ${tgt.type||''}/${tgt.side||''} — dano ${rp.damage||0}`,'effect'); } }catch(e){}
     } else {
       if(rec.actionType === 'END_TURN'){
         captureOriginals();
         try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
         if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
+        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Oponente encerrou turno`,'effect'); }catch(e){}
       } else if(rec.actionType === 'START_MATCH'){
         try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
+        try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
       } else {
         applyRemote(rec.actionType, rec.payload||{}); 
+        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Ação remota aplicada: ${rec.actionType}`,'effect'); }catch(e){}
       }
     }
   }
@@ -125,6 +149,7 @@
         console.log('[syncManager] Rolling back action:', pendingAction.actionType, reason);
         Game.applySnapshot(pendingAction.before);
       }
+      try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Ação rejeitada: ${pendingAction.actionType} — ${reason||''}`,'effect'); }catch(e){}
     }
   }
 

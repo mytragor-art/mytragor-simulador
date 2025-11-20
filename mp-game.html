@@ -238,7 +238,7 @@
 <script src="client/wrapDispatcherForMP.js"></script>
 <script src="assets/mobile.js"></script>
 <script src="mp-game.js"></script>
-<script>
+  <script>
 ;(function(){
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   function hasBoth(){ try{ return !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader); }catch(e){ return false; } }
@@ -247,7 +247,8 @@
       var el = document.getElementById('mpStatus');
       if(hasBoth()){
         if(el) el.textContent = 'Ambos escolheram. Iniciando…';
-        if(typeof window.safeStartMatch==='function') window.safeStartMatch();
+        // Solicitar início ONLY via ação autoritativa
+        try{ if(window.syncManager) syncManager.enqueueAndSend('START_MATCH', {}); }catch(e){}
         return true;
       } else {
         var you = !!(window.STATE && STATE.you && STATE.you.leader);
@@ -261,6 +262,83 @@
     try{ if(typeof window.chooseLeader==='function') window.chooseLeader(); }catch(e){}
     tryStart();
     setInterval(tryStart, 500);
+  });
+  // Wrap deck/leader selection de forma robusta (espera a engine carregar)
+  ready(function(){
+    function installSelectionWrappers(){
+      function sendSetLeaderWhenReady(retries){
+        try{
+          var r = (typeof retries==='number')?retries:14;
+          var leader = (window.STATE && STATE.you && STATE.you.leader) || null;
+          var cards  = (window.STATE && STATE.you && STATE.you.customDeck) || null;
+          var fragImg= (window.STATE && STATE.you && STATE.you.fragImg) || null;
+          if(leader){
+            var payload = { side: String(window.localSide||'p1'), leader: leader, cards: cards||null, fragImg: fragImg||null };
+            try{ if(window.syncManager) syncManager.enqueueAndSend('SET_LEADER', payload); }catch(e){}
+          } else if(r>0){ setTimeout(function(){ sendSetLeaderWhenReady(r-1); }, 60); }
+        }catch(e){}
+      }
+      try{
+        var origSL = window.selectLeader;
+        if(typeof origSL === 'function' && !origSL.__mpWrapped){
+          var wrapped = function(){
+            try{ origSL.apply(this, arguments); }catch(e){}
+            try{ var me = (window.STATE && STATE.you && STATE.you.leader); if(me && typeof window.appendLogLine==='function'){ window.appendLogLine(`Você escolheu líder: ${me.name||me.key||''}`,'effect'); } }catch(e){}
+            if(window.IS_MULTIPLAYER && window.syncManager){ sendSetLeaderWhenReady(14); }
+          };
+          wrapped.__mpWrapped = true; origSL.__mpWrapped = true; window.selectLeader = wrapped;
+        }
+      }catch(e){}
+      try{
+        var origSSD = window.selectSavedDeck;
+        if(typeof origSSD === 'function' && !origSSD.__mpWrapped){
+          var wrappedDeck = function(deck){
+            try{ origSSD.call(this, deck); }catch(e){}
+            try{ if(typeof window.appendLogLine==='function'){ window.appendLogLine(`Você escolheu baralho: ${deck && deck.deckName || ''}`,'effect'); } }catch(e){}
+            if(window.IS_MULTIPLAYER && window.syncManager){ 
+              try{
+                var lk = (typeof window.getLeaderKey==='function') ? getLeaderKey(String(deck.leader||'')) : String(deck.leader||'');
+                var fallbackLeader = { key: String(lk), name: String(deck.leader||''), img: (window.CHOSEN_IMAGES && CHOSEN_IMAGES[lk]) || deck.leaderImg };
+                var payload = { side: String(window.localSide||'p1'), leader: (window.STATE && STATE.you && STATE.you.leader) || fallbackLeader, cards: Array.isArray(deck.cards)? deck.cards.slice() : null, fragImg: deck.fragImg || (window.STATE && STATE.you && STATE.you.fragImg) || null, deckName: deck.deckName||'' };
+                syncManager.enqueueAndSend('SET_LEADER', payload);
+              }catch(e){}
+            }
+          };
+          wrappedDeck.__mpWrapped = true; origSSD.__mpWrapped = true; window.selectSavedDeck = wrappedDeck;
+        }
+      }catch(e){}
+    }
+    installSelectionWrappers();
+    window.__mpWrapTO = setInterval(installSelectionWrappers, 200);
+  });
+  ready(function(){
+    try{
+      var origAccept = window.syncManager && syncManager.onActionAccepted;
+      if(typeof origAccept === 'function'){
+        syncManager.onActionAccepted = function(rec){
+          try{
+            if(rec && rec.actionType === 'SET_LEADER'){
+              var mpSide = String(rec.by||rec.playerId||'p1');
+              var engineSide = (window.localSide === mpSide) ? 'you' : 'ai';
+              var leader = rec.payload && rec.payload.leader;
+              var cards = rec.payload && rec.payload.cards;
+              var fragImg = rec.payload && rec.payload.fragImg;
+              if(window.STATE && window.STATE[engineSide]){
+                if(leader){ window.STATE[engineSide].leader = { ...leader, kind:'leader', img: leader.img || (leader.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[leader.key]) : null) }; }
+                if(Array.isArray(cards)) window.STATE[engineSide].customDeck = cards.slice();
+                if(fragImg) window.STATE[engineSide].fragImg = fragImg;
+                try{ renderSide(engineSide); }catch(e){}
+                try{ if(typeof window.render==='function') render(); }catch(e){}
+                try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
+                tryStart();
+                return;
+              }
+            }
+          }catch(e){}
+          try{ return origAccept(rec); }catch(e){}
+        };
+      }
+    }catch(e){}
   });
 })();
 </script>

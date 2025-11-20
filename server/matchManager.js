@@ -61,6 +61,26 @@ class MatchManager {
     const type = String(action.actionType);
     const payload = action.payload || {};
 
+    if (type === 'SET_LEADER') {
+      m.serverSeq += 1;
+      const rec = makeActionRecord(m.serverSeq, action);
+      m.log.push(rec);
+      try {
+        if (!m.state.leaders) m.state.leaders = { p1: null, p2: null };
+        m.state.leaders[playerId] = payload.leader || null;
+      } catch {}
+      return { ok: true, applied: rec };
+    }
+
+    if (type === 'START_MATCH') {
+      if (!m.state) m.state = { active: 'p1' };
+      if (!m.state.active) m.state.active = 'p1';
+      m.serverSeq += 1;
+      const rec = makeActionRecord(m.serverSeq, action);
+      m.log.push(rec);
+      return { ok: true, applied: rec };
+    }
+
     if (type === 'END_TURN') {
       const expected = m.state.active;
       if (!expected || expected !== playerId) {

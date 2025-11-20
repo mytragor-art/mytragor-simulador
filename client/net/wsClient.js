@@ -19,6 +19,49 @@
   let lastServerSeq = 0;
   let lastJoin = null;
   let seenActionIds = new Set();
+  let heartbeat = null;
+
+  function sanitizeLeader(leader){
+    try{
+      if(!leader) return null;
+      let src = leader;
+      const out = {};
+      if(typeof src === 'string'){
+        const nm = String(src);
+        let key = nm;
+        try{ if(typeof window.getLeaderKey==='function') key = getLeaderKey(nm); }catch(e){}
+        out.key = String(key);
+        out.name = nm;
+        try{ if(window.CHOSEN_IMAGES && CHOSEN_IMAGES[key]) out.img = String(CHOSEN_IMAGES[key]); }catch(e){}
+      } else {
+        if(src.key) out.key = String(src.key);
+        if(src.name) out.name = String(src.name);
+        if(src.img) out.img = String(src.img);
+        if(typeof src.ac==='number') out.ac = src.ac;
+        if(typeof src.hp==='number') out.hp = src.hp;
+        if(typeof src.maxHp==='number') out.maxHp = src.maxHp;
+        if(typeof src.atkBonus==='number') out.atkBonus = src.atkBonus;
+        if(typeof src.damage==='number') out.damage = src.damage;
+        if(src.filiacao) out.filiacao = String(src.filiacao);
+      }
+      out.kind = 'leader';
+      return Object.keys(out).length? out : null;
+    }catch(e){ return null; }
+  }
+
+  function validateActionPayload(type, payload){
+    const t = String(type||'');
+    const p = payload || {};
+    if(t === 'SET_LEADER'){
+      const side = String(p.side||'');
+      const leader = sanitizeLeader(p.leader || (window.STATE && STATE.you && STATE.you.leader));
+      const cards = Array.isArray(p.cards) ? p.cards.slice() : (window.STATE && STATE.you && Array.isArray(STATE.you.customDeck)? STATE.you.customDeck.slice() : null);
+      const fragImg = (typeof p.fragImg==='string' && p.fragImg) ? p.fragImg : ((window.STATE && STATE.you && typeof STATE.you.fragImg==='string')? STATE.you.fragImg : null);
+      if(!leader) return { ok:false, reason:'missing_leader' };
+      return { ok:true, payload:{ side: side||String(lastJoin && lastJoin.playerId || 'p1'), leader, cards: cards||null, fragImg: fragImg||null } };
+    }
+    return { ok:true, payload:p };
+  }
 
   function log(){ try{ console.log.apply(console, ['[wsClient]'].concat([].slice.call(arguments))); }catch(e){} }
   function send(obj){ try{ if(ws && ws.readyState === WebSocket.OPEN){ ws.send(JSON.stringify(obj)); } }catch(e){} }
@@ -29,6 +72,7 @@
       connected = true; 
       log('open', SERVER); 
       console.log('[wsClient] connected'); 
+      try{ if(heartbeat) clearInterval(heartbeat); heartbeat = setInterval(()=>{ try{ requestPing(); }catch(e){} }, 8000); }catch(e){}
       // Reenviar join se houver uma sessão anterior
       if(lastJoin) {
         console.log('[wsClient] re-sending join for reconnection');
@@ -39,6 +83,7 @@
       connected = false; 
       log('close'); 
       console.log('[wsClient] disconnected, reconnecting...'); 
+      try{ if(heartbeat) clearInterval(heartbeat); heartbeat=null; }catch(e){}
       setTimeout(connect, 1000); 
     };
     ws.onerror = function(e){ 
@@ -54,8 +99,8 @@
   }
 
   function handle(msg){
-    if(msg.type === 'snapshot'){ lastServerSeq = Number(msg.serverSeq)||0; try{ if(window.syncManager && syncManager.onSnapshot) syncManager.onSnapshot(msg.snapshot, lastServerSeq); }catch(e){} return; }
-    if(msg.type === 'replay'){ var arr = Array.isArray(msg.actions)?msg.actions:[]; arr.sort((a,b)=>a.serverSeq-b.serverSeq).forEach(function(r){ try{ if(window.syncManager && syncManager.onActionAccepted) syncManager.onActionAccepted(r); }catch(e){} }); lastServerSeq = Number(msg.toSeq)||lastServerSeq; return; }
+    if(msg.type === 'snapshot'){ lastServerSeq = Number(msg.serverSeq)||0; try{ console.log('[wsClient] snapshot seq=', lastServerSeq, 'leaders=', msg.snapshot && msg.snapshot.leaders); }catch(e){} try{ if(typeof window.appendLogLine==='function'){ var ls = (msg.snapshot && msg.snapshot.leaders)||{}; appendLogLine(`[MP] Snapshot recebido — p1:${ls.p1?'ok':'—'} p2:${ls.p2?'ok':'—'}`,'effect'); } }catch(e){} try{ if(window.syncManager && syncManager.onSnapshot) syncManager.onSnapshot(msg.snapshot, lastServerSeq); }catch(e){} return; }
+    if(msg.type === 'replay'){ var arr = Array.isArray(msg.actions)?msg.actions:[]; try{ console.log('[wsClient] replay from', msg.fromSeq, 'to', msg.toSeq, 'count=', arr.length); }catch(e){} arr.sort((a,b)=>a.serverSeq-b.serverSeq).forEach(function(r){ try{ if(window.syncManager && syncManager.onActionAccepted) syncManager.onActionAccepted(r); }catch(e){} }); lastServerSeq = Number(msg.toSeq)||lastServerSeq; return; }
     if(msg.type === 'actionAccepted'){ 
       // Ignorar ações duplicadas
       if(msg.actionId && seenActionIds.has(msg.actionId)) return;
@@ -63,6 +108,8 @@
       
       if(typeof msg.serverSeq === 'number' && msg.serverSeq <= lastServerSeq) return; 
       lastServerSeq = Number(msg.serverSeq)||lastServerSeq; 
+      try{ console.log('[wsClient] actionAccepted', { seq: msg.serverSeq, by: msg.by, type: msg.actionType, keys: Object.keys(msg.payload||{}) }); }catch(e){}
+      try{ if(typeof window.appendLogLine==='function'){ appendLogLine(`[MP] Aceito ${msg.actionType} por ${msg.by} (seq ${msg.serverSeq})`,'effect'); } }catch(e){}
       try{ if(window.syncManager && syncManager.onActionAccepted) syncManager.onActionAccepted({ serverSeq: msg.serverSeq, actionId: msg.actionId, playerId: msg.by, actionType: msg.actionType, payload: msg.payload }); }catch(e){} 
       return; 
     }
@@ -96,7 +143,14 @@
     send({ type:'join', matchId: lastJoin.matchId, playerId: lastJoin.playerId, playerName: playerName, sinceSeq: lastJoin.sinceSeq }); 
   }
   function requestPing(){ send({ type:'ping' }); }
-  function sendAction(matchId, playerId, actionId, actionType, payload){ send({ type:'action', matchId:String(matchId), playerId:String(playerId), actionId:String(actionId), actionType:String(actionType), payload: payload||{} }); }
+  function sendAction(matchId, playerId, actionId, actionType, payload){ 
+    const v = validateActionPayload(actionType, payload||{});
+    if(!v.ok){ try{ console.warn('[wsClient] invalid payload', actionType, v.reason); if(typeof window.appendLogLine==='function') appendLogLine(`Falha ao enviar ${actionType}: ${v.reason}`,'effect'); }catch(e){} return; }
+    const out = { type:'action', matchId:String(matchId), playerId:String(playerId), actionId:String(actionId), actionType:String(actionType), payload: v.payload||{} };
+    try{ console.log('[wsClient] send', out.actionType, { keys:Object.keys(out.payload||{}), side: out.payload && out.payload.side }); }catch(e){}
+    send(out);
+  }
+  try{ const _origSendAction = sendAction; window.wsClientSendActionDebug = function(m,p,id,t,pl){ console.log('[wsClient] sendAction', { matchId:m, playerId:p, actionId:id, type:t, keys:Object.keys(pl||{}) }); return _origSendAction(m,p,id,t,pl); }; }catch(e){}
 
   window.wsClient = { connect, join, requestPing, sendAction, getStatus: function(){ return { connected, server: SERVER, lastServerSeq }; } };
 })();

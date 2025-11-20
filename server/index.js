@@ -34,6 +34,22 @@ function broadcast(match, obj, exclude) {
   match.players.forEach((sock) => { if (sock && sock.readyState === WebSocket.OPEN && sock !== exclude) { try { sock.send(data); } catch {} } });
 }
 
+function validateAction(action){
+  try{
+    const type = String(action.actionType||'');
+    const payload = action.payload || {};
+    if(type === 'SET_LEADER'){
+      const leader = payload.leader;
+      if(!leader || (typeof leader !== 'object')) return { ok:false, reason:'missing_leader' };
+      const hasKeyOrName = !!(leader.key || leader.name);
+      if(!hasKeyOrName) return { ok:false, reason:'leader_id_missing' };
+      const out = { side: String(payload.side||action.playerId||''), leader: { key: leader.key||undefined, name: leader.name||undefined, img: leader.img||undefined, kind:'leader', ac: leader.ac, hp: leader.hp, maxHp: leader.maxHp, atkBonus: leader.atkBonus, damage: leader.damage, filiacao: leader.filiacao }, cards: Array.isArray(payload.cards)? payload.cards.slice() : null, fragImg: (typeof payload.fragImg==='string' && payload.fragImg) ? String(payload.fragImg) : null };
+      return { ok:true, payload: out };
+    }
+    return { ok:true, payload };
+  }catch(e){ return { ok:false, reason:'validation_error' }; }
+}
+
 function roomsList(){
   const list = matchMgr.debugList();
   return list.map(r => ({ room: String(r.matchId).toUpperCase(), count: Array.isArray(r.players)? r.players.length : 0, players: Array.isArray(r.players)? r.players.slice() : [] }));
@@ -76,29 +92,24 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-    if (msg.type === 'action') {
-      if (!joined) { send(ws, { type: 'error', code: 'not_joined' }); return; }
-      const matchId = joined.matchId;
-      const playerId = joined.playerId;
-      const action = { matchId, playerId, actionId: msg.actionId, actionType: msg.actionType, payload: msg.payload };
-      const res = matchMgr.applyAction(matchId, action);
-      if (!res.ok) { send(ws, { type: 'actionRejected', matchId, actionId: action.actionId, reason: res.reason }); return; }
-      const m = matchMgr.getOrCreateMatch(matchId);
-      const out = { type: 'actionAccepted', matchId, serverSeq: res.applied.serverSeq, actionId: res.applied.actionId, actionType: res.applied.actionType, payload: res.applied.payload, by: playerId };
-      broadcast(m, out, null);
-      // Auto iniciar quando ambos definirem o líder
-      if(res.applied.actionType === 'SET_LEADER'){
-        try{
-          if(matchMgr.hasBothLeaders(matchId)){
-            const seq = m.serverSeq + 1; m.serverSeq = seq;
-            const startAction = { type:'actionAccepted', matchId, serverSeq: seq, actionId: String(Date.now())+'-start', actionType:'START_MATCH', payload:{ seed: Date.now() }, by: 'server' };
-            m.log.push({ serverSeq: seq, actionId: startAction.actionId, playerId: 'server', actionType:'START_MATCH', payload: startAction.payload, ts: Date.now() });
-            broadcast(m, startAction, null);
-          }
-        }catch{}
-      }
-      return;
-    }
+  if (msg.type === 'action') {
+    if (!joined) { send(ws, { type: 'error', code: 'not_joined' }); return; }
+    const matchId = joined.matchId;
+    const playerId = joined.playerId;
+    const action = { matchId, playerId, actionId: msg.actionId, actionType: msg.actionType, payload: msg.payload };
+    const v = validateAction(action);
+    if(!v.ok){ send(ws, { type:'actionRejected', matchId, actionId: action.actionId, reason: v.reason||'invalid_payload' }); return; }
+    action.payload = v.payload;
+    try{ console.log('[ws-server] apply', matchId, playerId, action.actionType, Object.keys(action.payload||{})); }catch{}
+    const res = matchMgr.applyAction(matchId, action);
+    if (!res.ok) { send(ws, { type: 'actionRejected', matchId, actionId: action.actionId, reason: res.reason }); return; }
+    const m = matchMgr.getOrCreateMatch(matchId);
+    const out = { type: 'actionAccepted', matchId, serverSeq: res.applied.serverSeq, actionId: res.applied.actionId, actionType: res.applied.actionType, payload: res.applied.payload, by: playerId };
+    try{ console.log('[ws-server] accepted', matchId, 'seq=', res.applied.serverSeq, 'type=', res.applied.actionType); }catch{}
+    broadcast(m, out, null);
+    // START_MATCH será solicitado pelo cliente MP quando ambos escolherem
+    return;
+  }
   });
 
   ws.on('close', () => { 

@@ -3151,10 +3151,15 @@ function hideCharSelect(){
 }
 
 function selectLeader(idx, opts){
-  // Assign chosen leader to player and pick a random leader for AI from available opts
+  // Assign chosen leader to player; em MP não definimos líder do oponente localmente
   STATE.you.leader = {...opts[idx], kind:'leader', img: opts[idx].img || CHOSEN_IMAGES[opts[idx].key]};
-  const other = opts[(idx+1+rnd(Math.max(1, opts.length)))%Math.max(1, opts.length)];
-  STATE.ai.leader = {...other, kind:'leader', img: other.img || CHOSEN_IMAGES[other.key]};
+  // Definir líder da IA apenas quando NÃO estiver em modo multiplayer
+  try{
+    if(!(window.IS_MULTIPLAYER || (typeof IS_MP !== 'undefined' && IS_MP))){
+      const other = opts[(idx+1+rnd(Math.max(1, opts.length)))%Math.max(1, opts.length)];
+      STATE.ai.leader = {...other, kind:'leader', img: other.img || CHOSEN_IMAGES[other.key]};
+    }
+  }catch(e){}
   // Limpar deck customizado quando usar seleção manual
   STATE.you.customDeck = null;
   render();
@@ -3167,6 +3172,12 @@ function selectLeader(idx, opts){
       console.log('selectLeader: sent SYNC_FULL to peers');
     }
   }catch(e){ console.warn('selectLeader: sync failed', e); }
+  try{
+    if((window.IS_MULTIPLAYER || __IS_MP) && window.syncManager){
+      var payload = { side: String(window.localSide||'p1'), leader: STATE.you && STATE.you.leader, cards: STATE.you && STATE.you.customDeck, fragImg: STATE.you && STATE.you.fragImg };
+      try{ window.syncManager.enqueueAndSend('SET_LEADER', payload); }catch(e){}
+    }
+  }catch(e){}
 }
 
 // Funções para carregar decks salvos
@@ -3452,6 +3463,13 @@ function selectSavedDeck(deck) {
       console.log('selectSavedDeck: sent SYNC_FULL to peers');
     }
   }catch(e){ console.warn('selectSavedDeck sync failed', e); }
+
+  try{
+    if(__IS_MP && window.syncManager){
+      var payload = { side: String(window.localSide||'p1'), leader: STATE.you && STATE.you.leader, cards: STATE.you && STATE.you.customDeck, fragImg: STATE.you && STATE.you.fragImg };
+      try{ window.syncManager.enqueueAndSend('SET_LEADER', payload); }catch(e){}
+    }
+  }catch(e){}
 }
 
 function getLeaderKey(leaderName) {
