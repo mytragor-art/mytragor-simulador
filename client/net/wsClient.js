@@ -9,7 +9,7 @@
       if(host === 'localhost' || host === '127.0.0.1' || /\.(local)$/i.test(host)){
         return (isHttps? 'wss':'ws') + '://localhost:8081';
       }
-      return 'wss://mytragor-simulador.onrender.com';
+      return 'wss://mytragor-simulador-1.onrender.com';
     }catch(e){ return (isHttps? 'wss':'ws') + '://localhost:8081'; }
   }
   let SERVER = computeDefaultServer();
@@ -92,7 +92,7 @@
       try{
         const host = location.hostname;
         if(!switchedToFallback && retries>=2 && !(/localhost|127\.0\.0\.1|\.local$/i.test(host))){
-          const fallback = 'wss://mytragor-simulador.onrender.com';
+          const fallback = 'wss://mytragor-simulador-1.onrender.com';
           console.log('[wsClient] switching to fallback server', fallback);
           SERVER = fallback; switchedToFallback = true; retries = 0;
         }

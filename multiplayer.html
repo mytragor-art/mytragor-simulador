@@ -86,7 +86,7 @@ F
 
   const params = new URLSearchParams(location.search);
   const isLocalHost = (function(){ try{ const h=location.hostname; return (h==='localhost'||h==='127.0.0.1'||/\.local$/i.test(h)); }catch(e){ return false; } })();
-  const defaultRenderServer = 'wss://mytragor-simulador.onrender.com';
+  const defaultRenderServer = 'wss://mytragor-simulador-1.onrender.com';
   const MP_SERVER_OVERRIDE = params.get('mpServer') || localStorage.getItem('mpServer') || (isLocalHost? null : defaultRenderServer);
 
   const roomInput = $('#room');
@@ -125,7 +125,7 @@ F
       console.warn('[lobby] ws error', e);
       try{
         if(!/localhost|127\.0\.0\.1|\.local$/i.test(host)){
-          const fallback = 'wss://mytragor-simulador.onrender.com';
+          const fallback = 'wss://mytragor-simulador-1.onrender.com';
           if(SERVER !== fallback){ console.log('[lobby] tentando fallback', fallback); localStorage.setItem('mpServer', fallback); setTimeout(()=> connectLobbyWS(), 500); return; }
         }
       }catch(_){}
@@ -177,7 +177,7 @@ F
     const isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
     const proto = isHttps ? 'wss' : 'ws';
     const host = location.hostname;
-    const defaultServer = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : 'wss://mytragor-simulador.onrender.com';
+    const defaultServer = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : 'wss://mytragor-simulador-1.onrender.com';
     const SERVER = MP_SERVER_OVERRIDE || defaultServer;
     localStorage.setItem('mpRoom', ROOM);
     localStorage.setItem('mpSide', MY_SIDE);
@@ -202,7 +202,7 @@ F
     if(!ROOM) return log('Selecione uma sala antes de entrar');
     MY_SIDE = 'p2';
     // Usar domínio do Render
-    const SERVER = 'wss://mytragor-simulador.onrender.com';
+    const SERVER = 'wss://mytragor-simulador-1.onrender.com';
     localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
     localStorage.setItem('mpServer', SERVER);
     log(`Entrando na sala ${ROOM} como p2...`);

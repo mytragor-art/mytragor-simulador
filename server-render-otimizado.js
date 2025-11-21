@@ -270,8 +270,8 @@ app.get('/health', (req, res) => {
 app.get('/status', (req, res) => {
   res.json({
     server: 'online',
-    domain: 'https://mytragor-simulador.onrender.com',
-    websocket: 'wss://mytragor-simulador.onrender.com',
+    domain: 'https://mytragor-simulador-1.onrender.com',
+    websocket: 'wss://mytragor-simulador-1.onrender.com',
     players: wss.clients.size,
     rooms: getRooms().length,
     timestamp: new Date().toISOString()
@@ -576,7 +576,7 @@ app.get('/', (req, res) => {
         
         // PARA RENDER - USAR SEMPRE WSS
         function getRenderWebSocketUrl(room = 'SALA1') {
-            return 'wss://mytragor-simulador.onrender.com?room=' + encodeURIComponent(room);
+            return 'wss://mytragor-simulador-1.onrender.com?room=' + encodeURIComponent(room);
         }
 
         let ws = null;
@@ -638,7 +638,7 @@ app.get('/', (req, res) => {
             
             // USAR FUNÇÃO DE AUTO-DETECÇÃO
             let wsUrl;
-            if (window.location.hostname === 'mytragor-simulador.onrender.com') {
+            if (window.location.hostname === 'mytragor-simulador-1.onrender.com') {
                 wsUrl = getRenderWebSocketUrl(room);
                 addMessage('🌐 Usando conexão WSS para Render', 'system');
             } else {
@@ -835,7 +835,7 @@ app.get('/', (req, res) => {
         
         // Mostrar URL de conexão
         const showConnectionUrl = () => {
-            const url = window.location.hostname === 'mytragor-simulador.onrender.com' 
+            const url = window.location.hostname === 'mytragor-simulador-1.onrender.com' 
                 ? getRenderWebSocketUrl('LOBBY') 
                 : getWebSocketUrl('LOBBY');
             document.getElementById('websocketUrl').textContent = '🔗 ' + url;
@@ -860,11 +860,11 @@ const PORT = process.env.PORT || 8080;
 
 server.listen(PORT, () => {
   console.log(`🚀 MyTragor Server rodando na porta ${PORT}`);
-  console.log(`🌐 Domínio: https://mytragor-simulador.onrender.com`);
-  console.log(`🎮 WebSocket: wss://mytragor-simulador.onrender.com`);
-  console.log(`📊 Health: https://mytragor-simulador.onrender.com/health`);
-  console.log(`📋 Salas: https://mytragor-simulador.onrender.com/rooms`);
-  console.log(`📈 Status: https://mytragor-simulador.onrender.com/status`);
+  console.log(`🌐 Domínio: https://mytragor-simulador-1.onrender.com`);
+  console.log(`🎮 WebSocket: wss://mytragor-simulador-1.onrender.com`);
+  console.log(`📊 Health: https://mytragor-simulador-1.onrender.com/health`);
+  console.log(`📋 Salas: https://mytragor-simulador-1.onrender.com/rooms`);
+  console.log(`📈 Status: https://mytragor-simulador-1.onrender.com/status`);
 });
 
 module.exports = { app, server, wss };
