@@ -3,13 +3,14 @@
   const params = new URLSearchParams(location.search);
   function computeDefaultServer(){
     try{
+      const proto = isHttps ? 'wss' : 'ws';
+      const host = location.hostname;
       const override = params.get('mpServer');
       if(override) return override;
-      const host = location.hostname;
       if(host === 'localhost' || host === '127.0.0.1' || /\.(local)$/i.test(host)){
-        return (isHttps? 'wss':'ws') + '://localhost:8081';
+        return `${proto}://localhost:8081`;
       }
-      return 'wss://mytragor-simulador-1.onrender.com';
+      return `${proto}://${location.host}`;
     }catch(e){ return (isHttps? 'wss':'ws') + '://localhost:8081'; }
   }
   let SERVER = computeDefaultServer();
@@ -20,7 +21,6 @@
   let seenActionIds = new Set();
   let heartbeat = null;
   let lastPingTs = 0; let lastRTT = null;
-  let retries = 0; let switchedToFallback = false;
 
   function sanitizeLeader(leader){
     try{
@@ -88,15 +88,6 @@
       try{ var s=document.getElementById('mpStatus'); if(s) s.textContent='Desconectado. Reconectando…'; }catch(e){}
       try{ if(window.syncManager && typeof syncManager.getHistory==='function'){ const h = syncManager.getHistory(); h.push({ t: Date.now(), type:'disconnect', server: SERVER }); localStorage.setItem('mp_hist_'+(lastJoin && lastJoin.matchId || 'TESTE123'), JSON.stringify(h)); } }catch(e){}
       try{ if(heartbeat) clearInterval(heartbeat); heartbeat=null; }catch(e){}
-      try{ retries++; }catch(e){}
-      try{
-        const host = location.hostname;
-        if(!switchedToFallback && retries>=2 && !(/localhost|127\.0\.0\.1|\.local$/i.test(host))){
-          const fallback = 'wss://mytragor-simulador-1.onrender.com';
-          console.log('[wsClient] switching to fallback server', fallback);
-          SERVER = fallback; switchedToFallback = true; retries = 0;
-        }
-      }catch(e){}
       setTimeout(connect, 1000); 
     };
     ws.onerror = function(e){ 

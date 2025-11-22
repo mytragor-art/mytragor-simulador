@@ -117,50 +117,29 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', (data) => {
     try {
-      const raw = data.toString();
-      let msg = null;
-      try { msg = JSON.parse(raw); } catch(_) {}
-      if(msg && typeof msg === 'object' && msg.type){
-        if(msg.type === 'join'){
-          ws.room = String(msg.matchId||'LOBBY').toUpperCase();
-          ws.playerId = String(msg.playerId||'');
-          ws.playerName = String(msg.playerName || ws.playerId || `Jogador_${Math.floor(Math.random()*1000)}`);
-          ws.joinTime = Date.now();
-          console.log('🟢 join recebido', { room: ws.room, playerId: ws.playerId, playerName: ws.playerName });
-          broadcastToRoom(ws.room, {
-            type: 'playerJoined',
-            playerId: ws.playerId,
-            playerName: ws.playerName,
-            matchId: ws.room,
-            timestamp: Date.now()
-          }, ws);
-          broadcastRooms();
-          return;
-        }
-        if(msg.type === 'ping'){
-          try{ ws.send(JSON.stringify({ type:'pong', t: Date.now() })); }catch(e){}
-          return;
-        }
-        if(msg.type === 'list'){
-          try{ ws.send(JSON.stringify({ type:'rooms', rooms: getRooms() })); }catch(e){}
-          return;
-        }
-        // Demais mensagens: encaminhar para a sala atual
-        broadcastToRoom(ws.room, {
-          type: 'message',
-          player: ws.playerName,
-          message: raw,
-          timestamp: Date.now()
-        }, ws);
+      const message = data.toString();
+      console.log(`📨 Mensagem de ${playerName}: ${message.slice(0, 100)}`);
+      
+      // Comandos especiais
+      if (message.startsWith('/')) {
+        handleCommand(message, ws);
         return;
       }
-      // Comandos simples iniciados por '/'
-      if (raw.startsWith('/')) { handleCommand(raw, ws); return; }
-      // Texto simples -> broadcast
-      broadcastToRoom(ws.room, { type: 'message', player: ws.playerName, message: raw, timestamp: Date.now() }, ws);
+      
+      // Broadcast para sala
+      broadcastToRoom(ws.room, {
+        type: 'message',
+        player: playerName,
+        message: message,
+        timestamp: Date.now()
+      }, ws);
+      
     } catch (e) {
       console.error('❌ Erro ao processar mensagem:', e);
-      try{ ws.send(JSON.stringify({ type: 'error', message: 'Erro ao processar mensagem' })); }catch(_){}
+      ws.send(JSON.stringify({ 
+        type: 'error', 
+        message: 'Erro ao processar mensagem' 
+      }));
     }
   });
 
@@ -291,8 +270,8 @@ app.get('/health', (req, res) => {
 app.get('/status', (req, res) => {
   res.json({
     server: 'online',
-    domain: 'https://mytragor-simulador-1.onrender.com',
-    websocket: 'wss://mytragor-simulador-1.onrender.com',
+    domain: 'https://mytragor-simulador.onrender.com',
+    websocket: 'wss://mytragor-simulador.onrender.com',
     players: wss.clients.size,
     rooms: getRooms().length,
     timestamp: new Date().toISOString()
@@ -597,7 +576,7 @@ app.get('/', (req, res) => {
         
         // PARA RENDER - USAR SEMPRE WSS
         function getRenderWebSocketUrl(room = 'SALA1') {
-            return 'wss://mytragor-simulador-1.onrender.com?room=' + encodeURIComponent(room);
+            return 'wss://mytragor-simulador.onrender.com?room=' + encodeURIComponent(room);
         }
 
         let ws = null;
@@ -659,7 +638,7 @@ app.get('/', (req, res) => {
             
             // USAR FUNÇÃO DE AUTO-DETECÇÃO
             let wsUrl;
-            if (window.location.hostname === 'mytragor-simulador-1.onrender.com') {
+            if (window.location.hostname === 'mytragor-simulador.onrender.com') {
                 wsUrl = getRenderWebSocketUrl(room);
                 addMessage('🌐 Usando conexão WSS para Render', 'system');
             } else {
@@ -856,7 +835,7 @@ app.get('/', (req, res) => {
         
         // Mostrar URL de conexão
         const showConnectionUrl = () => {
-            const url = window.location.hostname === 'mytragor-simulador-1.onrender.com' 
+            const url = window.location.hostname === 'mytragor-simulador.onrender.com' 
                 ? getRenderWebSocketUrl('LOBBY') 
                 : getWebSocketUrl('LOBBY');
             document.getElementById('websocketUrl').textContent = '🔗 ' + url;
@@ -881,11 +860,11 @@ const PORT = process.env.PORT || 8080;
 
 server.listen(PORT, () => {
   console.log(`🚀 MyTragor Server rodando na porta ${PORT}`);
-  console.log(`🌐 Domínio: https://mytragor-simulador-1.onrender.com`);
-  console.log(`🎮 WebSocket: wss://mytragor-simulador-1.onrender.com`);
-  console.log(`📊 Health: https://mytragor-simulador-1.onrender.com/health`);
-  console.log(`📋 Salas: https://mytragor-simulador-1.onrender.com/rooms`);
-  console.log(`📈 Status: https://mytragor-simulador-1.onrender.com/status`);
+  console.log(`🌐 Domínio: https://mytragor-simulador.onrender.com`);
+  console.log(`🎮 WebSocket: wss://mytragor-simulador.onrender.com`);
+  console.log(`📊 Health: https://mytragor-simulador.onrender.com/health`);
+  console.log(`📋 Salas: https://mytragor-simulador.onrender.com/rooms`);
+  console.log(`📈 Status: https://mytragor-simulador.onrender.com/status`);
 });
 
 module.exports = { app, server, wss };
