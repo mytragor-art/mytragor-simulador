@@ -102,7 +102,7 @@ F
     const isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
     const proto = isHttps ? 'wss' : 'ws';
     const host = location.hostname;
-    const defaultServer = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
+    const defaultServer = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : 'wss://mytragor-simulador-1.onrender.com';
     const SERVER = MP_SERVER_OVERRIDE || defaultServer;
     log(`Conectando ao servidor: ${SERVER}`);
     function tryConnect(url){
