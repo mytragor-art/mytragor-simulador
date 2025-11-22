@@ -117,29 +117,50 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', (data) => {
     try {
-      const message = data.toString();
-      console.log(`📨 Mensagem de ${playerName}: ${message.slice(0, 100)}`);
-      
-      // Comandos especiais
-      if (message.startsWith('/')) {
-        handleCommand(message, ws);
+      const raw = data.toString();
+      let msg = null;
+      try { msg = JSON.parse(raw); } catch(_) {}
+      if(msg && typeof msg === 'object' && msg.type){
+        if(msg.type === 'join'){
+          ws.room = String(msg.matchId||'LOBBY').toUpperCase();
+          ws.playerId = String(msg.playerId||'');
+          ws.playerName = String(msg.playerName || ws.playerId || `Jogador_${Math.floor(Math.random()*1000)}`);
+          ws.joinTime = Date.now();
+          console.log('🟢 join recebido', { room: ws.room, playerId: ws.playerId, playerName: ws.playerName });
+          broadcastToRoom(ws.room, {
+            type: 'playerJoined',
+            playerId: ws.playerId,
+            playerName: ws.playerName,
+            matchId: ws.room,
+            timestamp: Date.now()
+          }, ws);
+          broadcastRooms();
+          return;
+        }
+        if(msg.type === 'ping'){
+          try{ ws.send(JSON.stringify({ type:'pong', t: Date.now() })); }catch(e){}
+          return;
+        }
+        if(msg.type === 'list'){
+          try{ ws.send(JSON.stringify({ type:'rooms', rooms: getRooms() })); }catch(e){}
+          return;
+        }
+        // Demais mensagens: encaminhar para a sala atual
+        broadcastToRoom(ws.room, {
+          type: 'message',
+          player: ws.playerName,
+          message: raw,
+          timestamp: Date.now()
+        }, ws);
         return;
       }
-      
-      // Broadcast para sala
-      broadcastToRoom(ws.room, {
-        type: 'message',
-        player: playerName,
-        message: message,
-        timestamp: Date.now()
-      }, ws);
-      
+      // Comandos simples iniciados por '/'
+      if (raw.startsWith('/')) { handleCommand(raw, ws); return; }
+      // Texto simples -> broadcast
+      broadcastToRoom(ws.room, { type: 'message', player: ws.playerName, message: raw, timestamp: Date.now() }, ws);
     } catch (e) {
       console.error('❌ Erro ao processar mensagem:', e);
-      ws.send(JSON.stringify({ 
-        type: 'error', 
-        message: 'Erro ao processar mensagem' 
-      }));
+      try{ ws.send(JSON.stringify({ type: 'error', message: 'Erro ao processar mensagem' })); }catch(_){}
     }
   });
 
