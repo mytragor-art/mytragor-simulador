@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const { MatchManager } = require('./server/matchManager');
 
 const app = express();
 const server = http.createServer(app);
@@ -25,34 +26,22 @@ const wss = new WebSocket.Server({
   maxPayload: 1024 * 1024
 });
 
-// Armazenamento de salas e jogadores
-const rooms = new Map();
-const players = new Map();
+// Gerenciador de partidas autoritativas
+const matchMgr = new MatchManager();
 
 // Funções utilitárias
-function getRooms() {
-  const roomData = {};
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN && client.room) {
-      const roomName = client.room.toUpperCase();
-      if (!roomData[roomName]) {
-        roomData[roomName] = { room: roomName, count: 0, players: [] };
-      }
-      roomData[roomName].count++;
-      if (client.playerName) {
-        roomData[roomName].players.push(client.playerName);
-      }
-    }
-  });
-  return Object.values(roomData);
+function roomsList(){
+  const list = matchMgr.debugList();
+  return list.map(r => ({ room: String(r.matchId).toUpperCase(), count: Array.isArray(r.players)? r.players.length : 0, players: Array.isArray(r.players)? r.players.slice() : [] }));
 }
 
 function broadcastToRoom(room, message, excludeClient = null) {
+  if (!room || typeof room !== 'string') return;
   const data = JSON.stringify(message);
   wss.clients.forEach(client => {
-    if (client !== excludeClient && 
-        client.readyState === WebSocket.OPEN && 
-        client.room && 
+    if (client !== excludeClient &&
+        client.readyState === WebSocket.OPEN &&
+        client.room &&
         client.room.toUpperCase() === room.toUpperCase()) {
       try {
         client.send(data);
@@ -63,27 +52,48 @@ function broadcastToRoom(room, message, excludeClient = null) {
   });
 }
 
-function broadcastRooms() {
-  const rooms = getRooms();
-  const message = JSON.stringify({ type: 'rooms', rooms: rooms });
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      try {
-        client.send(message);
-      } catch (e) {
-        console.error('Erro ao enviar lista de salas:', e);
-      }
+function broadcastRooms(){
+  const payload = JSON.stringify({ type:'rooms', rooms: roomsList() });
+  wss.clients.forEach((c)=>{ if(c && c.readyState === WebSocket.OPEN){ try{ c.send(payload); }catch{} } });
+}
+
+function send(ws, obj) { try { ws.send(JSON.stringify(obj)); } catch {} }
+function broadcastMatch(match, obj, exclude) {
+  const data = JSON.stringify(obj);
+  match.players.forEach((sock) => { if (sock && sock.readyState === WebSocket.OPEN && sock !== exclude) { try { sock.send(data); } catch {} } });
+}
+
+function validateAction(action){
+  try{
+    const type = String(action.actionType||'');
+    const payload = action.payload || {};
+    if(type === 'SET_LEADER'){
+      const leader = payload.leader;
+      if(!leader || (typeof leader !== 'object')) return { ok:false, reason:'missing_leader' };
+      const hasKeyOrName = !!(leader.key || leader.name);
+      if(!hasKeyOrName) return { ok:false, reason:'leader_id_missing' };
+      const map = {
+        katsu: { name:'Katsu, o Vingador', ac:12, hp:20, maxHp:20, atkBonus:4, damage:4, filiacao:'Marcial' },
+        valbrak: { name:'Valbrak, Herói do Povo', ac:10, hp:20, maxHp:20, atkBonus:2, damage:2, filiacao:'Arcana' },
+        leafae: { name:'Leafae, Guardião', ac:10, hp:20, maxHp:20, atkBonus:2, damage:1, filiacao:'Religioso' },
+        ademais: { name:'Ademais, Aranha Negra', ac:11, hp:20, maxHp:20, atkBonus:3, damage:3, filiacao:'Sombras' }
+      };
+      const k = String(leader.key||leader.name||'').toLowerCase();
+      const base = map[k] || {};
+      const out = { side: String(payload.side||action.playerId||''), leader: { key: leader.key||undefined, name: leader.name||base.name||undefined, img: leader.img||undefined, kind:'leader', ac: leader.ac!=null?leader.ac:base.ac, hp: leader.hp!=null?leader.hp:base.hp, maxHp: leader.maxHp!=null?leader.maxHp:base.maxHp, atkBonus: leader.atkBonus!=null?leader.atkBonus:base.atkBonus, damage: leader.damage!=null?leader.damage:base.damage, filiacao: leader.filiacao||base.filiacao }, cards: Array.isArray(payload.cards)? payload.cards.slice() : null, fragImg: (typeof payload.fragImg==='string' && payload.fragImg) ? String(payload.fragImg) : null };
+      return { ok:true, payload: out };
     }
-  });
+    return { ok:true, payload };
+  }catch(e){ return { ok:false, reason:'validation_error' }; }
 }
 
 // WebSocket Connection Handler
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const room = url.searchParams.get('room') || 'LOBBY';
+  const room = url.searchParams.get('room') || null;
   const playerName = url.searchParams.get('player') || `Jogador_${Math.floor(Math.random() * 1000)}`;
   
-  ws.room = room.toUpperCase();
+  ws.room = room ? room.toUpperCase() : null;
   ws.playerName = playerName;
   ws.isAlive = true;
   ws.joinTime = Date.now();
@@ -120,10 +130,63 @@ wss.on('connection', (ws, req) => {
       const message = data.toString();
       console.log(`📨 Mensagem de ${playerName}: ${message.slice(0, 100)}`);
       
-      // Comandos especiais
-      if (message.startsWith('/')) {
-        handleCommand(message, ws);
-        return;
+      if (message.startsWith('/')) { handleCommand(message, ws); return; }
+
+      if (message.trim().startsWith('{')) {
+        try {
+          const obj = JSON.parse(message);
+          if (obj && obj.type === 'list') {
+            try { ws.send(JSON.stringify({ type: 'rooms', rooms: roomsList() })); } catch {}
+            return;
+          }
+          if (obj && obj.type === 'join') {
+            const matchId = String(obj.matchId||'').trim();
+            const pid = String(obj.playerId||'').trim();
+            const pname = String(obj.playerName||pid||playerName||'Jogador');
+            if (!matchId || !pid) {
+              try { ws.send(JSON.stringify({ type:'error', message:'invalid_join' })); } catch {}
+              return;
+            }
+            ws.room = matchId.toUpperCase();
+            ws.playerId = pid;
+            ws.playerName = pname;
+            const info = matchMgr.join(matchId, pid, ws);
+            try { send(ws, { type: 'snapshot', matchId, serverSeq: info.serverSeq, snapshot: info.snapshot }); } catch {}
+            const since = typeof obj.sinceSeq === 'number' ? obj.sinceSeq : null;
+            if (since !== null) {
+              const actions = matchMgr.actionsSince(matchId, since);
+              if (actions && actions.length) send(ws, { type: 'replay', matchId, fromSeq: since, toSeq: info.serverSeq, actions });
+            }
+            try { const m = matchMgr.getOrCreateMatch(matchId); const notice = { type: 'playerJoined', matchId, playerId: pid, playerName: ws.playerName, timestamp: Date.now() }; broadcastMatch(m, notice, ws); } catch {}
+            broadcastRooms();
+            return;
+          }
+          if (obj && obj.type === 'action') {
+            const joinedRoom = ws.room || null;
+            const matchId = String(obj.matchId||joinedRoom||'').trim();
+            const playerId = String(obj.playerId||'').trim();
+            if(!matchId || !playerId){ send(ws, { type:'error', message:'not_joined' }); return; }
+            const action = { matchId, playerId, actionId: obj.actionId, actionType: obj.actionType, payload: obj.payload };
+            const v = validateAction(action);
+            if(!v.ok){ send(ws, { type:'actionRejected', matchId, actionId: action.actionId, reason: v.reason||'invalid_payload' }); return; }
+            action.payload = v.payload;
+            const res = matchMgr.applyAction(matchId, action);
+            if (!res.ok) { send(ws, { type: 'actionRejected', matchId, actionId: action.actionId, reason: res.reason }); return; }
+            const m = matchMgr.getOrCreateMatch(matchId);
+            const out = { type: 'actionAccepted', matchId, serverSeq: res.applied.serverSeq, actionId: res.applied.actionId, actionType: res.applied.actionType, payload: res.applied.payload, by: playerId };
+            broadcastMatch(m, out, null);
+            return;
+          }
+          if (obj && obj.type === 'clientSnapshot') {
+            const matchId = String(obj.matchId||'').trim();
+            const playerId = String(obj.playerId||'').trim();
+            if (!matchId || !playerId) { send(ws, { type: 'error', message: 'not_joined' }); return; }
+            const m = matchMgr.getOrCreateMatch(matchId);
+            const out = { type: 'snapshot', matchId, serverSeq: m.serverSeq, snapshot: obj.snapshot || null };
+            broadcastMatch(m, out, null);
+            return;
+          }
+        } catch {}
       }
       
       // Broadcast para sala
@@ -152,12 +215,16 @@ wss.on('connection', (ws, req) => {
     console.log(`📊 Total de clientes: ${wss.clients.size}`);
     
     // Notificar sala sobre saída do jogador
-    broadcastToRoom(ws.room, {
-      type: 'player_left',
-      player: playerName,
-      room: ws.room,
-      timestamp: Date.now()
-    });
+    try{
+      if(ws.room){
+        const mid = ws.room;
+        const pid = ws.playerId || null;
+        matchMgr.removePlayer(mid, pid||'');
+        const m = matchMgr.getOrCreateMatch(mid);
+        const notice = { type: 'playerLeft', matchId: mid, playerId: pid||'', playerName: ws.playerName || pid || '', timestamp: Date.now() };
+        broadcastMatch(m, notice, null);
+      }
+    }catch{}
     
     broadcastRooms();
   });
@@ -242,7 +309,7 @@ wss.on('close', () => {
 
 // Rotas HTTP
 app.get('/rooms', (req, res) => {
-  const rooms = getRooms();
+  const rooms = roomsList();
   res.json({
     time: new Date().toISOString(),
     rooms: rooms,
@@ -262,7 +329,7 @@ app.get('/health', (req, res) => {
       heapUsed: Math.round(memory.heapUsed / 1024 / 1024) + 'MB'
     },
     websocketClients: wss.clients.size,
-    rooms: getRooms().length,
+    rooms: roomsList().length,
     server: 'MyTragor Render Server'
   });
 });
@@ -273,7 +340,7 @@ app.get('/status', (req, res) => {
     domain: 'https://mytragor-simulador.onrender.com',
     websocket: 'wss://mytragor-simulador.onrender.com',
     players: wss.clients.size,
-    rooms: getRooms().length,
+    rooms: roomsList().length,
     timestamp: new Date().toISOString()
   });
 });
@@ -835,11 +902,11 @@ app.get('/', (req, res) => {
         
         // Mostrar URL de conexão
         const showConnectionUrl = () => {
-            const url = window.location.hostname === 'mytragor-simulador.onrender.com' 
-                ? getRenderWebSocketUrl('LOBBY') 
-                : getWebSocketUrl('LOBBY');
-            document.getElementById('websocketUrl').textContent = '🔗 ' + url;
-        };
+        const url = window.location.hostname === 'mytragor-simulador.onrender.com' 
+                ? getRenderWebSocketUrl('SALA1') 
+                : getWebSocketUrl('SALA1');
+        document.getElementById('websocketUrl').textContent = '🔗 ' + url;
+      };
         showConnectionUrl();
     </script>
 </body>
