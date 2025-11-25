@@ -422,9 +422,14 @@
 
   // Function to randomly select the starting player
   function chooseStartingPlayer() {
+    // Do not randomly choose starting player in multiplayer mode; the server/host
+    // will determine the starting player via snapshot. If not MP, pick randomly.
+    if (window.IS_MULTIPLAYER || window.__IS_MP) {
+      console.log('[mp-game] Multiplayer mode - skipping local random starting player');
+      return;
+    }
     currentPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
-    console.log("Starting player:", currentPlayer);
-
+    console.log("Starting player (local-only):", currentPlayer);
     const statusElement = document.getElementById('mpStatus');
     if (statusElement) {
       statusElement.textContent = currentPlayer === 'p1' 
