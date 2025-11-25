@@ -214,7 +214,8 @@
       if(rec.actionType === 'END_TURN'){
         captureOriginals();
         try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
-        if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
+        // Apenas chamar beginTurn() se agora é a MINHA vez (STATE.active === 'you')
+        if(window.STATE && window.STATE.active === 'you' && typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Oponente encerrou turno`,'effect'); }catch(e){}
         // Se agora é a minha vez, enviar snapshot atualizado com novos fragmentos e estado
         try{
@@ -227,7 +228,7 @@
                 var snap = window.Game.buildSnapshot();
                 if(snap && window.wsClient && typeof window.wsClient.send==='function'){
                   window.wsClient.send({ type: 'clientSnapshot', matchId: context.matchId, snapshot: snap });
-                  console.log('[syncManager] END_TURN: Enviando snapshot atualizado (STATE.active=you)', snap);
+                  console.log('[syncManager] END_TURN: Enviando snapshot atualizado (STATE.active=you, maxPool=', snap.you && snap.you.maxMana, '), snap.pool=', snap.pool);
                 }
               }catch(e){ console.warn('[syncManager] Erro ao enviar snapshot após END_TURN', e); }
             }, 50);
