@@ -1749,7 +1749,7 @@ function restoreBoardFor(side, boardObj){
 
 window.Game.buildSnapshot = function(){
   try{
-    const snap = { seed: (window.RNG && window.RNG.currentSeed) ? window.RNG.currentSeed : (window.RNG?window.RNG.getSeed():null), turn: (STATE.active=== (MY_SIDE==='p1'?'you':'ai') ? 'p1' : 'p2'), p1:{}, p2:{} };
+    const snap = { seed: (window.RNG && window.RNG.currentSeed) ? window.RNG.currentSeed : (window.RNG?window.RNG.getSeed():null), turn: (STATE.active=== (MY_SIDE==='p1'?'you':'ai') ? 'p1' : 'p2'), turnCount: STATE.turnCount, maxPool: STATE.maxPool, pool: STATE.pool, p1:{}, p2:{} };
     // helper to collect side data
     ['p1','p2'].forEach(p => {
       const ls = localSideFromP(p);
@@ -1774,6 +1774,10 @@ window.Game.applySnapshot = function(snap, { remote=false } = {}){
   try{
     if(!snap) return;
     if(snap.seed && window.RNG && typeof window.RNG.setSeed === 'function') window.RNG.setSeed(snap.seed);
+    // Restaurar turnCount, maxPool, pool globais
+    if(snap.turnCount) STATE.turnCount = Object.assign({}, snap.turnCount);
+    if(snap.maxPool) STATE.maxPool = Object.assign({}, snap.maxPool);
+    if(snap.pool) STATE.pool = Object.assign({}, snap.pool);
     // clear current boards
     Game.resetBoards();
     // reconstruct decks/hands/board from snapshot
@@ -1796,6 +1800,9 @@ window.Game.applySnapshot = function(snap, { remote=false } = {}){
     if(snap.turn) {
       STATE.active = (snap.turn === 'p1') ? (MY_SIDE === 'p1' ? 'you' : 'ai') : (MY_SIDE === 'p1' ? 'ai' : 'you');
     }
+    // Re-render com fragmentos atualizados
+    try{ renderFrags('you'); renderFrags('ai'); }catch(e){}
+    try{ renderHUD(); }catch(e){}
     render();
   }catch(e){ console.warn('applySnapshot error', e); }
 };
