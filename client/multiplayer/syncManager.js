@@ -51,7 +51,26 @@
           const leader = payload.leader || {};
           const cards = Array.isArray(payload.cards) ? payload.cards.slice() : null;
           const fragImg = payload.fragImg || null;
-          function ensureFiliacao(obj){ try{ if(!obj) return obj; if(obj.filiacao) return obj; const k = obj.key || obj.name; if(k && Array.isArray(window.CARD_DEFS)){ const def = window.CARD_DEFS.find(d=> (d.key && d.key===k) || (d.name && d.name===k)); if(def && def.filiacao) obj.filiacao = def.filiacao; } return obj; }catch(e){ return obj; } }
+          function ensureFiliacao(obj){ 
+            try{ 
+              if(!obj) return obj; 
+              if(obj.filiacao) return obj; 
+              const k = obj.key || obj.name; 
+              if(k && Array.isArray(window.CARD_DEFS)){ 
+                const def = window.CARD_DEFS.find(d=> (d.key && d.key===k) || (d.name && d.name===k)); 
+                if(def && def.filiacao) obj.filiacao = def.filiacao; 
+              }
+              // Fallback: try to determine filiacao from known leaders by name/key
+              if(!obj.filiacao && (obj.name || obj.key)){
+                const name = String(obj.name || obj.key).toLowerCase();
+                if(name.includes('katsu')) obj.filiacao = 'Marcial';
+                else if(name.includes('valbrak')) obj.filiacao = 'Arcana';
+                else if(name.includes('leafae')) obj.filiacao = 'Religioso';
+                else if(name.includes('ademais') || name.includes('aranha')) obj.filiacao = 'Sombras';
+              }
+              return obj; 
+            }catch(e){ return obj; } 
+          }
           if(window.STATE){
             if(!window.STATE[engineSide]){
               window.STATE[engineSide] = { allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] };
