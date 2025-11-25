@@ -8,6 +8,12 @@
   let history = [];
   let storageKeyBase = 'mp_choice_';
   let playerChosen = { p1: false, p2: false }; // Track explicit choices per player
+  
+  function syncPlayerChosen(){
+    if(window.STATE){
+      window.STATE.playerChosen = { ...playerChosen };
+    }
+  }
 
   function uuid(){ if(window.crypto && crypto.randomUUID) return crypto.randomUUID(); return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
 
@@ -70,7 +76,7 @@
             }catch(e){}
               // Mark the remote player as having chosen
               playerChosen[payload.side||'p1'] = true;
-              if(window.STATE) window.STATE.playerChosen = playerChosen;
+              syncPlayerChosen();
               try{ if(typeof window.tryStart==='function') tryStart(); }catch(e){}
               try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
               try{ pushHistory({ t: Date.now(), type:'SET_LEADER', by: payload.side||'', side: engineSide, leader: withAff }); }catch(e){}
@@ -95,7 +101,7 @@
         try{ persistChoice('you'); pushHistory({ t: Date.now(), type:'SET_LEADER(send)', by: side, side:'you', leader }); }catch(e){}
         // Mark this player as having explicitly chosen
         playerChosen[side] = true;
-        if(window.STATE) window.STATE.playerChosen = playerChosen;
+        syncPlayerChosen();
       }catch(e){ console.warn('[syncManager] normalize SET_LEADER failed', e); }
     }
     
@@ -155,7 +161,7 @@
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoritativa)','effect'); }catch(e){}
         // Reset playerChosen after match starts so future matches start fresh
         playerChosen = { p1: false, p2: false };
-        if(window.STATE) window.STATE.playerChosen = playerChosen;
+        syncPlayerChosen();
         return;
       }
       
@@ -179,7 +185,7 @@
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
         // Reset playerChosen after match starts
         playerChosen = { p1: false, p2: false };
-        if(window.STATE) window.STATE.playerChosen = playerChosen;
+        syncPlayerChosen();
       } else {
         applyRemote(rec.actionType, rec.payload||{}); 
         try{ if(typeof renderSide==='function'){ renderSide('you'); renderSide('ai'); } }catch(e){}

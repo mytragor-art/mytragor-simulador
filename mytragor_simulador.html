@@ -1758,6 +1758,7 @@ window.Game.buildSnapshot = function(){
       const obj = {};
       obj.life = s.leader ? s.leader.hp : 0;
       obj.mana = s.pool || 0;
+      obj.maxMana = s.maxPool || 0;
       obj.hand = (s.hand||[]).map(c=>({ id: ensureCardId(c), name: c.name }));
       obj.deck = (s.deck||[]).map(c=>({ id: ensureCardId(c), name: c.name }));
       obj.board = serializeBoardFor(ls);
@@ -1789,6 +1790,7 @@ window.Game.applySnapshot = function(snap, { remote=false } = {}){
       // leader HP/mana
       if(data.life != null && STATE[ls].leader) STATE[ls].leader.hp = data.life;
       if(data.mana != null) STATE[ls].pool = data.mana;
+      if(data.maxMana != null) STATE[ls].maxPool = data.maxMana;
     });
     // set turn
     if(snap.turn) {
@@ -3471,7 +3473,7 @@ function selectSavedDeck(deck) {
   }
   
   // Em MP não inicializamos um líder de IA local — o oponente humano cuida do próprio estado
-  if(!__IS_MP){
+  if(!__IS_MP && !(window.IS_MULTIPLAYER || window.__IS_MP)){
     // Escolher líder aleatório para a IA a partir de CARD_DEFS
     const leaderOpts = getLeaderOpts();
     const randomLeader = leaderOpts.length ? leaderOpts[Math.floor(Math.random() * leaderOpts.length)] : null;
@@ -3486,7 +3488,7 @@ function selectSavedDeck(deck) {
   console.log(`Deck "${deck.deckName || deck.leader}" carregado! Líder: ${deck.leader}`);
 
   // Após escolher o deck do jogador, somente oferecer deck da IA se não for MP
-  if(!__IS_MP){
+  if(!__IS_MP && !(window.IS_MULTIPLAYER || window.__IS_MP)){
     try { configureAIDeck(); } catch(e) { console.warn('configureAIDeck failed', e); }
   }
   // In MP, if we're the host (p1) broadcast full snapshot so peer can mirror leader/deck
