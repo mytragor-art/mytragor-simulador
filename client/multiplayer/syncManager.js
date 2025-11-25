@@ -10,9 +10,11 @@
   let playerChosen = { p1: false, p2: false }; // Track explicit choices per player
   
   function syncPlayerChosen(){
-    if(window.STATE){
+    try{
+      if(!window.STATE){ window.STATE = { you:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, ai:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, playerChosen: { p1: false, p2: false } }; }
       window.STATE.playerChosen = { ...playerChosen };
-    }
+      console.log('[syncManager] syncPlayerChosen updated STATE.playerChosen to', window.STATE.playerChosen);
+    }catch(e){ console.warn('[syncManager] syncPlayerChosen error', e); }
   }
 
   function uuid(){ if(window.crypto && crypto.randomUUID) return crypto.randomUUID(); return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
@@ -264,7 +266,8 @@
   function onSnapshot(snap, seq){ 
     try{
       lastServerSeq = Number(seq)||0; pending.clear();
-      if(!window.STATE){ window.STATE = { you:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, ai:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] } }; }
+      if(!window.STATE){ window.STATE = { you:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, ai:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, playerChosen: { p1: false, p2: false } }; }
+      if(!window.STATE.playerChosen){ window.STATE.playerChosen = { ...playerChosen }; }
       if(snap && (snap.p1 || snap.p2)){
         try{ if(window.Game && typeof Game.applySnapshot==='function') Game.applySnapshot(snap, { remote:true }); }catch(e){}
         try{ if(typeof window.render==='function') render(); }catch(e){}
