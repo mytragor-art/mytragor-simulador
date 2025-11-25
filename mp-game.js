@@ -86,4 +86,64 @@
   const btnRestart=document.getElementById('btnRestart')
   let _reloadPending=false
   if(btnRestart) btnRestart.onclick=function(){ if(_reloadPending) return; _reloadPending=true; setTimeout(()=>{ location.reload() },120) }
-})();
+
+  function renderHUD() {
+    const whoEl = document.getElementById('whoActive');
+    if (whoEl) {
+      whoEl.textContent = `Ativo — ${STATE.active === 'you' ? 'Você' : 'Oponente'}`;
+    }
+
+    const phaseName = STATE.phase === 'main' ? 'Principal' : STATE.phase === 'battle' ? 'Combate' : 'Final';
+    const phaseEl = document.getElementById('phasePill');
+    if (phaseEl) {
+      phaseEl.textContent = `Fase: ${phaseName}`;
+    }
+
+    const rest = STATE.pool[STATE.active];
+    const max = STATE.maxPool[STATE.active];
+    const spent = Math.max(0, max - rest);
+    const fragEl = document.getElementById('fragPill');
+    if (fragEl) {
+      fragEl.textContent = `Frags: ${rest}/${max} (turno)`;
+      fragEl.title = `Restantes: ${rest} | Gastos: ${spent} | Max: ${max}`;
+    }
+
+    try {
+      const bar = document.getElementById('phaseBar');
+      if (bar) {
+        const items = bar.querySelectorAll('.phaseItem');
+        const map = { start: 0, main: 1, battle: 2, end: 3 };
+        const idx = map[STATE.phase] ?? 0;
+        items.forEach((it, i) => {
+          if (i === idx) {
+            it.classList.add('active');
+          } else {
+            it.classList.remove('active');
+          }
+        });
+      }
+
+      const btn = document.getElementById('phaseActionBtn');
+      if (btn) {
+        if (!window.__MATCH_STARTED) {
+          btn.textContent = 'Iniciar';
+          btn.className = 'btn btn-start';
+          btn.onclick = safeStartMatch;
+          btn.disabled = false;
+        } else if (STATE.phase === 'main') {
+          btn.textContent = 'Próxima Fase';
+          btn.className = 'btn btn-next';
+          btn.onclick = nextPhase;
+          btn.disabled = false;
+        } else {
+          btn.textContent = 'Encerrar Turno';
+          btn.className = 'btn btn-end';
+          btn.onclick = endTurn;
+          btn.disabled = false;
+        }
+      }
+    } catch (e) {
+      console.warn('Error rendering HUD:', e);
+    }
+  }
+})

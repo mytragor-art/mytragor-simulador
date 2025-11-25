@@ -102,6 +102,8 @@
               </div>
             </div>
 
+            ...existing code...
+
             <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0;">
               <span id="whoActive"></span>
               <span id="phasePill"></span>
@@ -115,6 +117,10 @@
               <div class="phaseItem" data-phase="battle"><span class="dot" aria-hidden="true"></span><span>Combate</span></div>
               <div class="phaseSep" aria-hidden="true" style="width:22px;height:2px;background:#2a3b55;opacity:.6;border-radius:2px"></div>
               <div class="phaseItem" data-phase="end"><span class="dot" aria-hidden="true"></span><span>Final</span></div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:center;margin:6px 0 12px 0;">
+              <button id="phaseActionBtn" class="btn" style="min-width:160px">Iniciar</button>
             </div>
 
             <div style="display:flex;align-items:center;justify-content:center;margin:6px 0 12px 0;">
@@ -382,7 +388,49 @@
     }catch(e){}
   });
 })();
-</script>
+  </script>
+  <script>
+;(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+
+  let currentPlayer = null;
+
+  // Function to randomly select the starting player
+  function chooseStartingPlayer() {
+    currentPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
+    console.log("Starting player:", currentPlayer);
+
+    const statusElement = document.getElementById('mpStatus');
+    if (statusElement) {
+      statusElement.textContent = currentPlayer === 'p1' 
+        ? 'Jogador 1 foi sorteado para começar!' 
+        : 'Jogador 2 foi sorteado para começar!';
+    }
+  }
+
+  // Function to start the game
+  function startGame() {
+    // Habilita o botão de ação central (renderHUD cuida do texto/handler)
+    try{
+      console.log(`${currentPlayer} inicia o jogo!`);
+      if(typeof renderHUD === 'function') renderHUD();
+      var pbtn = document.getElementById('phaseActionBtn'); if(pbtn) pbtn.disabled = false;
+    }catch(e){ console.warn('startGame renderHUD failed', e); }
+  }
+
+  // Event listeners for buttons
+  ready(function() {
+    chooseStartingPlayer();
+    // Chamamos renderHUD para manter o botão de ação (Iniciar/Próxima Fase/Encerrar Turno)
+    // sincronizado com a lógica central definida em `mp-game.js`.
+    try{ if(typeof renderHUD === 'function') renderHUD(); }catch(e){}
+    // Atualiza periodicamente enquanto a UI é inicializada (garante sincronização em MP)
+    setInterval(function(){ try{ if(typeof renderHUD === 'function') renderHUD(); }catch(e){} }, 500);
+  });
+})();
+  </script>
+
+  <!-- botão principal de fase movido para ficar entre as arenas -->
 
 </body>
 </html>
