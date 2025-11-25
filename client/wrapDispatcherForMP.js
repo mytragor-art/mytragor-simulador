@@ -44,15 +44,26 @@
         }
         
         // Criar payload canônico para o servidor
+        // NOTE: server expects global side ids (p1/p2) as fromSide — use URL's playerId
+        // Normalize sides to server-side player ids (p1/p2)
+        const remoteSide = (String(playerId) === 'p1') ? 'p2' : 'p1';
+        const normalizedTargetSide = (function(ts){
+          if(!ts) return ts;
+          if(String(ts) === 'you') return String(playerId);
+          if(String(ts) === 'ai') return remoteSide;
+          return String(ts);
+        })(target.side);
+
         const payload = {
           attacker: {
             leader: !!atk.leader,
-            index: atk.leader ? undefined : atk.idx
+            index: atk.leader ? undefined : atk.idx,
+            side: String(playerId)
           },
-          fromSide: atk.side,
+          fromSide: String(playerId),
           target: {
             type: target.type,
-            side: target.side,
+            side: normalizedTargetSide,
             index: target.index
           }
         };
