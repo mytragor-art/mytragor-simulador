@@ -247,18 +247,17 @@
 
   function restoreChoices(){ try{
     if(!matchId) return;
-    ['you','ai'].forEach(function(side){
-      const raw = localStorage.getItem(storageKeyBase + matchId + '_' + side);
-      if(!raw) return;
-      try{
-        const dat = JSON.parse(raw);
-        if(!window.STATE) window.STATE = { you:{}, ai:{} };
-        if(!window.STATE[side]) window.STATE[side] = { allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] };
-        if(dat.leader && !window.STATE[side].leader){ window.STATE[side].leader = { kind:'leader', key: dat.leader.key, name: dat.leader.name, img: dat.leader.img, filiacao: dat.leader.filiacao }; }
-        if(dat.cards && !window.STATE[side].customDeck){ window.STATE[side].customDeck = dat.cards.slice(); }
-        if(dat.fragImg && !window.STATE[side].fragImg){ window.STATE[side].fragImg = dat.fragImg; }
-      }catch(e){}
-    });
+    // Only restore 'you' side — 'ai' side comes from remote player via SET_LEADER
+    const raw = localStorage.getItem(storageKeyBase + matchId + '_you');
+    if(!raw) return;
+    try{
+      const dat = JSON.parse(raw);
+      if(!window.STATE) window.STATE = { you:{}, ai:{} };
+      if(!window.STATE.you) window.STATE.you = { allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] };
+      if(dat.leader && !window.STATE.you.leader){ window.STATE.you.leader = { kind:'leader', key: dat.leader.key, name: dat.leader.name, img: dat.leader.img, filiacao: dat.leader.filiacao }; }
+      if(dat.cards && !window.STATE.you.customDeck){ window.STATE.you.customDeck = dat.cards.slice(); }
+      if(dat.fragImg && !window.STATE.you.fragImg){ window.STATE.you.fragImg = dat.fragImg; }
+    }catch(e){}
   }catch(e){} }
 
   function pushHistory(entry){ try{
