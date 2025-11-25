@@ -214,6 +214,23 @@
         try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
         if(typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Oponente encerrou turno`,'effect'); }catch(e){}
+        // Se agora é a minha vez, enviar snapshot atualizado com novos fragmentos e estado
+        try{
+          var myP = String(context.playerId||'p1');
+          var mySide = (window.MY_SIDE || 'you');
+          // STATE.active foi atualizado em endTurn(), verificar se é 'you' (minha perspectiva)
+          if(window.STATE && window.STATE.active === mySide && typeof window.Game==='object' && typeof window.Game.buildSnapshot==='function'){
+            setTimeout(function(){
+              try{
+                var snap = window.Game.buildSnapshot();
+                if(snap && window.wsClient && typeof window.wsClient.send==='function'){
+                  window.wsClient.send({ type: 'clientSnapshot', matchId: context.matchId, snapshot: snap });
+                  console.log('[syncManager] END_TURN: Enviando snapshot atualizado (STATE.active=you)', snap);
+                }
+              }catch(e){ console.warn('[syncManager] Erro ao enviar snapshot após END_TURN', e); }
+            }, 50);
+          }
+        }catch(e){}
       } else if(rec.actionType === 'START_MATCH'){
         try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
