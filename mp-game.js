@@ -146,4 +146,4 @@
       console.warn('Error rendering HUD:', e);
     }
   }
-})
+})();
