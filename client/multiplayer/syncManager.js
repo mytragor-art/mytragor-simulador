@@ -193,6 +193,11 @@
         syncPlayerChosen();
         return;
       }
+      // Para SET_LEADER, apenas confirmar aceição (renderização feita no wrapper)
+      if(pendingAction.actionType === 'SET_LEADER' && rec.actionType === 'SET_LEADER') {
+        console.log('[syncManager] SET_LEADER ação própria aceita pelo servidor, playerChosen =', playerChosen);
+        return;
+      }
       
       return; 
     } 

@@ -402,7 +402,8 @@
                 }catch(e){ console.warn('[MP] Failed to update playerChosen', e); }
                 try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
                 tryStart();
-                return;
+                // IMPORTANTE: Continuar para chamar origAccept mesmo após processar SET_LEADER
+                // Não fazer return aqui!
               }
             }
           }catch(e){}
