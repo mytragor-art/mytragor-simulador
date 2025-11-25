@@ -171,13 +171,21 @@
         try{
           var isHost = String(window.localSide||'p1') === 'p1';
           if(isHost && window.Game && typeof Game.buildSnapshot==='function' && window.wsClient && typeof wsClient.sendClientSnapshot==='function'){
-            // Ensure host initializes turn/fragments before publishing snapshot
-            try{ if(typeof beginTurn === 'function') beginTurn(); }catch(e){}
-            var snap = Game.buildSnapshot();
-            wsClient.sendClientSnapshot(snap);
+            // Host publishes snapshot after a small delay to ensure both players have finished deck setup
+            setTimeout(function(){
+              try{
+                // Ensure host initializes turn/fragments before publishing snapshot
+                try{ if(typeof beginTurn === 'function') beginTurn(); }catch(e){}
+                var snap = Game.buildSnapshot();
+                wsClient.sendClientSnapshot(snap);
+                console.log('[syncManager] Host published initial snapshot after START_MATCH');
+              }catch(e){
+                console.error('[syncManager] Host snapshot publish error:', e);
+              }
+            }, 200);
           }
         }catch(e){}
-        try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoritativa)','effect'); }catch(e){}
+        try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
         // Reset playerChosen after match starts so future matches start fresh
         playerChosen = { p1: false, p2: false };
         syncPlayerChosen();
