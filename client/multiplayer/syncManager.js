@@ -96,6 +96,7 @@
               // Mark the remote player as having chosen
               playerChosen[payload.side||'p1'] = true;
               syncPlayerChosen();
+              console.log('[MP] SET_LEADER applyRemote, playerChosen =', playerChosen, 'STATE.playerChosen =', window.STATE && window.STATE.playerChosen);
               try{ if(typeof window.tryStart==='function') tryStart(); }catch(e){}
               try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
               try{ pushHistory({ t: Date.now(), type:'SET_LEADER', by: payload.side||'', side: engineSide, leader: withAff }); }catch(e){}
@@ -121,6 +122,7 @@
         // Mark this player as having explicitly chosen
         playerChosen[side] = true;
         syncPlayerChosen();
+        console.log('[MP] SET_LEADER enqueued locally, playerChosen =', playerChosen, 'STATE.playerChosen =', window.STATE && window.STATE.playerChosen);
       }catch(e){ console.warn('[syncManager] normalize SET_LEADER failed', e); }
     }
     
@@ -293,5 +295,5 @@
     if(matchId) localStorage.setItem('mp_hist_'+matchId, JSON.stringify(history));
   }catch(e){} }
 
-  window.syncManager = { setContext, enqueueAndSend, onActionAccepted, onActionRejected, onSnapshot, getStatus: function(){ return { lastServerSeq, pending: Array.from(pending.keys()) }; }, getHistory: function(){ return history.slice(); }, persistChoice, persistAll, restoreChoices };
+  window.syncManager = { setContext, enqueueAndSend, onActionAccepted, onActionRejected, onSnapshot, getStatus: function(){ return { lastServerSeq, pending: Array.from(pending.keys()) }; }, getHistory: function(){ return history.slice(); }, persistChoice, persistAll, restoreChoices, syncPlayerChosen };
 })();

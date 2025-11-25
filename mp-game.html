@@ -254,8 +254,10 @@
   function tryStart(){
     try{
       var el = document.getElementById('mpStatus');
+      var pc = (window.STATE && window.STATE.playerChosen) || { p1: false, p2: false };
       // Require BOTH players to have EXPLICITLY chosen (tracked in playerChosen)
       if(hasBoth() && bothHaveChosen()){
+        console.log('[tryStart] GATE PASSED: hasBoth=true, bothHaveChosen=true, playerChosen=', pc);
         if(!startRequested){
           startRequested = true;
           if(el) el.textContent = 'Ambos escolheram. Iniciando…';
@@ -272,6 +274,7 @@
         var ai  = !!(window.STATE && STATE.ai && STATE.ai.leader);
         var youChosen = !!(window.STATE && window.STATE.playerChosen && window.STATE.playerChosen.p1);
         var aiChosen = !!(window.STATE && window.STATE.playerChosen && window.STATE.playerChosen.p2);
+        console.log('[tryStart] GATE FAILED: hasBoth=' + (you&&ai) + ', bothHaveChosen=' + (youChosen&&aiChosen) + ', playerChosen=', pc);
         var statusMsg = '';
         if(!youChosen && !aiChosen){ statusMsg = 'Escolha seu baralho e líder. Aguardando ambos…'; }
         else if(youChosen && !aiChosen){ statusMsg = 'Você escolheu. Aguardando o oponente escolher…'; }
@@ -385,6 +388,18 @@
                   console.log('[mp-game] leader slot check', { engineSide, hasChild });
                   if(slot && !hasChild && window.STATE[engineSide].leader){ slot.appendChild(cardEl(window.STATE[engineSide].leader,{})); console.log('[mp-game] leader slot appended fallback'); }
                 }catch(e){ console.warn('[mp-game] fallback append failed', e); }
+                // UPDATE playerChosen flag when SET_LEADER is received from remote player
+                try{
+                  if(rec.payload && rec.payload.side){
+                    if(!window.STATE.playerChosen) window.STATE.playerChosen = { p1: false, p2: false };
+                    if(rec.payload.side === 'p1') window.STATE.playerChosen.p1 = true;
+                    if(rec.payload.side === 'p2') window.STATE.playerChosen.p2 = true;
+                    if(window.syncManager && typeof syncManager.syncPlayerChosen === 'function'){
+                      syncManager.syncPlayerChosen();
+                    }
+                    console.log('[MP] SET_LEADER accepted, playerChosen =', window.STATE.playerChosen);
+                  }
+                }catch(e){ console.warn('[MP] Failed to update playerChosen', e); }
                 try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
                 tryStart();
                 return;
