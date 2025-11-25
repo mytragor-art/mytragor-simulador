@@ -139,6 +139,8 @@
         try{
           var isHost = String(window.localSide||'p1') === 'p1';
           if(isHost && window.Game && typeof Game.buildSnapshot==='function' && window.wsClient && typeof wsClient.sendClientSnapshot==='function'){
+            // Ensure host initializes turn/fragments before publishing snapshot
+            try{ if(typeof beginTurn === 'function') beginTurn(); }catch(e){}
             var snap = Game.buildSnapshot();
             wsClient.sendClientSnapshot(snap);
           }
