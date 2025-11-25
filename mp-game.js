@@ -73,6 +73,12 @@
   function initNet(){
     if(!window.wsClient||!window.syncManager) return setTimeout(initNet,100)
     window.syncManager.setContext({matchId,playerId})
+    // Clear old localStorage for this match to ensure fresh start (no ghost choices)
+    try{
+      var oldKeys = Object.keys(localStorage).filter(k=> k.indexOf('mp_choice_' + matchId)===0);
+      oldKeys.forEach(k=> localStorage.removeItem(k));
+      console.log('[mp-game] cleared old localStorage entries for room', matchId, oldKeys);
+    }catch(e){}
     try{ window.wsClient.connect() }catch(e){}
     try{ window.wsClient.join(matchId,playerId,0) }catch(e){}
   }

@@ -248,12 +248,14 @@
 ;(function(){
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   function hasBoth(){ try{ return !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader); }catch(e){ return false; } }
+  function bothHaveChosen(){ try{ var pc = (window.STATE && window.STATE.playerChosen) || {}; return !!(pc.p1 && pc.p2); }catch(e){ return false; } }
   var startRequested = false;
   var tryStartInterval = null;
   function tryStart(){
     try{
       var el = document.getElementById('mpStatus');
-      if(hasBoth()){
+      // Require BOTH players to have EXPLICITLY chosen (tracked in playerChosen)
+      if(hasBoth() && bothHaveChosen()){
         if(!startRequested){
           startRequested = true;
           if(el) el.textContent = 'Ambos escolheram. Iniciando…';
@@ -268,10 +270,17 @@
         startRequested = false;
         var you = !!(window.STATE && STATE.you && STATE.you.leader);
         var ai  = !!(window.STATE && STATE.ai && STATE.ai.leader);
-        if(el){ el.textContent = you && !ai ? 'Você escolheu. Aguardando o oponente…' : (!you && ai ? 'Oponente escolheu. Aguardando você…' : 'Escolha seu baralho e líder. Aguardando ambos…'); }
+        var youChosen = !!(window.STATE && window.STATE.playerChosen && window.STATE.playerChosen.p1);
+        var aiChosen = !!(window.STATE && window.STATE.playerChosen && window.STATE.playerChosen.p2);
+        var statusMsg = '';
+        if(!youChosen && !aiChosen){ statusMsg = 'Escolha seu baralho e líder. Aguardando ambos…'; }
+        else if(youChosen && !aiChosen){ statusMsg = 'Você escolheu. Aguardando o oponente escolher…'; }
+        else if(!youChosen && aiChosen){ statusMsg = 'Oponente escolheu. Aguardando você escolher…'; }
+        else { statusMsg = 'Ambos escolheram. Pronto para iniciar!'; }
+        if(el){ el.textContent = statusMsg; }
         return false;
       }
-    }catch(e){ return false; }
+    }catch(e){ console.warn('[mp-game] tryStart error', e); return false; }
   }
   ready(function(){
     try{ if(typeof window.chooseLeader==='function') window.chooseLeader(); }catch(e){}
