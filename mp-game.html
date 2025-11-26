@@ -247,22 +247,25 @@
 <script src="mp-game.js"></script>
   <script>
 ;(function(){
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  function ready(fn){ if(document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   function hasBoth(){ try{ return !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader); }catch(e){ return false; } }
-  function bothHaveChosen(){ try{ var pc = (window.STATE && window.STATE.playerChosen) || {}; return !!(pc.p1 && pc.p2); }catch(e){ return false; } }
+  function bothHaveChosen(){
+    try{
+      const chosen = window.syncManager.playerChosen; // Usa diretamente do syncManager
+      return !!(chosen.p1 && chosen.p2);
+    }catch(e){ return false; }
+  }
   var startRequested = false;
   var tryStartInterval = null;
   function tryStart(){
     try{
       var el = document.getElementById('mpStatus');
-      var pc = (window.STATE && window.STATE.playerChosen) || { p1: false, p2: false };
-      // Require BOTH players to have EXPLICITLY chosen (tracked in playerChosen)
+      const chosen = window.syncManager.playerChosen; // Usa diretamente do syncManager
       if(hasBoth() && bothHaveChosen()){
-        console.log('[tryStart] GATE PASSED: hasBoth=true, bothHaveChosen=true, playerChosen=', pc);
+        console.log('[tryStart] GATE PASSED: hasBoth=true, bothHaveChosen=true, playerChosen=', chosen);
         if(!startRequested){
           startRequested = true;
           if(el) el.textContent = 'Ambos escolheram. Iniciando…';
-          // Solicitar início ONLY via ação autoritativa (uma única vez)
           try{ if(window.syncManager) syncManager.enqueueAndSend('START_MATCH', {}); }catch(e){}
           try{ if(tryStartInterval){ clearInterval(tryStartInterval); tryStartInterval = null; } }catch(e){}
         } else {
@@ -273,9 +276,9 @@
         startRequested = false;
         var you = !!(window.STATE && STATE.you && STATE.you.leader);
         var ai  = !!(window.STATE && STATE.ai && STATE.ai.leader);
-        var youChosen = !!(window.STATE && window.STATE.playerChosen && window.STATE.playerChosen.p1);
-        var aiChosen = !!(window.STATE && window.STATE.playerChosen && window.STATE.playerChosen.p2);
-        console.log('[tryStart] GATE FAILED: hasBoth=' + (you&&ai) + ', bothHaveChosen=' + (youChosen&&aiChosen) + ', playerChosen=', pc);
+        var youChosen = !!(chosen.p1);
+        var aiChosen = !!(chosen.p2);
+        console.log('[tryStart] GATE FAILED: hasBoth=' + (you && ai) + ', bothHaveChosen=' + (youChosen && aiChosen) + ', playerChosen=', chosen);
         var statusMsg = '';
         if(!youChosen && !aiChosen){ statusMsg = 'Escolha seu baralho e líder. Aguardando ambos…'; }
         else if(youChosen && !aiChosen){ statusMsg = 'Você escolheu. Aguardando o oponente escolher…'; }
@@ -287,7 +290,7 @@
     }catch(e){ console.warn('[mp-game] tryStart error', e); return false; }
   }
   ready(function(){
-    try{ if(typeof window.chooseLeader==='function') window.chooseLeader(); }catch(e){}
+    try{ if(typeof window.chooseLeader === 'function') window.chooseLeader(); }catch(e){}
     tryStart();
     tryStartInterval = setInterval(tryStart, 500);
   });

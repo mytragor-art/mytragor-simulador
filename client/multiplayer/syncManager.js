@@ -7,12 +7,18 @@
   let pendingById = {};
   let history = [];
   let storageKeyBase = 'mp_choice_';
-  let playerChosen = { p1: false, p2: false }; // Track explicit choices per player
-  
+  this.playerChosen = { p1: false, p2: false }; // Unifica playerChosen
+
   function syncPlayerChosen(){
     try{
-      if(!window.STATE){ window.STATE = { you:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, ai:{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }, playerChosen: { p1: false, p2: false } }; }
-      window.STATE.playerChosen = { ...playerChosen };
+      if(!window.STATE){
+        window.STATE = {
+          you: { allies: [null, null, null, null, null], spells: [null, null, null, null, null], deck: [], hand: [], grave: [], ban: [] },
+          ai: { allies: [null, null, null, null, null], spells: [null, null, null, null, null], deck: [], hand: [], grave: [], ban: [] },
+          playerChosen: this.playerChosen // Aponta diretamente para playerChosen
+        };
+      }
+      window.STATE.playerChosen = this.playerChosen; // Sincroniza referência
       console.log('[syncManager] syncPlayerChosen updated STATE.playerChosen to', window.STATE.playerChosen);
     }catch(e){ console.warn('[syncManager] syncPlayerChosen error', e); }
   }
@@ -43,70 +49,19 @@
 
   function applyRemote(actionType, payload){
     captureOriginals();
-    try{ window.__APPLY_REMOTE = true;
-      if(actionType==='PLAY_CARD' && orig.playFromHand){ orig.playFromHand('ai', payload.index); }
-      else if(actionType==='END_TURN' && orig.endTurn){ orig.endTurn(); }
-      else if(actionType==='SET_LEADER'){
+    try{
+      window.__APPLY_REMOTE = true;
+      if(actionType === 'SET_LEADER'){
         try{
-          const mpSide = String(payload.side||'p1');
-          const engineSide = (window.localSide === mpSide) ? 'you' : 'ai';
-          const leader = payload.leader || {};
-          const cards = Array.isArray(payload.cards) ? payload.cards.slice() : null;
-          const fragImg = payload.fragImg || null;
-          function ensureFiliacao(obj){ 
-            try{ 
-              if(!obj) return obj; 
-              if(obj.filiacao) return obj; 
-              const k = obj.key || obj.name; 
-              if(k && Array.isArray(window.CARD_DEFS)){ 
-                const def = window.CARD_DEFS.find(d=> (d.key && d.key===k) || (d.name && d.name===k)); 
-                if(def && def.filiacao) obj.filiacao = def.filiacao; 
-              }
-              // Fallback: try to determine filiacao from known leaders by name/key
-              if(!obj.filiacao && (obj.name || obj.key)){
-                const name = String(obj.name || obj.key).toLowerCase();
-                if(name.includes('katsu')) obj.filiacao = 'Marcial';
-                else if(name.includes('valbrak')) obj.filiacao = 'Arcana';
-                else if(name.includes('leafae')) obj.filiacao = 'Religioso';
-                else if(name.includes('ademais') || name.includes('aranha')) obj.filiacao = 'Sombras';
-              }
-              return obj; 
-            }catch(e){ return obj; } 
-          }
-          if(window.STATE){
-            if(!window.STATE[engineSide]){
-              window.STATE[engineSide] = { allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] };
-            }
-            if(window.STATE && window.STATE[engineSide]){
-              const withAff = ensureFiliacao(Object.assign({}, leader));
-              window.STATE[engineSide].leader = { ...withAff, kind:'leader', img: withAff.img || (withAff.key ? (window.CHOSEN_IMAGES && CHOSEN_IMAGES[withAff.key]) : null) };
-              if(cards) window.STATE[engineSide].customDeck = cards;
-              if(fragImg) window.STATE[engineSide].fragImg = fragImg;
-              try{ persistChoice(engineSide); }catch(e){}
-            try{ renderSide(engineSide); }catch(e){}
-            try{ if(typeof updateArenaTheme==='function') updateArenaTheme(); }catch(e){}
-            try{ if(typeof updateEnvArenaBackgrounds==='function') updateEnvArenaBackgrounds(); }catch(e){}
-            try{ if(typeof renderFrags==='function'){ renderFrags('you'); renderFrags('ai'); } }catch(e){}
-            try{ if(typeof window.render==='function') render(); }catch(e){}
-            try{ console.log('[syncManager] leaders now', { you: !!(window.STATE && STATE.you && STATE.you.leader), ai: !!(window.STATE && STATE.ai && STATE.ai.leader) }); }catch(e){}
-            try{
-              var slot = document.querySelector('#'+engineSide+'-leader');
-              if(slot && slot.children && slot.children.length===0 && window.STATE[engineSide].leader){
-                slot.appendChild(cardEl(window.STATE[engineSide].leader,{}));
-              }
-            }catch(e){}
-              // Mark the remote player as having chosen
-              playerChosen[payload.side||'p1'] = true;
-              syncPlayerChosen();
-              console.log('[MP] SET_LEADER applyRemote, playerChosen =', playerChosen, 'STATE.playerChosen =', window.STATE && window.STATE.playerChosen);
-              try{ if(typeof window.tryStart==='function') tryStart(); }catch(e){}
-              try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
-              try{ pushHistory({ t: Date.now(), type:'SET_LEADER', by: payload.side||'', side: engineSide, leader: withAff }); }catch(e){}
-            }
-          }
-        }catch(e){ console.warn('applyRemote SET_LEADER failed', e); }
+          const side = payload.side || 'p1';
+          this.playerChosen[side] = true; // Atualiza diretamente playerChosen
+          syncPlayerChosen();
+          console.log('[syncManager] SET_LEADER applyRemote, playerChosen =', this.playerChosen);
+        }catch(e){ console.warn('[syncManager] Failed to apply SET_LEADER', e); }
       }
-    } finally { window.__APPLY_REMOTE = false; }
+    } finally {
+      window.__APPLY_REMOTE = false;
+    }
   }
 
   function enqueueAndSend(actionType, payload){ 
