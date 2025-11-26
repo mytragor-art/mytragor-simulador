@@ -1786,7 +1786,22 @@ window.Game.applySnapshot = function(snap, { remote=false } = {}){
       const data = snap[p] || {};
       if(!ls) return;
       // rebuild deck
-      STATE[ls].deck = (data.deck||[]).map(e => { const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }).filter(Boolean);
+      // Preserve local customDeck if present for 'you' side to avoid host snapshots
+      // overwriting a player's saved deck choice when desynchronized.
+      try{
+        if(ls === 'you' && STATE[ls] && Array.isArray(STATE[ls].customDeck) && STATE[ls].customDeck.length){
+          // rebuild from the customDeck spec (names)
+          try{ buildDeck(ls); }
+          catch(e){
+            // fallback to snapshot-provided deck if buildDeck fails
+            STATE[ls].deck = (data.deck||[]).map(e => { const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }).filter(Boolean);
+          }
+        } else {
+          STATE[ls].deck = (data.deck||[]).map(e => { const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }).filter(Boolean);
+        }
+      }catch(e){
+        STATE[ls].deck = (data.deck||[]).map(e => { try{ const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }catch(err){ return null; } }).filter(Boolean);
+      }
       // rebuild hand
       STATE[ls].hand = (data.hand||[]).map(e => { const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }).filter(Boolean);
       // restore board
