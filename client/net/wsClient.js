@@ -141,6 +141,19 @@
       return;
     }
     if(msg.type === 'pong'){ try{ lastRTT = Math.max(0, Date.now() - (lastPingTs||Date.now())); var s=document.getElementById('mpStatus'); if(s){ var base=s.textContent||''; if(/Conectado/.test(base)) s.textContent = 'Conectado ao servidor (' + lastRTT + ' ms)'; } }catch(e){} return; }
+    if(msg.type === 'START_MATCH') {
+      try {
+        window.STATE = window.STATE || {};
+        window.STATE.hostSide = msg.hostSide; // Salva o hostSide enviado pelo servidor
+        window.STATE.side = window.STATE.side || (lastJoin && lastJoin.playerId) || 'p1'; // Garante que o lado do cliente esteja definido
+        window.STATE.isHost = (window.STATE.side === window.STATE.hostSide); // Define se o cliente é host
+
+        console.log('[wsClient] START_MATCH recebido. hostSide =', msg.hostSide, 'side =', window.STATE.side, 'isHost =', window.STATE.isHost);
+      } catch (e) {
+        console.error('[wsClient] Erro ao processar START_MATCH:', e);
+      }
+      return;
+    }
   }
 
   function join(matchId, playerId, sinceSeq){ 

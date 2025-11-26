@@ -174,8 +174,12 @@
       if(pendingAction.actionType === 'START_MATCH' && rec.actionType === 'START_MATCH') {
         try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
         try{
-          var isHost = String(window.localSide||'p1') === 'p1';
-          if(isHost && window.Game && typeof Game.buildSnapshot==='function' && window.wsClient && typeof wsClient.sendClientSnapshot==='function'){
+          if (!window.STATE || !window.STATE.isHost) {
+            // Apenas o host publica snapshot inicial.
+            return;
+          }
+
+          if (window.Game && typeof Game.buildSnapshot === 'function' && window.wsClient && typeof wsClient.sendClientSnapshot === 'function') {
             // Host publishes snapshot after a small delay to ensure both players have finished deck setup
             setTimeout(function(){
               try{

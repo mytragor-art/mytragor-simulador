@@ -9,7 +9,13 @@ function createMatch(matchId) {
     id: String(matchId),
     serverSeq: 0,
     players: new Map(),
-    state: { active: 'p1', leaders: { p1: null, p2: null }, playerNames: { p1: null, p2: null }, started: false },
+    state: {
+      active: 'p1',
+      leaders: { p1: null, p2: null },
+      playerNames: { p1: null, p2: null },
+      started: false,
+      hostSide: 'p1' // Define o primeiro jogador como host
+    },
     log: [],
   };
 }
@@ -74,11 +80,27 @@ class MatchManager {
     }
 
     if (type === 'START_MATCH') {
-      if (!m.state) m.state = { active: 'p1' };
+      if (!m.state) m.state = { active: 'p1', hostSide: 'p1' }; // Garante que o estado tenha hostSide
       if (!m.state.active) m.state.active = 'p1';
       m.serverSeq += 1;
       const rec = makeActionRecord(m.serverSeq, action);
       m.log.push(rec);
+
+      // Inclui hostSide no payload START_MATCH
+      const payload = {
+        type: 'START_MATCH',
+        matchId: m.id,
+        players: Array.from(m.players.keys()),
+        hostSide: m.state.hostSide
+      };
+      m.players.forEach((ws) => {
+        try {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(payload));
+          }
+        } catch {}
+      });
+
       return { ok: true, applied: rec };
     }
 
