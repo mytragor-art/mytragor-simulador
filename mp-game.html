@@ -302,7 +302,10 @@
           var fragImg= (window.STATE && STATE.you && STATE.you.fragImg) || null;
           if(leader){
             var payload = { side: String(window.localSide||'p1'), leader: leader, cards: cards||null, fragImg: fragImg||null };
-            try{ if(window.syncManager) syncManager.enqueueAndSend('SET_LEADER', payload); }catch(e){}
+            try{ if(window.syncManager && !window.STATE.__leaderSent) {
+              syncManager.enqueueAndSend('SET_LEADER', payload);
+              window.STATE.__leaderSent = true; // Marca que o líder já foi enviado
+            }}catch(e){}
           } else if(r>0){ setTimeout(function(){ sendSetLeaderWhenReady(r-1); }, 60); }
         }catch(e){}
       }
@@ -323,12 +326,13 @@
           var wrappedDeck = function(deck){
             try{ origSSD.call(this, deck); }catch(e){}
             try{ if(typeof window.appendLogLine==='function'){ window.appendLogLine(`Você escolheu baralho: ${deck && deck.deckName || ''}`,'effect'); } }catch(e){}
-            if(window.IS_MULTIPLAYER && window.syncManager){ 
+            if(window.IS_MULTIPLAYER && window.syncManager && !window.STATE.__leaderSent){ 
               try{
                 var lk = (typeof window.getLeaderKey==='function') ? getLeaderKey(String(deck.leader||'')) : String(deck.leader||'');
                 var fallbackLeader = { key: String(lk), name: String(deck.leader||''), img: (window.CHOSEN_IMAGES && CHOSEN_IMAGES[lk]) || deck.leaderImg };
                 var payload = { side: String(window.localSide||'p1'), leader: (window.STATE && STATE.you && STATE.you.leader) || fallbackLeader, cards: Array.isArray(deck.cards)? deck.cards.slice() : null, fragImg: deck.fragImg || (window.STATE && STATE.you && STATE.you.fragImg) || null, deckName: deck.deckName||'' };
                 syncManager.enqueueAndSend('SET_LEADER', payload);
+                window.STATE.__leaderSent = true; // Marca que o líder já foi enviado
               }catch(e){}
             }
           };
