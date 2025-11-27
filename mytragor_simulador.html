@@ -183,7 +183,7 @@
   }
 
   /* Topbar */
-  .topbar{display:flex;gap:10px;padding:10px;align-items:center;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(14,26,43,.85);backdrop-filter:blur(2px) saturate(1.05);-webkit-backdrop-filter:blur(2px) saturate(1.05);z-index:5;flex-wrap:wrap}
+  .topbar{display:flex;gap:10px;padding:10px;align-items:center;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(14,26,43,.85);-webkit-backdrop-filter:blur(2px) saturate(1.05);backdrop-filter:blur(2px) saturate(1.05);z-index:5;flex-wrap:wrap}
   /* Brand (moved to topbar flow) */
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&display=swap');
   .brandWrap{position:relative;display:inline-flex;flex-direction:column;align-items:flex-start;pointer-events:none;margin-left:8px;z-index:3;max-width:220px}
@@ -191,7 +191,7 @@
   .brand span{display:inline-block;background: linear-gradient(90deg, rgba(255,235,160,0.06) 0%, rgba(255,250,200,0.95) 45%, rgba(255,230,140,0.95) 52%, rgba(255,215,90,0.6) 58%, rgba(255,235,160,0.06) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
   .subtitle{font-family: Georgia, 'Times New Roman', serif;color:var(--gold1,#facc15);font-size:10px;letter-spacing:0.6px;text-transform:uppercase;margin-top:2px;pointer-events:none}
   .brand .spark, .subtitle .spark{position:absolute;top:50%;left:0;width:6px;height:6px;border-radius:50%;pointer-events:none;background: radial-gradient(circle at 30% 30%, #fff 0%, #fff9d6 30%, rgba(255,210,80,0.98) 50%, rgba(255,210,80,0.22) 70%, transparent 85%);box-shadow:0 0 6px rgba(255,230,140,0.98);opacity:0;transform:translateY(-50%) scale(.6);mix-blend-mode: screen;animation:brandSpark 3.2s linear infinite}
-  @keyframes brandSpark{0%{left:-20%;opacity:0}12%{left:12%;opacity:1}35%{left:45%;opacity:0.95}55%{left:55%;opacity:0.6}78%{left:88%;opacity:0.15}100%{left:120%;opacity:0}}
+  @keyframes brandSpark{0%{transform:translateX(-20%);opacity:0}12%{transform:translateX(12%);opacity:1}35%{transform:translateX(45%);opacity:0.95}55%{transform:translateX(55%);opacity:0.6}78%{transform:translateX(88%);opacity:0.15}100%{transform:translateX(120%);opacity:0}}
   .btn{background:#13223a;border:1px solid var(--line);color:#c9d4e7;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:14px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.2);margin:4px 4px 4px 0;transition:all 0.2s ease;min-width:80px;text-align:center;}
   .btn:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.3);opacity:0.9;}
   /* Estilo dourado padrão para botões melhorados */
@@ -340,7 +340,7 @@
   /* When a column is visually collapsed hide its children content except the toggle area */
   .col.collapsed > *:not(.panelToggle){ display:none }
 
-  .col{background:linear-gradient(180deg,rgba(14,26,43,.86),rgba(12,23,40,.80));backdrop-filter:blur(1.5px) saturate(1.05);-webkit-backdrop-filter:blur(1.5px) saturate(1.05);border:1px solid var(--line);border-radius:12px;overflow:auto;padding:10px}
+  .col{background:linear-gradient(180deg,rgba(14,26,43,.86),rgba(12,23,40,.80));-webkit-backdrop-filter:blur(1.5px) saturate(1.05);backdrop-filter:blur(1.5px) saturate(1.05);border:1px solid var(--line);border-radius:12px;overflow:auto;padding:10px}
   .right{display:flex;flex-direction:column}
 
   h3{margin:12px 14px 0 14px;font-size:15px;color:#a7b5cc;letter-spacing:.04em}
@@ -1003,7 +1003,7 @@ try{
         <button id="btnTogglePreview" class="panelToggle" aria-expanded="false" title="Abrir/Fechar prévia" style="display:none"></button>
       </div>
     </div>
-    <div class="inspector"><div class="big"><img id="bigImg" src="" alt=""></div></div>
+    <div class="inspector"><div class="big"><img id="bigImg" src="" alt="Visualização de carta"></div></div>
     <div class="meta" id="bigMeta">
 Passe o mouse sobre uma carta…
 Dica: na Fase de Combate, clique no seu aliado/líder e depois no alvo (líder inimigo ou aliados deitados).
@@ -1064,7 +1064,7 @@ Dica: na Fase de Combate, clique no seu aliado/líder e depois no alvo (líder i
       <div class="modalBox" style="max-width:480px;width:90vw;text-align:center;padding:22px;display:flex;flex-direction:column;align-items:center;gap:12px">
         <div style="font-size:48px">🏆</div>
         <h2 id="victoryTitle" style="margin:0;font-size:22px;color:#facc15">—</h2>
-        <img id="victoryImg" src="assets/ui/card-back.png" style="width:120px;height:170px;border-radius:10px;object-fit:cover;box-shadow:0 8px 30px rgba(0,0,0,0.6)" onerror="this.src='assets/ui/card-back.png'" />
+        <img id="victoryImg" src="assets/ui/card-back.png" alt="Vitória" style="width:120px;height:170px;border-radius:10px;object-fit:cover;box-shadow:0 8px 30px rgba(0,0,0,0.6)" onerror="this.src='assets/ui/card-back.png'" />
         <div id="victoryText" style="color:#e2e8f0;font-size:15px;max-width:360px"></div>
         <div style="display:flex;gap:12px;width:100%;justify-content:center;margin-top:6px">
           <button id="victoryBtnClose" class="btn" style="flex:1;background:#334155;color:#e2e8f0;">Fechar</button>
