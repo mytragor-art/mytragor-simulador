@@ -3749,13 +3749,9 @@ function beginTurn(){
   valbrakComprouTurno[side] = false;
   STATE.maxPool[side] = (STATE.turnCount[side]===1)?((side===STATE.first)?1:2):clamp(STATE.maxPool[side]+2,0,10);
   STATE.pool[side]=STATE.maxPool[side];
-  // Em multiplayer, SEMPRE chamar draw() para preencher a mão com 1 carta por turno
-  // Em offline (single-player), apenas draw() no começo (já feito em drawStartHands)
-  if(window.IS_MULTIPLAYER || window.__IS_MP) {
-    draw(side);
-  } else if(STATE.turnCount[side] === 1) {
-    draw(side);
-  }
+  // Comprar 1 carta no início de TODO turno (MP e VS IA)
+  // As mãos iniciais já são tratadas separadamente (drawStartHands), aqui é por turno.
+  try{ draw(side); }catch(e){ console.warn('draw at beginTurn failed', e); }
   try { applyEnvEffectsOnTurnStart(side); } catch(e) { console.error('applyEnvEffectsOnTurnStart error', e); log('⚠️ Erro em ambiente: '+(e?.message||e)); }
   // Desvirar: respeita _skipNextUntap (ex.: Constrição)
   STATE[side].allies.forEach(c=>{
