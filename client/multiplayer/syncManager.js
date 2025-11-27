@@ -190,12 +190,20 @@
       }
       try{ if(typeof window.appendLogLine==='function'){ var rp=rec.payload||{}; var tgt=rp.target||{}; window.appendLogLine(`Oponente atacou: ${rp.fromSide} contra ${tgt.type||''}/${tgt.side||''} — dano ${rp.damage||0}`,'effect'); } }catch(e){}
     } else if(rec.actionType === 'PLAY_CARD') {
-      // Ação PLAY_CARD do oponente
+      // Ação PLAY_CARD do oponente — usar playerId canônico para mapear o lado local
       captureOriginals();
       try{ 
         window.__APPLY_REMOTE = true; 
         if(typeof orig.playFromHand === 'function') {
-          orig.playFromHand(rec.payload.side, rec.payload.index); 
+          try{
+            const sender = String(rec.playerId||'');
+            const me = String(playerId||'');
+            const ls = (sender === me) ? 'you' : 'ai';
+            orig.playFromHand(ls, rec.payload.index);
+          }catch(err){
+            // fallback antigo (pode falhar se "side" vier em perspectiva do remetente)
+            orig.playFromHand(rec.payload.side, rec.payload.index);
+          }
         }
       } finally { 
         window.__APPLY_REMOTE = false; 

@@ -1785,20 +1785,9 @@ window.Game.applySnapshot = function(snap, { remote=false } = {}){
       const ls = localSideFromP(p);
       const data = snap[p] || {};
       if(!ls) return;
-      // rebuild deck
-      // Preserve local customDeck if present for 'you' side to avoid host snapshots
-      // overwriting a player's saved deck choice when desynchronized.
+      // rebuild deck — always trust snapshot order in MP to keep clients deterministic
       try{
-        if(ls === 'you' && STATE[ls] && Array.isArray(STATE[ls].customDeck) && STATE[ls].customDeck.length){
-          // rebuild from the customDeck spec (names)
-          try{ buildDeck(ls); }
-          catch(e){
-            // fallback to snapshot-provided deck if buildDeck fails
-            STATE[ls].deck = (data.deck||[]).map(e => { const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }).filter(Boolean);
-          }
-        } else {
-          STATE[ls].deck = (data.deck||[]).map(e => { const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }).filter(Boolean);
-        }
+        STATE[ls].deck = (data.deck||[]).map(e => { const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }).filter(Boolean);
       }catch(e){
         STATE[ls].deck = (data.deck||[]).map(e => { try{ const c = createCardFromName(e.name); if(c) c.id = e.id; return c; }catch(err){ return null; } }).filter(Boolean);
       }
@@ -3035,7 +3024,7 @@ function buildDeck(side){
     let safeIdx = 0;
     while (d.length < 40) {
       // escolher aleatoriamente do pool para variar decks da IA
-      const name = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+      const name = pool.length ? pool[rnd(pool.length)] : null;
       if (!name) break;
       const card = createCardFromName(name);
       if (card) d.push(card);
@@ -3498,7 +3487,7 @@ function selectSavedDeck(deck) {
   if(!__IS_MP && !(window.IS_MULTIPLAYER || window.__IS_MP)){
     // Escolher líder aleatório para a IA a partir de CARD_DEFS
     const leaderOpts = getLeaderOpts();
-    const randomLeader = leaderOpts.length ? leaderOpts[Math.floor(Math.random() * leaderOpts.length)] : null;
+    const randomLeader = leaderOpts.length ? leaderOpts[rnd(leaderOpts.length)] : null;
     if(randomLeader){
       STATE.ai.leader = { ...randomLeader, kind: 'leader', img: randomLeader.img || CHOSEN_IMAGES[randomLeader.key] };
     } else {
@@ -3634,7 +3623,13 @@ function selectAiSavedDeck(deck){
 }
 
 /* ============== Fluxo / FRAGMENTOS ============== */
-function coin(){ STATE.first=(Math.random()<0.5)?'you':'ai'; STATE.active=STATE.first; STATE.turnCount.you=STATE.turnCount.ai=0; STATE.maxPool.you=STATE.maxPool.ai=0; STATE.pool.you=STATE.pool.ai=0; console.log(`${STATE.first==='you'?'Você':'IA'} começa!`); renderHUD(); }
+function coin(){
+  try{
+    const r = (window.RNG && typeof window.RNG.random==='function') ? window.RNG.random() : Math.random();
+    STATE.first = (r < 0.5) ? 'you' : 'ai';
+  }catch(e){ STATE.first = (Math.random()<0.5)?'you':'ai'; }
+  STATE.active=STATE.first; STATE.turnCount.you=STATE.turnCount.ai=0; STATE.maxPool.you=STATE.maxPool.ai=0; STATE.pool.you=STATE.pool.ai=0; console.log(`${STATE.first==='you'?'Você':'IA'} começa!`); renderHUD();
+}
 function safeStartMatch() {
   console.log('=== TENTANDO INICIAR PARTIDA ===');
   
@@ -3669,6 +3664,16 @@ function startMatch(){
   // Offline / VS IA: behave as before
   if(!IS_MP){
     try{
+      // Reseed RNG for a fresh offline match so opening hands vary
+      try{
+        if(window.RNG && typeof window.RNG.setSeed==='function'){
+          const rand32 = (function(){ try{ return Math.floor(Math.random()*0xFFFFFFFF)>>>0; }catch(e){ return 0; } })();
+          const newSeed = ((Date.now()>>>0) ^ rand32) >>> 0;
+          window.RNG.setSeed(newSeed);
+          try{ window.__RNG_MATCH_SEEDED = true; }catch(e){}
+          console.log('[startMatch] Offline RNG seeded:', newSeed);
+        }
+      }catch(e){ console.warn('Failed to reseed RNG (offline)', e); }
       // prepare both sides
       Game.createDeck('p1', getDeckFor('p1'));
       Game.createDeck('p2', getDeckFor('p2'));
@@ -3707,6 +3712,18 @@ function startMatch(){
       }
     }
   }catch(e){ console.warn('startMatch MP guard error', e); }
+  // Seed RNG once for this MP match on the host so both sides share the same shuffle via snapshot
+  try{
+    if(window.STATE && window.STATE.isHost && !window.__RNG_MATCH_SEEDED){
+      if(window.RNG && typeof window.RNG.setSeed==='function'){
+        const rand32 = (function(){ try{ return Math.floor(Math.random()*0xFFFFFFFF)>>>0; }catch(e){ return 0; } })();
+        const hostSeed = ((Date.now()>>>0) ^ rand32) >>> 0;
+        window.RNG.setSeed(hostSeed);
+        window.__RNG_MATCH_SEEDED = true;
+        console.log('[startMatch MP] Host RNG seeded:', hostSeed);
+      }
+    }
+  }catch(e){ console.warn('startMatch MP seeding error', e); }
   // 2.1 Render empty layout for both sides
   try{ Game.renderEmptyBoard('p1'); Game.renderEmptyBoard('p2'); }catch(e){ console.warn('renderEmptyBoard error', e); }
 
@@ -3897,7 +3914,7 @@ function discardRandomFromHand(ownerSide, count=1, opts){
     let removed = 0;
     for(let i=0;i<count;i++){
       if((STATE[ownerSide].hand||[]).length===0) break;
-      const idx = Math.floor(Math.random() * STATE[ownerSide].hand.length);
+      const idx = rnd(STATE[ownerSide].hand.length);
       const ok = discardCardFromHand(ownerSide, idx, opts || {});
       if(ok) removed++; else break;
     }
@@ -6062,7 +6079,7 @@ function resolveAttackOn(target){
           log(`🛡️ Bloquear: ataque redirecionado para ${blockers[idx].c.name}, que ficou deitado.`);
         }
       } else {
-        let wants = defenderIsYou ? confirm(`Você tem BLOQUEAR (${blockers[0].c.name}). Deseja bloquear este ataque ao seu Líder?`) : (Math.random()<0.75);
+        let wants = defenderIsYou ? confirm(`Você tem BLOQUEAR (${blockers[0].c.name}). Deseja bloquear este ataque ao seu Líder?`) : (((window.RNG && typeof window.RNG.random==='function') ? window.RNG.random() : Math.random()) < 0.75);
         if(wants){
           STATE[foe].allies[blockers[0].i].tapped = true;
           finalTarget = {type:'ally', side:foe, index:blockers[0].i};
@@ -6074,10 +6091,10 @@ function resolveAttackOn(target){
 
   // rolagem
   const bonusTempAtk = attackerCard.atkBonusTemp || 0;
-  let d20 = 1 + Math.floor(Math.random() * 20);
+  let d20 = 1 + rnd(20);
   let d20b = null;
   if (hasKw(attackerCard, 'precisão') || hasKw(attackerCard, 'precisao')) {
-    d20b = 1 + Math.floor(Math.random() * 20);
+    d20b = 1 + rnd(20);
     d20 = Math.max(d20, d20b);
   }
   const total = d20 + (attackerCard.atkBonus || 0) + bonusTempAtk;
