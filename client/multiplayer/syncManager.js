@@ -172,6 +172,19 @@
     } 
     
     // Ação de outro jogador - aplicar remotamente
+    // Importante: Para SET_LEADER de qualquer jogador, atualizar playerChosen globalmente
+    if(rec.actionType === 'SET_LEADER') {
+      try{
+        const side = rec.payload && rec.payload.side ? String(rec.payload.side) : null;
+        if(side && (side === 'p1' || side === 'p2')) {
+          playerChosen[side] = true;
+          syncPlayerChosen();
+          console.log('[syncManager] SET_LEADER remoto de', side, ', playerChosen agora =', playerChosen, 'STATE.playerChosen =', window.STATE && window.STATE.playerChosen);
+        }
+      }catch(e){ console.warn('[syncManager] Erro ao processar SET_LEADER remoto', e); }
+      return;
+    }
+    
     if(rec.actionType === 'ATTACK') {
       if(window.Game && typeof Game.applyResolvedAttack === 'function') {
         Game.applyResolvedAttack(rec.payload);
