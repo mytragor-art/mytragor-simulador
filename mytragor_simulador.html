@@ -3679,11 +3679,11 @@ function startMatch(){
           const leaderMap = (window.CARD_DEFS||[]).filter(c=>c.kind==='leader').reduce((m,l)=>{ m[l.key || _slugKey(l.name)] = l; return m; }, {});
           const katsu = leaderMap['katsu'];
           const valbrak = leaderMap['valbrak'];
-          if(!STATE.you.leader) STATE.you.leader = katsu ? ({ ...katsu, kind:'leader' }) : { kind:'leader', name:'Katsu', img:CHOSEN_IMAGES.katsu, ac:13, hp:20, atkBonus:4, damage:4, filiacao:'Marcial' };
-          if(!STATE.ai.leader) STATE.ai.leader = valbrak ? ({ ...valbrak, kind:'leader' }) : { kind:'leader', name:'Valbrak', img:CHOSEN_IMAGES.valbrak, ac:13, hp:20, atkBonus:2, damage:2, filiacao:'Arcana' };
+          if(!STATE.you.leader) STATE.you.leader = katsu ? ({ ...katsu, kind:'leader' }) : { key:'katsu', kind:'leader', name:'Katsu, o Vingador', img:CHOSEN_IMAGES.katsu, ac:13, hp:20, atkBonus:4, damage:4, filiacao:'Marcial' };
+          if(!STATE.ai.leader) STATE.ai.leader = valbrak ? ({ ...valbrak, kind:'leader' }) : { key:'valbrak', kind:'leader', name:'Valbrak, Herói do Povo', img:CHOSEN_IMAGES.valbrak, ac:13, hp:20, atkBonus:2, damage:2, filiacao:'Arcana' };
         }catch(e){
-          STATE.you.leader = {kind:'leader',name:'Katsu',img:CHOSEN_IMAGES.katsu,ac:13,hp:20,atkBonus:4,damage:4,filiacao:'Marcial'};
-          STATE.ai.leader = {kind:'leader',name:'Valbrak',img:CHOSEN_IMAGES.valbrak,ac:13,hp:20,atkBonus:2,damage:2,filiacao:'Arcana'};
+          STATE.you.leader = { key:'katsu', kind:'leader', name:'Katsu, o Vingador', img:CHOSEN_IMAGES.katsu, ac:13, hp:20, atkBonus:4, damage:4, filiacao:'Marcial' };
+          STATE.ai.leader = { key:'valbrak', kind:'leader', name:'Valbrak, Herói do Povo', img:CHOSEN_IMAGES.valbrak, ac:13, hp:20, atkBonus:2, damage:2, filiacao:'Arcana' };
         }
       }
       Game.drawStartHands();
