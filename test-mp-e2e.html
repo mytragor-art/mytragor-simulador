@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste MP E2E - Mytragor</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #0a0a0a;
+      color: #0f0;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      height: 100vh;
+      margin: 0;
+    }
+    .client {
+      border: 2px solid #0f0;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-y: auto;
+      background: #000;
+    }
+    .client h2 {
+      color: #fff;
+      margin-top: 0;
+    }
+    .log-entry {
+      font-size: 11px;
+      padding: 2px 0;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .log-entry.error { color: #f00; }
+    .log-entry.warn { color: #ff0; }
+    .log-entry.success { color: #0f0; }
+    .log-entry.info { color: #0ff; }
+    .controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      flex-direction: column;
+    }
+    button {
+      padding: 10px 15px;
+      background: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    button:hover { background: #00ff00; }
+    button:disabled { background: #555; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<div class="client" id="client-p1">
+  <h2>Player P1 (Host)</h2>
+  <div id="log-p1" style="height: calc(100% - 40px); overflow-y: auto;"></div>
+</div>
+
+<div class="client" id="client-p2">
+  <h2>Player P2 (Client)</h2>
+  <div id="log-p2" style="height: calc(100% - 40px); overflow-y: auto;"></div>
+</div>
+
+<div class="controls">
+  <button onclick="testFlowStep1()">1. Criar Sala</button>
+  <button onclick="testFlowStep2()">2. P1 Escolhe Deck</button>
+  <button onclick="testFlowStep3()">3. P2 Escolhe Deck</button>
+  <button onclick="testFlowStep4()">4. Iniciar Match</button>
+  <button onclick="testFlowStep5()">5. P1 Joga Carta</button>
+  <button onclick="testFlowStep6()">6. P2 Joga Carta</button>
+  <button onclick="testFlowStep7()">7. END_TURN</button>
+  <button onclick="clearLogs()">Limpar Logs</button>
+</div>
+
+<script>
+// Simulação de Cliente MP
+class MPTestClient {
+  constructor(playerId, isHost) {
+    this.playerId = playerId;
+    this.isHost = isHost;
+    this.matchId = 'TEST_MATCH_001';
+    this.url = `http://localhost:8081/mp-game.html?match=${this.matchId}&player=${playerId}`;
+    this.logs = [];
+    this.state = {};
+  }
+
+  log(msg, level = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMsg = `[${timestamp}] ${msg}`;
+    this.logs.push({ msg: logMsg, level });
+    this.render();
+  }
+
+  render() {
+    const logId = `log-${this.playerId}`;
+    const logEl = document.getElementById(logId);
+    if (logEl) {
+      logEl.innerHTML = this.logs
+        .map(l => `<div class="log-entry ${l.level}">${l.msg}</div>`)
+        .join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  }
+
+  openWindow() {
+    this.window = window.open(this.url, `mp_${this.playerId}`, 'width=1200,height=800');
+    this.log(`Abrindo ${this.isHost ? 'HOST' : 'CLIENT'}`, 'success');
+    
+    // Esperar página carregar
+    setTimeout(() => {
+      this.checkStatus();
+    }, 3000);
+  }
+
+  checkStatus() {
+    try {
+      if (!this.window || this.window.closed) {
+        this.log('Janela fechada!', 'error');
+        return;
+      }
+      
+      const state = this.window.STATE;
+      const sm = this.window.syncManager;
+      const wsClient = this.window.wsClient;
+      
+      let info = `STATE: ${state ? 'OK' : 'null'} | syncManager: ${sm ? 'OK' : 'null'} | wsClient: ${wsClient ? 'OK' : 'null'}`;
+      
+      if (sm && sm.playerChosen) {
+        info += ` | playerChosen: p1=${sm.playerChosen.p1 ? '✓' : '-'} p2=${sm.playerChosen.p2 ? '✓' : '-'}`;
+      }
+      
+      if (state && state.you) {
+        info += ` | you.leader: ${state.you.leader ? state.you.leader.name : 'null'}`;
+      }
+      
+      this.log(info, 'info');
+    } catch (e) {
+      this.log(`checkStatus error: ${e.message}`, 'error');
+    }
+  }
+}
+
+// Criar dois clientes
+const client_p1 = new MPTestClient('p1', true);
+const client_p2 = new MPTestClient('p2', false);
+
+function testFlowStep1() {
+  client_p1.log('===== STEP 1: CRIAR SALA =====', 'warn');
+  client_p2.log('===== STEP 1: CRIAR SALA =====', 'warn');
+  
+  client_p1.log('P1 abrindo janela...', 'info');
+  client_p1.openWindow();
+  
+  setTimeout(() => {
+    client_p2.log('P2 abrindo janela...', 'info');
+    client_p2.openWindow();
+  }, 2000);
+}
+
+function testFlowStep2() {
+  client_p1.log('===== STEP 2: P1 ESCOLHE DECK =====', 'warn');
+  try {
+    const w1 = client_p1.window;
+    if (w1 && w1.chooseLeader) {
+      client_p1.log('Chamando chooseLeader() em P1...', 'info');
+      w1.chooseLeader();
+      
+      // Simular clique em um líder após 1s
+      setTimeout(() => {
+        const btns = w1.document.querySelectorAll('[data-leader]');
+        if (btns.length > 0) {
+          client_p1.log(`Clicando em líder...`, 'info');
+          btns[0].click();
+        }
+      }, 1000);
+    }
+  } catch (e) {
+    client_p1.log(`Error: ${e.message}`, 'error');
+  }
+}
+
+function testFlowStep3() {
+  client_p2.log('===== STEP 3: P2 ESCOLHE DECK =====', 'warn');
+  try {
+    const w2 = client_p2.window;
+    if (w2 && w2.chooseLeader) {
+      client_p2.log('Chamando chooseLeader() em P2...', 'info');
+      w2.chooseLeader();
+      
+      // Simular clique em um líder após 1s
+      setTimeout(() => {
+        const btns = w2.document.querySelectorAll('[data-leader]');
+        if (btns.length > 1) {
+          client_p2.log(`Clicando em segundo líder...`, 'info');
+          btns[1].click();
+        }
+      }, 1000);
+    }
+  } catch (e) {
+    client_p2.log(`Error: ${e.message}`, 'error');
+  }
+}
+
+function testFlowStep4() {
+  client_p1.checkStatus();
+  client_p2.checkStatus();
+  client_p1.log('===== STEP 4: INICIAR MATCH =====', 'warn');
+  client_p2.log('Aguardando START_MATCH...', 'info');
+}
+
+function testFlowStep5() {
+  client_p1.log('===== STEP 5: P1 JOGA CARTA =====', 'warn');
+  try {
+    const w1 = client_p1.window;
+    if (w1 && w1.playFromHand) {
+      client_p1.log('Simulando playFromHand(you, 0)...', 'info');
+      w1.playFromHand('you', 0);
+    }
+  } catch (e) {
+    client_p1.log(`Error: ${e.message}`, 'error');
+  }
+}
+
+function testFlowStep6() {
+  client_p2.log('===== STEP 6: P2 JOGA CARTA =====', 'warn');
+  try {
+    const w2 = client_p2.window;
+    if (w2 && w2.playFromHand) {
+      client_p2.log('Simulando playFromHand(you, 0)...', 'info');
+      w2.playFromHand('you', 0);
+    }
+  } catch (e) {
+    client_p2.log(`Error: ${e.message}`, 'error');
+  }
+}
+
+function testFlowStep7() {
+  client_p1.log('===== STEP 7: END_TURN =====', 'warn');
+  try {
+    const w1 = client_p1.window;
+    if (w1 && w1.endTurn) {
+      client_p1.log('Chamando endTurn() em P1...', 'info');
+      w1.endTurn();
+      
+      setTimeout(() => {
+        client_p1.checkStatus();
+        client_p2.checkStatus();
+      }, 500);
+    }
+  } catch (e) {
+    client_p1.log(`Error: ${e.message}`, 'error');
+  }
+}
+
+function clearLogs() {
+  client_p1.logs = [];
+  client_p2.logs = [];
+  client_p1.render();
+  client_p2.render();
+}
+</script>
+
+</body>
+</html>

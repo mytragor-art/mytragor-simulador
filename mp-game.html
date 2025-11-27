@@ -396,18 +396,11 @@
                   console.log('[mp-game] leader slot check', { engineSide, hasChild });
                   if(slot && !hasChild && window.STATE[engineSide].leader){ slot.appendChild(cardEl(window.STATE[engineSide].leader,{})); console.log('[mp-game] leader slot appended fallback'); }
                 }catch(e){ console.warn('[mp-game] fallback append failed', e); }
-                // UPDATE playerChosen flag when SET_LEADER is received from remote player
+                // NOTA: playerChosen já é atualizado no syncManager.applyRemote()
+                // Não precisamos duplicar essa lógica aqui
                 try{
-                  if(rec.payload && rec.payload.side){
-                    if(!window.STATE.playerChosen) window.STATE.playerChosen = { p1: false, p2: false };
-                    if(rec.payload.side === 'p1') window.STATE.playerChosen.p1 = true;
-                    if(rec.payload.side === 'p2') window.STATE.playerChosen.p2 = true;
-                    if(window.syncManager && typeof syncManager.syncPlayerChosen === 'function'){
-                      syncManager.syncPlayerChosen();
-                    }
-                    console.log('[MP] SET_LEADER accepted, playerChosen =', window.STATE.playerChosen);
-                  }
-                }catch(e){ console.warn('[MP] Failed to update playerChosen', e); }
+                  console.log('[MP] SET_LEADER accepted, syncManager.playerChosen =', window.syncManager && window.syncManager.playerChosen);
+                }catch(e){};
                 try{ if(typeof window.appendLogLine==='function'){ var who = (engineSide==='you'?'Você':'Oponente'); var name = (leader&& (leader.name||leader.key)) || ''; appendLogLine(`${who} definiu líder: ${name}`,'effect'); } }catch(e){}
                 tryStart();
                 // IMPORTANTE: Continuar para chamar origAccept mesmo após processar SET_LEADER

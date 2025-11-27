@@ -7,7 +7,8 @@
   let pendingById = {};
   let history = [];
   let storageKeyBase = 'mp_choice_';
-  this.playerChosen = { p1: false, p2: false }; // Unifica playerChosen
+  let playerChosen = { p1: false, p2: false }; // Unifica playerChosen
+  let lastSnapshotSent = 0; // Rastrear última vez que enviou snapshot
 
   function syncPlayerChosen(){
     try{
@@ -15,10 +16,10 @@
         window.STATE = {
           you: { allies: [null, null, null, null, null], spells: [null, null, null, null, null], deck: [], hand: [], grave: [], ban: [] },
           ai: { allies: [null, null, null, null, null], spells: [null, null, null, null, null], deck: [], hand: [], grave: [], ban: [] },
-          playerChosen: this.playerChosen // Aponta diretamente para playerChosen
+          playerChosen: playerChosen // Aponta diretamente para playerChosen
         };
       }
-      window.STATE.playerChosen = this.playerChosen; // Sincroniza referência
+      window.STATE.playerChosen = playerChosen; // Sincroniza referência
       console.log('[syncManager] syncPlayerChosen updated STATE.playerChosen to', window.STATE.playerChosen);
     }catch(e){ console.warn('[syncManager] syncPlayerChosen error', e); }
   }
@@ -54,9 +55,9 @@
       if(actionType === 'SET_LEADER'){
         try{
           const side = payload.side || 'p1';
-          this.playerChosen[side] = true; // Atualiza diretamente playerChosen
+          playerChosen[side] = true; // Atualiza diretamente playerChosen
           syncPlayerChosen();
-          console.log('[syncManager] SET_LEADER applyRemote, playerChosen =', this.playerChosen);
+          console.log('[syncManager] SET_LEADER applyRemote, playerChosen =', playerChosen);
         }catch(e){ console.warn('[syncManager] Failed to apply SET_LEADER', e); }
       }
     } finally {
@@ -125,6 +126,12 @@
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Turno encerrado por ${rec.playerId||''}`,'effect'); }catch(e){}
         return;
       }
+      // Para PLAY_CARD, apenas confirmar aceição (ação já foi aplicada otimisticamente)
+      if(pendingAction.actionType === 'PLAY_CARD' && rec.actionType === 'PLAY_CARD') {
+        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Carta jogada confirmada pelo servidor`,'effect'); }catch(e){}
+        console.log('[syncManager] PLAY_CARD ação própria aceita pelo servidor');
+        return;
+      }
       // Para START_MATCH, iniciar partida sincronizada
       if(pendingAction.actionType === 'START_MATCH' && rec.actionType === 'START_MATCH') {
         try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
@@ -170,6 +177,20 @@
         Game.applyResolvedAttack(rec.payload);
       }
       try{ if(typeof window.appendLogLine==='function'){ var rp=rec.payload||{}; var tgt=rp.target||{}; window.appendLogLine(`Oponente atacou: ${rp.fromSide} contra ${tgt.type||''}/${tgt.side||''} — dano ${rp.damage||0}`,'effect'); } }catch(e){}
+    } else if(rec.actionType === 'PLAY_CARD') {
+      // Ação PLAY_CARD do oponente
+      captureOriginals();
+      try{ 
+        window.__APPLY_REMOTE = true; 
+        if(typeof orig.playFromHand === 'function') {
+          orig.playFromHand(rec.payload.side, rec.payload.index); 
+        }
+      } finally { 
+        window.__APPLY_REMOTE = false; 
+      }
+      try{ if(typeof renderSide==='function'){ renderSide('you'); renderSide('ai'); } }catch(e){}
+      try{ if(typeof window.render==='function') render(); }catch(e){}
+      try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Oponente jogou carta de seu baralho`,'effect'); }catch(e){}
     } else {
       if(rec.actionType === 'END_TURN'){
         captureOriginals();
@@ -414,5 +435,23 @@
     if(matchId) localStorage.setItem('mp_hist_'+matchId, JSON.stringify(history));
   }catch(e){} }
 
-  window.syncManager = { setContext, enqueueAndSend, onActionAccepted, onActionRejected, onSnapshot, getStatus: function(){ return { lastServerSeq, pending: Array.from(pending.keys()) }; }, getHistory: function(){ return history.slice(); }, persistChoice, persistAll, restoreChoices, syncPlayerChosen };
+  function publishSnapshot(){
+    // Apenas host publica snapshots
+    if(!window.STATE || !window.STATE.isHost) return;
+    // Throttle: publicar no máximo a cada 200ms
+    const now = Date.now();
+    if(now - lastSnapshotSent < 200) return;
+    lastSnapshotSent = now;
+    try{
+      if(window.Game && typeof Game.buildSnapshot === 'function' && window.wsClient && typeof wsClient.sendClientSnapshot === 'function'){
+        const snap = Game.buildSnapshot();
+        wsClient.sendClientSnapshot(snap);
+        console.log('[syncManager] Host published snapshot, seq =', lastServerSeq);
+      }
+    }catch(e){
+      console.warn('[syncManager] Error publishing snapshot:', e);
+    }
+  }
+
+  window.syncManager = { setContext, enqueueAndSend, onActionAccepted, onActionRejected, onSnapshot, publishSnapshot, getStatus: function(){ return { lastServerSeq, pending: Array.from(pending.keys()) }; }, getHistory: function(){ return history.slice(); }, persistChoice, persistAll, restoreChoices, syncPlayerChosen, playerChosen };
 })();

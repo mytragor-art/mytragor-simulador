@@ -21,6 +21,9 @@
       window.playFromHand = function(side, index){ 
         console.log('[wrapDispatcherForMP] playFromHand called:', side, index); 
         if(window.__APPLY_REMOTE){ return origPFH(side,index); } 
+        // Aplicar OTIMISTICAMENTE — enviar e executar simultaneamente
+        try { origPFH(side, index); } catch(e) { console.warn('[wrapDispatcherForMP] playFromHand apply failed', e); }
+        // Enfileirar para confirmação do servidor
         syncManager.enqueueAndSend('PLAY_CARD', { side: String(side), index: Number(index) }); 
       };
     }
