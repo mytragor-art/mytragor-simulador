@@ -3693,6 +3693,20 @@ function startMatch(){
   }
 
   // === Multiplayer ===
+  // Guard: só inicia se ambos escolheram e líderes existem
+  try{
+    if(window.syncManager){
+      var chosen = window.syncManager.playerChosen || {p1:false,p2:false};
+      var haveBothLeaders = !!(STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader);
+      var bothChosen = !!(chosen.p1 && chosen.p2);
+      if(!haveBothLeaders || !bothChosen){
+        console.warn('[startMatch MP] bloqueado: haveBothLeaders=', haveBothLeaders, 'bothChosen=', bothChosen, 'playerChosen=', chosen);
+        // Atualiza HUD/estado visual se necessário e sai sem iniciar
+        try{ if(typeof renderHUD==='function') renderHUD(); }catch(e){}
+        return;
+      }
+    }
+  }catch(e){ console.warn('startMatch MP guard error', e); }
   // 2.1 Render empty layout for both sides
   try{ Game.renderEmptyBoard('p1'); Game.renderEmptyBoard('p2'); }catch(e){ console.warn('renderEmptyBoard error', e); }
 
