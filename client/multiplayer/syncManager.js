@@ -157,9 +157,8 @@
           }
         }catch(e){}
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
-        // Reset playerChosen after match starts so future matches start fresh
-        playerChosen = { p1: false, p2: false };
-        syncPlayerChosen();
+        // Não redefinir playerChosen aqui; isso quebra o gate de início em MP.
+        // Mantemos os flags até que a partida termine.
         return;
       }
       // Para SET_LEADER, apenas confirmar aceição (renderização feita no wrapper)
@@ -231,9 +230,7 @@
       } else if(rec.actionType === 'START_MATCH'){
         try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
-        // Reset playerChosen after match starts
-        playerChosen = { p1: false, p2: false };
-        syncPlayerChosen();
+        // Não redefinir playerChosen aqui; manter até fim da partida.
       } else {
         applyRemote(rec.actionType, rec.payload||{}); 
         try{ if(typeof renderSide==='function'){ renderSide('you'); renderSide('ai'); } }catch(e){}
