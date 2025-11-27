@@ -3813,7 +3813,18 @@ function efeitoCervoGalhosBrancos(side) {
     log('Cervo de Galhos Brancos: nenhum Animal para curar.');
   }
 }
-function endTurn(){ STATE.phase='main'; STATE.active=(STATE.active==='you')?'ai':'you'; if(!window.IS_MULTIPLAYER) beginTurn(); else renderHUD(); }
+function endTurn(){
+  STATE.phase = 'main';
+  STATE.active = (STATE.active === 'you') ? 'ai' : 'you';
+  if (!window.IS_MULTIPLAYER) {
+    beginTurn();
+  } else {
+    // Multiplayer: only host should begin turn
+    if (!window.STATE.isHost) return; // Ensure only host can begin turn
+    beginTurn();
+  }
+  renderHUD();
+}
 
   // (Removido: efeito agora é ao entrar em campo)
 

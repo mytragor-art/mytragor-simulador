@@ -146,7 +146,7 @@
         window.STATE = window.STATE || {};
         window.STATE.hostSide = msg.hostSide; // Salva o hostSide enviado pelo servidor
         window.STATE.side = window.STATE.side || (lastJoin && lastJoin.playerId) || 'p1'; // Garante que o lado do cliente esteja definido
-        window.STATE.isHost = (window.STATE.side === window.STATE.hostSide); // Define se o cliente é host
+        window.STATE.isHost = (msg.hostSide === window.STATE.side); // Correctly set isHost based on server payload
 
         console.log('[wsClient] START_MATCH recebido. hostSide =', msg.hostSide, 'side =', window.STATE.side, 'isHost =', window.STATE.isHost);
       } catch (e) {
