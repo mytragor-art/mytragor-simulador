@@ -11,8 +11,15 @@
   try{ window.__HAS_AI_CONTROLLER = false; }catch(e){}
 
   let me, opp;
-  if(mode==='local'){ me=new HumanController('p1'); opp=new HumanController('p2'); }
-  else if(mode==='vsia'){ me=new HumanController('p1'); opp=new AIController('p2'); try{ window.__HAS_AI_CONTROLLER = true; }catch(e){} }
+  // Local/VS IA controllers should use local state sides ('you'/'ai')
+  if(mode==='local'){ me=new HumanController('you'); opp=new HumanController('ai'); }
+  else if(mode==='vsia'){
+    // VS IA usa a lógica inline existente (aiMain). Não criar AIController aqui.
+    me=new HumanController('you');
+    opp=null;
+    try{ window.__HAS_AI_CONTROLLER = false; }catch(e){}
+  }
+  // Multiplayer uses canonical p1/p2; the Net wrapper will drive rendering
   else if(mode==='mp'){ me=new HumanController(side); opp=null; }
 
   // Attach controllers to Game events. Game may be defined after this script

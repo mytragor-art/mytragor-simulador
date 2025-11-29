@@ -1100,8 +1100,8 @@ const __URLP = QS;
 const __MODE = (__URLP.get('mode') || (IS_MP ? 'mp' : 'vsia'));
 const __IS_MP = IS_MP;
 const __SIDE = MY_SIDE;
-// Flag global padronizada para multiplayer autoritativo
-window.IS_MULTIPLAYER = IS_MP || (QS.get('match') !== null);
+// Flag global padronizada para multiplayer autoritativo (apenas quando mode=mp)
+window.IS_MULTIPLAYER = IS_MP;
 
 // Utilitário: conta cartas de um tipo em pilhas específicas
 function contarCartasTipo(side, tipo, pilhas=['grave']) {
@@ -3728,6 +3728,8 @@ function startMatch(){
       }
       Game.drawStartHands();
       console.log('startMatch: drawStartHands completed — calling beginTurn');
+      // Ensure the first turn belongs to player 1 (you)
+      try{ STATE.active = 'you'; }catch(e){}
       try{ beginTurn(); }catch(e){ console.error('beginTurn failed in startMatch', e); }
     }catch(e){ console.warn('startMatch offline error', e); }
     return;
@@ -3797,6 +3799,7 @@ const start = startMatch;
 let valbrakComprouTurno = { you: false, ai: false };
 function beginTurn(){
   const side=STATE.active; STATE.phase='main'; STATE.turnCount[side]++;
+  try{ console.debug('[IA DEBUG] Início do turno:', side); }catch(e){}
   // Emit TURN_START event for controllers/listeners
   try{ Game.emit && Game.emit({ type: 'TURN_START', side: side }); }catch(e){ console.warn('Game.emit TURN_START failed', e); }
   // mark beginTurn in progress so we can defer UI modals until the refresh finishes
