@@ -5705,7 +5705,7 @@ function olharTopoDeck(qtd, side) {
 function verificarValbrakEngine(side, c) {
   if (
     STATE[side].leader &&
-    (STATE[side].leader.name === 'Valbrak, Herói do Povo' || STATE[side].leader.name === 'Valbrak') &&
+    leaderIs(side, 'valbrak') &&
     c.classe === 'Cidadão' &&
     !valbrakComprouTurno[side]
   ) {
@@ -5793,7 +5793,7 @@ function canAttackCard(side, card) {
   if (firstTurnOf(side)) { console.log('No 1º turno não pode atacar.'); return false; }
   if (!card || card.hp <= 0) return false;
   // Efeito de Katsu: Guerreiros podem atacar inimigos deitados ou em pé
-  const katsu = STATE[side].leader && STATE[side].leader.name === 'Katsu';
+  const katsu = leaderIs(side, 'katsu');
     if (katsu && card.classe === 'Guerreiro') {
     if (card.tapped) { console.log('Este atacante já está deitado.'); return false; }
     if (card.summonedThisTurn) { console.log('Aliados não atacam no turno em que entram.'); return false; }
@@ -5809,7 +5809,7 @@ function canAttackCardQuiet(side, card) {
   if (!isBattlePhase()) return false;
   if (firstTurnOf(side)) return false;
   if (!card || card.hp <= 0) return false;
-  const katsu = STATE[side].leader && STATE[side].leader.name === 'Katsu';
+  const katsu = leaderIs(side, 'katsu');
   if (katsu && card.classe === 'Guerreiro') {
     if (card.tapped) return false;
     if (card.summonedThisTurn) return false;
@@ -5846,7 +5846,7 @@ function highlightTargetsFor(side) {
   const foe = enemySide(side);
   clearTargetHighlights();
   let any = false;
-  const katsu = STATE[side].leader && STATE[side].leader.name === 'Katsu';
+  const katsu = leaderIs(side, 'katsu');
   // Se atacante é Guerreiro e Katsu está em campo, pode atacar qualquer inimigo, EXCETO se houver provocadores deitados
   if (ATTACK_CTX.attacker) {
     const attackerCard = ATTACK_CTX.attacker.leader ? STATE[side].leader : STATE[side].allies[ATTACK_CTX.attacker.idx];
@@ -5906,6 +5906,9 @@ function highlightTargetsFor(side) {
   else if(ATTACK_CTX.attacker)    markSlotSelected(`${side}-ally-${ATTACK_CTX.attacker.idx}`);
 }
 function getAC(target){ const s=target.side; return (target.type==='leader') ? (STATE[s].leader?.ac??13) : (STATE[s].allies[target.index]?.ac??12); }
+
+// Helper to check leader identity robustly (by key or substring of name)
+function leaderIs(side, keyName){ try{ const L = STATE[side] && STATE[side].leader; if(!L) return false; const k = (L.key||'').toString().toLowerCase(); const n = (L.name||'').toString().toLowerCase(); keyName = (keyName||'').toString().toLowerCase(); if(k && k === keyName) return true; if(n && n.indexOf(keyName) !== -1) return true; return false; }catch(e){ return false; } }
 
 // Reação: Constrição — ao declarar ataque, o defensor pode negar o ataque e o atacante não desvira no próximo início de turno do seu controlador.
 // Retorna true se a reação foi usada e o fluxo de ataque deve ser interrompido.
@@ -6017,7 +6020,7 @@ function resolveAttackOn(target){
   const atk=ATTACK_CTX.attacker; if(!atk){ clearTargetHighlights(); return; }
   const side=atk.side, foe=enemySide(side);
   const attackerCard = atk.leader?STATE[side].leader:STATE[side].allies[atk.idx];
-  const katsu = STATE[side].leader && STATE[side].leader.name === 'Katsu';
+  const katsu = leaderIs(side, 'katsu');
   // Permite atacar o líder inimigo (escolhido) em pé ou deitado por qualquer personagem
   if(target.type==='leader'){
     // Pode atacar normalmente
@@ -6540,7 +6543,7 @@ function aiMain(){
       };
 
       const chooseTargetFor = (attackerCard) => {
-        const katsu = STATE[side].leader && STATE[side].leader.name === 'Katsu';
+        const katsu = leaderIs(side, 'katsu');
         let candidates = [];
         // enemy allies (collect raw for taunt detection)
         const enemyEntries = (STATE[foe].allies||[]).map((c,i)=>({ c, i })).filter(x=>x.c && x.c.hp>0);
