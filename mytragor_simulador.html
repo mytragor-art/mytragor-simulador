@@ -1330,6 +1330,26 @@ function getLeaderOpts(){
 const CARD_BACK = 'assets/ui/card-back.png';
 const FALLBACK_BACK = 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="360"><rect width="100%" height="100%" rx="14" ry="14" fill="#0b0b0b"/><rect x="8" y="8" width="244" height="344" rx="12" ry="12" stroke="#f9d34a" stroke-width="4" fill="none"/><text x="50%" y="54%" fill="#f9d34a" font-family="Georgia, serif" font-weight="700" font-size="30" text-anchor="middle">Mytragor</text></svg>`);
 
+// Normalize image paths so they work both when opening file:// and when served over HTTP.
+function resolveImgPath(p){
+  try{
+    if(!p) return p;
+    p = String(p||'');
+    // data:, http(s): or absolute root
+    if(p.match(/^data:/) || p.match(/^https?:\/\//) || p.startsWith('/')) return p;
+    // already in assets/ prefix
+    if(p.indexOf('assets/') === 0) return p;
+    // strip leading ./ or ../
+    const clean = p.replace(/^\.\/?/, '').replace(/^(\.\.\/)+/, (m)=> m);
+    // if it references chosens or known asset folders, prefix with assets/
+    if(clean.indexOf('chosens/')===0 || clean.indexOf('allies/')===0 || clean.indexOf('equip/')===0 || clean.indexOf('spell/')===0 || clean.indexOf('tokens/')===0 || clean.indexOf('fragments/')===0 || clean.indexOf('trick/')===0 || clean.indexOf('ui/')===0) return 'assets/' + clean;
+    // if it already looks like a sibling relative (../chosens/...), normalize to assets/
+    if(p.indexOf('../chosens/')===0) return 'assets/chosens/' + p.split('../chosens/').pop();
+    // fallback: return as-is
+    return p;
+  }catch(e){ return p; }
+}
+
 // Simple deterministic RNG (Mulberry32)
 window.RNG = window.RNG || (function(){
   let seed = 1;
@@ -1660,6 +1680,18 @@ if (typeof STATE === 'undefined') {
 
 // Minimal Game API used by NetController: load a full snapshot and apply to local STATE
 window.Game = window.Game || {};
+// Simple event bus on Game so controllers can listen for lifecycle events
+if(!Game._listeners){
+  Game._listeners = {};
+  Game.on = function(ev, cb){ try{ if(!Game._listeners[ev]) Game._listeners[ev]=[]; Game._listeners[ev].push(cb); }catch(e){} };
+  Game.off = function(ev, cb){ try{ if(!Game._listeners[ev]) return; const i = Game._listeners[ev].indexOf(cb); if(i!==-1) Game._listeners[ev].splice(i,1); }catch(e){} };
+  Game.emit = function(evt){ try{ if(typeof evt === 'string') evt = { type: evt }; const t = evt.type || '*'; // call specific listeners
+      const specific = Game._listeners[t] || [];
+      specific.forEach(fn=>{ try{ fn(evt); }catch(e){} });
+      const any = Game._listeners['*'] || [];
+      any.forEach(fn=>{ try{ fn(evt); }catch(e){} });
+  }catch(e){} };
+}
 window.Game.loadSnapshot = function(snapshot){
   try{
     if(!snapshot) return;
@@ -1891,7 +1923,7 @@ window.Game.applyResolvedAttack = function(resolved){
 };
 
 // helper used by startMatch: choose deck spec for side (uses STATE customDeck if present)
-function getDeckFor(side){ try{ return STATE[side] && STATE[side].customDeck ? STATE[side].customDeck : null; }catch(e){ return null; } }
+function getDeckFor(side){ try{ const st = mapToStateSide(side); return st && STATE[st] && STATE[st].customDeck ? STATE[st].customDeck : null; }catch(e){ return null; } }
 
 
 /* ===== Equip Helpers (NOVOS) ===== */
@@ -2055,8 +2087,8 @@ function cardEl(card,{hand=false,onClick=null,canPlay=false,blockerReady=false,t
   }
 
   const im=document.createElement('img');
-  im.src = card?.faceDown ? CARD_BACK : (card?.img || CARD_BACK);
-  im.onerror=()=>im.src=FALLBACK_BACK;
+  im.src = card?.faceDown ? resolveImgPath(CARD_BACK) : resolveImgPath(card?.img || CARD_BACK);
+  im.onerror=()=>{ try{ im.src = resolveImgPath(FALLBACK_BACK); }catch(e){ im.src = CARD_BACK; } };
   el.appendChild(im);
 
   const facedown=!!card?.faceDown;
@@ -2151,7 +2183,7 @@ function showCardModal(card, ownerSide, pile, idx){
   const text = card.text || card.description || '';
   modal.innerHTML = `
     <div class="modalBox" style="min-width:320px;max-width:520px;padding:18px;display:flex;gap:12px;align-items:flex-start;">
-      <img src="${card.img||'assets/ui/card-back.png'}" alt="${title}" style="width:96px;height:134px;border-radius:8px;box-shadow:0 6px 18px #0008;object-fit:cover;" onerror="this.src='assets/ui/card-back.png'">
+      <img id="__cv_img" src="" alt="${title}" style="width:96px;height:134px;border-radius:8px;box-shadow:0 6px 18px #0008;object-fit:cover;">
       <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
         <div style="font-weight:700;font-size:18px;color:#f8fafc;">${title}</div>
         <div style="font-size:13px;color:#cbd5e1;">${kind} ${cost}</div>
@@ -2162,6 +2194,7 @@ function showCardModal(card, ownerSide, pile, idx){
       </div>
     </div>`;
   modal.style.display = 'flex';
+  const imgEl = modal.querySelector('#__cv_img'); if(imgEl){ imgEl.src = resolveImgPath(card.img || CARD_BACK); imgEl.onerror = ()=>{ imgEl.src = CARD_BACK; } }
   const btn = modal.querySelector('#cardPreviewClose'); if(btn) btn.onclick = ()=>{ modal.style.display = 'none'; };
 }
 // aplicarEfeitoOProtetor removido - agora usamos recomputeAuras()
@@ -2422,7 +2455,7 @@ function renderHUD(){
   const rest = STATE.pool[STATE.active];
   const max = STATE.maxPool[STATE.active];
   const spent = Math.max(0, max - rest);
-  const fragEl = $('#fragPill'); if (fragEl) { fragEl.textContent = `Frags: ${rest}/${max} (turno)`; fragEl.title = `Restantes: ${rest} | Gastos: ${spent} | Max: ${max}`; }
+  const fragEl = $('#fragPill'); if(fragEl){ fragEl.textContent = `Frags: ${rest}/${max} (turno)`; fragEl.title = `Restantes: ${rest} | Gastos: ${spent} | Max: ${max}`; }
 
   // Atualiza a barra de fases
   try {
@@ -3660,10 +3693,12 @@ function safeStartMatch() {
 }
 
 function startMatch(){
+  console.log('startMatch invoked — IS_MP=', IS_MP, 'MY_SIDE=', MY_SIDE);
   try{ window.__MATCH_STARTED = true; }catch(e){}
   // Offline / VS IA: behave as before
   if(!IS_MP){
     try{
+<<<<<<< HEAD
       // Reseed RNG for a fresh offline match so opening hands vary
       try{
         if(window.RNG && typeof window.RNG.setSeed==='function'){
@@ -3674,6 +3709,9 @@ function startMatch(){
           console.log('[startMatch] Offline RNG seeded:', newSeed);
         }
       }catch(e){ console.warn('Failed to reseed RNG (offline)', e); }
+=======
+      console.log('startMatch: offline path — preparing decks');
+>>>>>>> a4143ee (feat: stabilize VS IA and MP paths; fix deck mapping and image resolution; add Game event bus and AIController fallback)
       // prepare both sides
       Game.createDeck('p1', getDeckFor('p1'));
       Game.createDeck('p2', getDeckFor('p2'));
@@ -3692,7 +3730,8 @@ function startMatch(){
         }
       }
       Game.drawStartHands();
-      beginTurn();
+      console.log('startMatch: drawStartHands completed — calling beginTurn');
+      try{ beginTurn(); }catch(e){ console.error('beginTurn failed in startMatch', e); }
     }catch(e){ console.warn('startMatch offline error', e); }
     return;
   }
@@ -3761,6 +3800,8 @@ const start = startMatch;
 let valbrakComprouTurno = { you: false, ai: false };
 function beginTurn(){
   const side=STATE.active; STATE.phase='main'; STATE.turnCount[side]++;
+  // Emit TURN_START event for controllers/listeners
+  try{ Game.emit && Game.emit({ type: 'TURN_START', side: side }); }catch(e){ console.warn('Game.emit TURN_START failed', e); }
   // mark beginTurn in progress so we can defer UI modals until the refresh finishes
   try{ window.__BEGIN_TURN_IN_PROGRESS = true; }catch(e){}
   valbrakComprouTurno[side] = false;
@@ -3788,8 +3829,10 @@ function beginTurn(){
   // allow any deferred modals to run after the turn refresh completes
   try{ window.__BEGIN_TURN_IN_PROGRESS = false; }catch(e){}
   try{ setTimeout(function(){ if(window.processModalQueue) window.processModalQueue(); }, 60); }catch(e){}
-  // Em MP, não rodar IA localmente — o oponente humano joga via NetController
-  if(side==='ai' && !__IS_MP) setTimeout(()=>{ try{ aiMain(); }catch(e){ console.error(e); log('⚠️ IA (beginTurn): '+(e?.message||e)); } }, 300);
+  // Em MP, não rodar IA localmente — o oponente humano joga via NetController.
+  // Também não rodar o `aiMain()` inline se um `AIController` foi criado
+  // pelo bootstrap (isso evita execução dupla controller + aiMain).
+  if(side==='ai' && !__IS_MP && !window.__HAS_AI_CONTROLLER) setTimeout(()=>{ try{ aiMain(); }catch(e){ console.error(e); log('⚠️ IA (beginTurn): '+(e?.message||e)); } }, 300);
 }
 function nextPhase(){ if(STATE.phase==='main'){ STATE.phase='battle'; log('Fase de Combate: clique no seu aliado/líder e depois no alvo.'); } else if(STATE.phase==='battle'){ STATE.phase='final'; } else endTurn(); renderHUD(); }
 // Efeito do Cervo de Galhos Brancos: cura 1 de vida de outro Animal ao final do turno

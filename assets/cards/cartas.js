@@ -376,6 +376,7 @@ if (typeof window !== 'undefined') {
     }
   });
 }
+// Note: keep image paths as-is (relative) so they work both via file:// and when served.
 // Removido export para compatibilidade com <script> HTML
 
 // Lista de efeitos customizados:
