@@ -3698,7 +3698,6 @@ function startMatch(){
   // Offline / VS IA: behave as before
   if(!IS_MP){
     try{
-<<<<<<< HEAD
       // Reseed RNG for a fresh offline match so opening hands vary
       try{
         if(window.RNG && typeof window.RNG.setSeed==='function'){
@@ -3709,9 +3708,7 @@ function startMatch(){
           console.log('[startMatch] Offline RNG seeded:', newSeed);
         }
       }catch(e){ console.warn('Failed to reseed RNG (offline)', e); }
-=======
       console.log('startMatch: offline path — preparing decks');
->>>>>>> a4143ee (feat: stabilize VS IA and MP paths; fix deck mapping and image resolution; add Game event bus and AIController fallback)
       // prepare both sides
       Game.createDeck('p1', getDeckFor('p1'));
       Game.createDeck('p2', getDeckFor('p2'));
