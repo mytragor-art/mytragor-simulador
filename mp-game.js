@@ -6,8 +6,10 @@
   const sideParam=(getParam('player')||getParam('side')||'p1')+''
   const playerId=sideParam.toLowerCase()==='p2'?'p2':'p1'
   const playerName=(getParam('name')||('Jogador '+playerId)).toString()
+  // Definições explícitas de modo (evita confusão com VS IA)
+  window.MODE='mp'
+  window.IS_VS_IA=false
   window.IS_MULTIPLAYER=true
-  window.__IS_MP=true
   window.localSide=playerId
   window.remoteSide=playerId==='p1'?'p2':'p1'
   window.PLAYER_NAME=playerName
@@ -21,7 +23,12 @@
         try{ var obj = JSON.parse(curRaw); if(obj){ curEmail = obj.email||null; curName = obj.username||obj.name||obj.email||null; } }
         catch(e){ curEmail = curRaw; curName = curRaw; }
       }
-      if(!curName){ curName = params.get('name') || ('Jogador '+playerId); }
+      if(!curName){
+        try{
+          var sp=new URL(location.href).searchParams;
+          curName = sp.get('name') || ('Jogador '+playerId);
+        }catch(e){ curName = ('Jogador '+playerId); }
+      }
       var found = null; if(curEmail && Array.isArray(users)){ found = users.find(u=> String(u.email||'')===String(curEmail)); }
       if(found){ window.PLAYER_NAME = String(found.username||found.name||found.email||window.PLAYER_NAME); }
       else { window.PLAYER_NAME = String(curName||window.PLAYER_NAME); }
@@ -84,6 +91,8 @@
   }
   function onReady(){
     loadEngine(function(){
+      // Garantia extra: remover AI local caso tenha sido injetada pelo simulador.
+      try{ if(window.aiMain){ delete window.aiMain; console.log('[mp-game] aiMain removida para MP'); } }catch(e){ }
       initNet()
       if(typeof render==='function') try{ render() }catch(e){}
     })
@@ -131,11 +140,24 @@
 
       const btn = document.getElementById('phaseActionBtn');
       if (btn) {
+        // Verifica se ambos jogadores enviaram SET_LEADER via syncManager
+        var bothChosen = false;
+        try{
+          var pc = window.syncManager && syncManager.playerChosen;
+            bothChosen = !!(pc && pc.p1 && pc.p2);
+        }catch(e){ bothChosen = false; }
         if (!window.__MATCH_STARTED) {
-          btn.textContent = 'Iniciar';
-          btn.className = 'btn btn-start';
-          btn.onclick = safeStartMatch;
-          btn.disabled = false;
+          if(!bothChosen){
+            btn.textContent = 'Aguardando escolha';
+            btn.className = 'btn btn-start';
+            btn.onclick = function(){};
+            btn.disabled = true;
+          } else {
+            btn.textContent = 'Iniciar';
+            btn.className = 'btn btn-start';
+            btn.onclick = safeStartMatch;
+            btn.disabled = false;
+          }
         } else if (STATE.phase === 'main') {
           btn.textContent = 'Próxima Fase';
           btn.className = 'btn btn-next';

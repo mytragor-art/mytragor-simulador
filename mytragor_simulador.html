@@ -1097,8 +1097,12 @@ const MY_SIDE = (QS.get('side') || 'p1').toLowerCase() === 'p2' ? 'p2' : 'p1';
 const OP_SIDE = MY_SIDE === 'p1' ? 'p2' : 'p1';
 // legacy aliases used by older code in this file
 const __URLP = QS;
-const __MODE = (__URLP.get('mode') || (IS_MP ? 'mp' : 'vsia'));
-const __IS_MP = IS_MP;
+// Novas constantes de modo (unificadas)
+const MODE = (__URLP.get('mode') || (IS_MP ? 'mp' : 'vsia'));
+const IS_VS_IA = MODE === 'vsia';
+// Manter aliases mínimos para compatibilidade de código antigo
+const __MODE = MODE;
+const __IS_MP = IS_MP; // legado (substituir progressivamente)
 const __SIDE = MY_SIDE;
 // Flag global padronizada para multiplayer autoritativo (apenas quando mode=mp)
 window.IS_MULTIPLAYER = IS_MP;
@@ -1119,7 +1123,7 @@ function contarCartasTipo(side, tipo, pilhas=['grave']) {
 }
 const $ = s => document.querySelector(s);
 const logEl = $('#log');
-function appendLogLine(text, cls){ try{ const d=document.createElement('div'); d.className='logLine' + (cls? ' '+cls : ''); var actor = (STATE && STATE.active==='you') ? 'Você' : ((window.__IS_MP || window.IS_MULTIPLAYER) ? 'Oponente' : 'IA'); d.innerHTML = '[' + actor + '] ' + text; if(logEl) logEl.prepend(d); }catch(e){ console.warn('appendLogLine error', e); } }
+function appendLogLine(text, cls){ try{ const d=document.createElement('div'); d.className='logLine' + (cls? ' '+cls : ''); var actor = (STATE && STATE.active==='you') ? 'Você' : (window.IS_MULTIPLAYER ? 'Oponente' : 'IA'); d.innerHTML = '[' + actor + '] ' + text; if(logEl) logEl.prepend(d); }catch(e){ console.warn('appendLogLine error', e); } }
 function logDice(text){ appendLogLine(text, 'dice'); console.log('[dice]', text); }
 function logEffect(text){ appendLogLine(text, 'effect'); console.log('[effect]', text); }
 function logAttackResult(hit, text){ appendLogLine(text, hit? 'hit':'miss'); console.log('[attack]', hit? 'HIT':'MISS', text); }
@@ -2255,7 +2259,7 @@ function checkLeafaeOnAllyHealed(side, healedObj){
 
 // Chama ao renderizar o lado
 function renderSide(side){
-  if((window.IS_MULTIPLAYER || window.__IS_MP) && (!STATE[side] || !STATE[side].leader)){
+  if(window.IS_MULTIPLAYER && (!STATE[side] || !STATE[side].leader)){
     try{ var mk=null; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i)||''; if(/^mp_choice_/.test(k) && k.endsWith('_'+side)){ mk=k; break; } }
       if(mk){ var raw=localStorage.getItem(mk); if(raw){ var dat=JSON.parse(raw); if(dat && dat.leader){ STATE[side]=STATE[side]||{ allies:[null,null,null,null,null], spells:[null,null,null,null,null], deck:[], hand:[], grave:[], ban:[] }; STATE[side].leader={ kind:'leader', key:dat.leader.key, name:dat.leader.name, img:dat.leader.img, filiacao:dat.leader.filiacao }; } } }
     }catch(e){}
@@ -2629,7 +2633,7 @@ function chooseFragmentsFor(side){
   box.style.background = '#0e1a2b'; box.style.border = '2px solid #2a3b55'; box.style.borderRadius = '16px';
   box.style.padding = '20px'; box.style.maxWidth = '760px'; box.style.color = '#e2e8f0';
 
-  const h = document.createElement('h3'); h.textContent = side==='you' ? 'Escolha seus Fragmentos' : ((window.IS_MULTIPLAYER || window.__IS_MP) ? 'Escolha os Fragmentos do Oponente' : 'Escolha os Fragmentos da IA'); h.style.marginTop='0'; h.style.color='#facc15';
+  const h = document.createElement('h3'); h.textContent = side==='you' ? 'Escolha seus Fragmentos' : (window.IS_MULTIPLAYER ? 'Escolha os Fragmentos do Oponente' : 'Escolha os Fragmentos da IA'); h.style.marginTop='0'; h.style.color='#facc15';
   const p = document.createElement('p'); p.textContent = 'Selecione o estilo/afilição dos seus fragmentos. Apenas estética.'; p.style.marginTop='4px'; p.style.opacity='0.9';
 
   const grid = document.createElement('div');
@@ -2641,7 +2645,7 @@ function chooseFragmentsFor(side){
     const cap = document.createElement('div'); cap.textContent = label; cap.style.textAlign='center'; cap.style.marginTop='6px'; cap.style.color='#cbd5e1';
     card.onmouseover = ()=> card.style.borderColor = '#facc15';
     card.onmouseout  = ()=> card.style.borderColor = 'transparent';
-  card.onclick = ()=>{ STATE[side].fragImg = imgPath; console.log(`${side==='you'?'Você':((window.IS_MULTIPLAYER||window.__IS_MP)?'Oponente':'IA')} selecionou fragmentos: ${label}.`); try{ document.body.removeChild(modal);}catch{} renderFrags(side); try{ if(window.syncManager && typeof syncManager.persistChoice==='function') syncManager.persistChoice(side); }catch(e){} };
+  card.onclick = ()=>{ STATE[side].fragImg = imgPath; console.log(`${side==='you'?'Você':(window.IS_MULTIPLAYER?'Oponente':'IA')} selecionou fragmentos: ${label}.`); try{ document.body.removeChild(modal);}catch{} renderFrags(side); try{ if(window.syncManager && typeof syncManager.persistChoice==='function') syncManager.persistChoice(side); }catch(e){} };
     card.appendChild(img); card.appendChild(cap); return card;
   };
 
@@ -3246,13 +3250,13 @@ function selectLeader(idx, opts){
   try { chooseFragmentsFor('you'); } catch(e) { console.warn('chooseFragmentsFor you failed', e); }
   // If multiplayer, let p1 broadcast the chosen initial state to the room
   try{
-    if(__IS_MP && typeof __SIDE !== 'undefined' && __SIDE === 'p1' && window.NetPeer && window.NetPeer.sendSync){
+    if(window.IS_MULTIPLAYER && typeof __SIDE !== 'undefined' && __SIDE === 'p1' && window.NetPeer && window.NetPeer.sendSync){
       window.NetPeer.sendSync(JSON.parse(JSON.stringify(STATE)));
       console.log('selectLeader: sent SYNC_FULL to peers');
     }
   }catch(e){ console.warn('selectLeader: sync failed', e); }
   try{
-    if((window.IS_MULTIPLAYER || __IS_MP) && window.syncManager){
+    if(window.IS_MULTIPLAYER && window.syncManager){
       var payload = { side: String(window.localSide||'p1'), leader: STATE.you && STATE.you.leader, cards: STATE.you && STATE.you.customDeck, fragImg: STATE.you && STATE.you.fragImg };
       try{ window.syncManager.enqueueAndSend('SET_LEADER', payload); }catch(e){}
     }
@@ -3517,7 +3521,7 @@ function selectSavedDeck(deck) {
   }
   
   // Em MP não inicializamos um líder de IA local — o oponente humano cuida do próprio estado
-  if(!__IS_MP && !(window.IS_MULTIPLAYER || window.__IS_MP)){
+  if(!window.IS_MULTIPLAYER){
     // Escolher líder aleatório para a IA a partir de CARD_DEFS
     const leaderOpts = getLeaderOpts();
     const randomLeader = leaderOpts.length ? leaderOpts[rnd(leaderOpts.length)] : null;
@@ -3532,19 +3536,19 @@ function selectSavedDeck(deck) {
   console.log(`Deck "${deck.deckName || deck.leader}" carregado! Líder: ${deck.leader}`);
 
   // Após escolher o deck do jogador, somente oferecer deck da IA se não for MP
-  if(!__IS_MP && !(window.IS_MULTIPLAYER || window.__IS_MP)){
+  if(!window.IS_MULTIPLAYER){
     try { configureAIDeck(); } catch(e) { console.warn('configureAIDeck failed', e); }
   }
   // In MP, if we're the host (p1) broadcast full snapshot so peer can mirror leader/deck
   try{
-    if(__IS_MP && typeof __SIDE !== 'undefined' && __SIDE === 'p1' && window.NetPeer && window.NetPeer.sendSync){
+    if(window.IS_MULTIPLAYER && typeof __SIDE !== 'undefined' && __SIDE === 'p1' && window.NetPeer && window.NetPeer.sendSync){
       window.NetPeer.sendSync(JSON.parse(JSON.stringify(STATE)));
       console.log('selectSavedDeck: sent SYNC_FULL to peers');
     }
   }catch(e){ console.warn('selectSavedDeck sync failed', e); }
 
   try{
-    if(__IS_MP && window.syncManager){
+    if(window.IS_MULTIPLAYER && window.syncManager){
       var payload = { side: String(window.localSide||'p1'), leader: STATE.you && STATE.you.leader, cards: STATE.you && STATE.you.customDeck, fragImg: STATE.you && STATE.you.fragImg };
       try{ window.syncManager.enqueueAndSend('SET_LEADER', payload); }catch(e){}
     }
@@ -3693,10 +3697,12 @@ function safeStartMatch() {
 }
 
 function startMatch(){
+  // Carregamento separado: VS IA não inicializa estruturas de MP.
+  // Se futuro: mover MP para módulo separado.
   console.log('startMatch invoked — IS_MP=', IS_MP, 'MY_SIDE=', MY_SIDE);
   try{ window.__MATCH_STARTED = true; }catch(e){}
   // Offline / VS IA: behave as before
-  if(!IS_MP){
+  if(IS_VS_IA){
     try{
       // Reseed RNG for a fresh offline match so opening hands vary
       try{
@@ -3735,7 +3741,7 @@ function startMatch(){
     return;
   }
 
-  // === Multiplayer ===
+  // === Multiplayer (separado) ===
   // Guard: só inicia se ambos escolheram e líderes existem
   try{
     if(window.syncManager){
@@ -3832,7 +3838,7 @@ function beginTurn(){
   // Em MP, não rodar IA localmente — o oponente humano joga via NetController.
   // Também não rodar o `aiMain()` inline se um `AIController` foi criado
   // pelo bootstrap (isso evita execução dupla controller + aiMain).
-  if(side==='ai' && !__IS_MP && !window.__HAS_AI_CONTROLLER) setTimeout(()=>{ try{ aiMain(); }catch(e){ console.error(e); log('⚠️ IA (beginTurn): '+(e?.message||e)); } }, 300);
+  if(side==='ai' && !window.IS_MULTIPLAYER && !window.__HAS_AI_CONTROLLER) setTimeout(()=>{ try{ aiMain(); }catch(e){ console.error(e); log('⚠️ IA (beginTurn): '+(e?.message||e)); } }, 300);
 }
 function nextPhase(){ if(STATE.phase==='main'){ STATE.phase='battle'; log('Fase de Combate: clique no seu aliado/líder e depois no alvo.'); } else if(STATE.phase==='battle'){ STATE.phase='final'; } else endTurn(); renderHUD(); }
 // Efeito do Cervo de Galhos Brancos: cura 1 de vida de outro Animal ao final do turno
@@ -6379,7 +6385,7 @@ try {
   else if (k === 'e') { ev.preventDefault(); try{ endTurn(); }catch{} }
   else if (k === 's') { ev.preventDefault(); try{ startMatch(); }catch{} }
     else if (k === 'd') { ev.preventDefault(); try{ chooseLeader(); }catch{} }
-  else if (k === 'a') { ev.preventDefault(); if(!__IS_MP){ try{ configureAIDeck(); }catch{} } }
+  else if (k === 'a') { ev.preventDefault(); if(!window.IS_MULTIPLAYER){ try{ configureAIDeck(); }catch{} } }
     else if (k === 'r') { ev.preventDefault(); try { location.reload(); } catch { window.location.href = window.location.href; } }
   });
 } catch(e) { console.warn('Falha ao vincular botões', e); }
@@ -7063,8 +7069,16 @@ window.__tour_startDemo = function(){ try{
   }catch(e){ /* ignore */ }
 })();
 </script>
-<script src="net/bootstrap.js"></script>
-<script src="net/net.js"></script>
+<script>
+// Carregamento condicional dos scripts de Multiplayer: somente em MODE==='mp'
+try{
+  if(typeof MODE!=='undefined' && MODE==='mp'){
+    ['net/net.js','net/bootstrap.js','net/mp_runtime.js'].forEach(function(src){
+      var s=document.createElement('script'); s.src=src; s.async=false; document.head.appendChild(s);
+    });
+  }
+}catch(e){ console.warn('Falha ao carregar scripts MP', e); }
+</script>
 <script src="mp_intercept.js"></script>
 
 <script src="assets/mobile.js"></script>

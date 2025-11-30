@@ -1,3 +1,156 @@
+# Guia de Efeitos de Cartas (Referência)
+
+Este documento serve como referência rápida para escrever/entender efeitos em `assets/cards/effects.js`.
+
+## Convenções
+- **Registro:** efeitos são definidos e registrados em `effects.js` usando funções utilitárias da engine (`Game.applyAction`, triggers, etc.).
+- **Targets:** use chaves como `self`, `ally`, `opponent`, `leader`, `slot`, `pile` para indicar alvos.
+- **Fases:** `start`, `main`, `battle`, `end` — combine com triggers.
+- **Custo:** gasta fragmentos do pool do lado ativo via ações do tipo `spend`.
+
+## Tipos de Trigger
+- **onPlay:** dispara quando a carta é colocada em jogo.
+- **onStartTurn:** dispara no início do turno do dono.
+- **onPhase:** específico por fase (`main`, `battle`, `end`).
+- **onKill / onDamage:** ao causar/receber dano/abater.
+- **onDeath:** quando a unidade deixa o campo.
+- **onDraw / onDiscard:** ao comprar/descartar.
+- **onSpell / onTrick:** ao conjurar magias/truques.
+
+## Ações Comuns
+- **Buff:** `+atk`, `+hp`, `+ac`, `atkBonus` no alvo.
+- **Heal:** restaurar `hp` até `maxHp`.
+- **Damage:** aplicar dano direto a `unit` ou `leader`.
+- **Move:** mover carta entre `hand`, `deck`, `grave`, `ban`, `allies`, `spells`.
+- **Summon:** colocar aliado/efeito no campo.
+- **Draw:** comprar cartas do topo do `deck`.
+- **Discard:** descartar da `hand`.
+- **Banish:** enviar para `ban` (banidas).
+- **Counter:** negar magia/truque (ex.: Conversa Fiada).
+
+## Seleção de Alvos
+- **Manual:** UI abre `cardChoiceModal` e retorna `target`.
+- **Automática:** primeiro válido conforme filtro (`filiacao`, `tipo`, `hp>0`, `lane`).
+
+## Estrutura Padrão (Pseudo)
+```js
+Effects.register('effect-key', {
+  name: 'Nome do Efeito',
+  cost: 1, // fragmentos
+  trigger: 'onPlay', // ou onStartTurn, onPhase:main, ...
+  target: { side: 'opponent', zone: 'allies', select: 'any' },
+  action(ctx){
+    const { Game, STATE, you, ai } = ctx
+    // Exemplo: dano
+    Game.applyAction({ type: 'damage', target: ctx.target, amount: 2 })
+  }
+})
+```
+
+## Exemplos Comuns
+- **Buff simples (aliado seu ao jogar):** `onPlay` → `+2 atk` no `ally` selecionado.
+- **Dano direto ao líder inimigo:** `main` → `damage leader(opponent) amount:2`.
+- **Compra de cartas:** `onPlay` → `draw count:1` para `you`.
+- **Conversa Fiada (counter):** abre prompt; se confirmado, nega `spell/trick` do oponente com custo em fragmentos.
+
+## Exemplos Reais (do `effects.js`)
+- **Olhar Topo:** `olhar_topo` ativa `habilitarOlharTopo(1, side)` ao entrar.
+```js
+// onEnterHandlers.olhar_topo
+olhar_topo: (card, side) => { setTimeout(() => helpers.enableLookTop(1, side), 10) }
+```
+- **Curar Animal:** `curar_animal` cura o primeiro aliado `Animal` com vida faltando.
+```js
+curar_animal: (card, side, pos) => {
+  const animais = STATE[side].allies.filter((a,i)=> a && a.tipo==='Animal' && a.hp<a.maxHp && i!==pos)
+  if(animais.length){ const alvo=animais[0]; const v=card.effectValue||1; alvo.hp=Math.min(alvo.maxHp, alvo.hp+v); helpers.render() }
+}
+```
+- **Banir Carta ao Entrar:** `ban_on_enter` mostra escolha entre aliados/feitiços/ambiente e move para `ban`.
+```js
+ban_on_enter: (card, side) => {
+  const candidates=[/* coleta spells/allies/env dos dois lados */]
+  helpers.showChoice(candidates.map(o=>({card:o.card,label:o.side==='you'?'Seu':'Oponente'})), (chosen,idx)=>{
+    const ch=candidates[idx]; /* remove do local e adiciona em STATE[ch.side].ban */ helpers.render()
+  }, 'Escolha uma carta para banir')
+}
+```
+- **Destruir Equipamento:** `destroy_equip_on_enter` envia um `equip` de `spells` ao cemitério.
+```js
+destroy_equip_on_enter: (card, side) => {
+  const equips=[/* filtra spells.kind==='equip' */]
+  helpers.showChoice(equips.map(e=>({card:e.card,label:e.side==='you'?'Seu':'Oponente'})), (chosen,idx)=>{
+    const eq=equips[idx]; helpers.sendEquipToGrave(eq.side, eq.card); helpers.render()
+  }, 'Escolha um equipamento para destruir')
+}
+```
+- **Buscar no Deck:** `search_deck` abre busca com `performSearchDeck` e coloca na mão.
+```js
+search_deck: (card, side) => {
+  const q = { ...(card.query||card.effectValue||{}), excludeName: card.name }
+  helpers.searchDeck(side, q, card.max||10, card.title||'Buscar no deck', (chosen)=>{ if(chosen){ helpers.render() } })
+}
+```
+- **Causar Dano a Aliado seu:** `damage_ally_on_enter` seleciona outro aliado e aplica `effectValue` de dano.
+```js
+damage_ally_on_enter: (card, side, pos) => {
+  const candidates = (STATE[side].allies||[]).map((a,i)=> a&&i!==pos&&a.hp>0?{obj:a,slot:i}:null).filter(Boolean)
+  helpers.showChoice(candidates.map(p=>({card:p.obj})), (chosen,idx)=>{ const pick=candidates[idx]; pick.obj.hp=Math.max(0, pick.obj.hp-(card.effectValue||1)); helpers.render() }, 'Escolha aliado para receber dano')
+}
+```
+- **Descartar da Mão do Oponente:** `discard_enemy_hand` permite escolher carta da mão inimiga e descartar.
+```js
+discard_enemy_hand: (card, side) => {
+  const foe = side==='you'?'ai':'you'; const hand=STATE[foe].hand||[];
+  const opts = hand.map((c,i)=>({card:c, idx:i}))
+  helpers.showChoice(opts, (chosen,idx)=>{ discardCardFromHand(foe, idx, { reason:'discard_enemy_hand' }); helpers.render() }, 'Escolha uma carta do oponente para descartar')
+}
+```
+- **Aranhas — Informante:** dano no próprio líder e descarta aleatório do oponente.
+```js
+aranhas_informante: (card, side) => {
+  const foe = side==='you'?'ai':'you'; const dmg=(card.effectValue?.damage)||4; STATE[side].leader.hp=Math.max(0,STATE[side].leader.hp-dmg);
+  discardRandomFromHand(foe, (card.effectValue?.discard)||1, { reason:'aranhas_informante' }); helpers.render()
+}
+```
+- **Aranhas — Mascote:** cria tokens "Aranhas Negras" em slots vazios.
+```js
+aranhas_mascote: (card, side) => {
+  const freeSlots=(STATE[side].allies||[]).filter(a=>!a).length; const tpl={ name:'Aranhas Negras', kind:'ally', ac:5, hp:1, maxHp:1, damage:1, atkBonus:1, img:'assets/tokens/token_aranhas.png' };
+  for(let i=0;i<freeSlots;i++){ MYTRAGOR_EFFECTS.createToken(tpl, side) } helpers.render()
+}
+```
+- **Emboscada (Reação):** `aranhas_emboscada_reaction` paga custo, envia carta à pilha correta e aplica `-3 atkBonusTemp` ao atacante.
+```js
+MYTRAGOR_EFFECTS.triggerEffect('aranhas_emboscada_reaction', card, attackerSide, attackerCard, defenderSide)
+```
+- **Bem Treinado (Reação):** ao aliado seu morrer, permite chamar aliado `Marcial` do cemitério.
+```js
+MYTRAGOR_EFFECTS.notifyAllySentToGrave(deadCard, side)
+// Internamente chama triggerEffect('bem_treinado_reaction', ...)
+```
+- **Ajuda do Povo:** cria até 2 tokens "Cidadãos Unidos" se houver espaço.
+```js
+MYTRAGOR_EFFECTS.triggerEffect('ajuda_do_povo', card, side)
+```
+- **Raio de Gelo:** deita (tap) um inimigo — líder ou aliado de maior dano.
+```js
+MYTRAGOR_EFFECTS.triggerEffect('raio_gelo', card, side)
+```
+- **Espionagem Sorrateira:** inspeciona mão e permite descartar carta Religiosa/Marcial/Arcana.
+```js
+MYTRAGOR_EFFECTS.triggerEffect('espionagem_sorrateira', card, side)
+```
+
+## Boas Práticas
+- Validar alvo antes de aplicar.
+- Não vazar estado entre modos (VS IA vs MP).
+- Usar `resolveImgPath` para imagens quando necessário.
+- Emitir eventos (`Game.emit('TURN_START')`) quando relevante.
+
+## Observações
+- Esta referência não substitui o código em `effects.js`; serve para orientar escrita e leitura.
+- Adapte nomes/chaves aos existentes na engine.
 # EFFECTS — Nomenclaturas e comportamentos
 
 Este arquivo lista as chaves (`effect`) usadas no projeto Mytragor, descreve o comportamento esperado de cada efeito, os campos auxiliares mais comuns (por exemplo `effectValue`, `dmgBonus`) e boas práticas ao adicionar novas cartas em `assets/cards/cartas.js`.
