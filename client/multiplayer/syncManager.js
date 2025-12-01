@@ -101,6 +101,52 @@
     return id; 
   }
 
+  function applyRemoteAction(rec){
+    captureOriginals();
+    const { actionType, payload, playerId: senderId } = rec;
+    const me = String(playerId || 'p1');
+    const localSide = (String(senderId) === me) ? 'you' : 'ai';
+
+    console.log(`[syncManager] Applying remote action ${actionType} for local side: ${localSide}`);
+
+    try {
+      window.__APPLY_REMOTE = true;
+      if (actionType === 'PLAY_CARD') {
+        if (typeof orig.playFromHand === 'function') {
+          orig.playFromHand(localSide, payload.index);
+        }
+      } else if (actionType === 'END_TURN') {
+        if (typeof orig.endTurn === 'function') {
+          orig.endTurn();
+        }
+        // Se o turno que começou é o nosso, chamar beginTurn()
+        if (window.STATE && window.STATE.active === 'you' && typeof window.beginTurn === 'function') {
+          try { beginTurn(); } catch(e) {}
+        }
+      } else if (actionType === 'ATTACK') {
+        if (window.Game && typeof Game.applyResolvedAttack === 'function') {
+          Game.applyResolvedAttack(payload);
+        }
+      } else if (actionType === 'START_MATCH') {
+        if (typeof window.startMatch === 'function') {
+          window.startMatch();
+        }
+      }
+    } finally {
+      window.__APPLY_REMOTE = false;
+    }
+
+    // Forçar renderização para garantir que a UI reflita o novo estado
+    try {
+      if (typeof window.render === 'function') {
+        render();
+        console.log('[syncManager] Render triggered after remote action.');
+      }
+    } catch(e) {
+      console.warn('[syncManager] Render after remote action failed', e);
+    }
+  }
+
   function onActionAccepted(rec){ 
     try{ console.log('[MP] actionAccepted', rec); }catch(e){}
     try{ pushHistory({ t: Date.now(), type: String(rec.actionType||''), by: String(rec.playerId||''), serverSeq: Number(rec.serverSeq||0), payload: rec.payload||{} }); }catch(e){}
@@ -108,80 +154,20 @@
     lastServerSeq = Number(rec.serverSeq)||lastServerSeq; 
     const id = String(rec.actionId||''); 
     
+    // Se a ação estava pendente (era nossa), apenas a removemos da fila.
+    // A aplicação real acontece abaixo, tratando-a como qualquer outra ação vinda do servidor.
     if(pending.has(id)) {
-      const pendingAction = pending.get(id);
       pending.delete(id); 
-      
-      // Para ATTACK, aplicar a resolução completa vinda do servidor
-      if(pendingAction.actionType === 'ATTACK' && rec.actionType === 'ATTACK') {
-        if(window.Game && typeof Game.applyResolvedAttack === 'function') {
-          Game.applyResolvedAttack(rec.payload);
-        }
-        try{ if(typeof window.appendLogLine==='function'){ var rp=rec.payload||{}; var tgt=rp.target||{}; window.appendLogLine(`Ataque aceito: ${rp.fromSide} contra ${tgt.type||''}/${tgt.side||''} — dano ${rp.damage||0}`,'effect'); } }catch(e){}
-        return;
-      }
-      // Para END_TURN, avançar turno pelo servidor
-      if(pendingAction.actionType === 'END_TURN' && rec.actionType === 'END_TURN') {
-        captureOriginals();
-        try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
-        // NÃO chamar beginTurn() aqui. Apenas o jogador que se torna ativo deve fazer isso.
-        // A lógica para isso já existe no handler de ações remotas.
-        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Turno encerrado por ${rec.playerId||''}`,'effect'); }catch(e){}
-        return;
-      }
-      // Para PLAY_CARD, agora precisamos aplicar a ação que vem do servidor
-      if(pendingAction.actionType === 'PLAY_CARD' && rec.actionType === 'PLAY_CARD') {
-        captureOriginals();
-        try{
-          window.__APPLY_REMOTE = true;
-          if(typeof orig.playFromHand === 'function') orig.playFromHand(rec.payload.side, rec.payload.index);
-        } finally {
-          window.__APPLY_REMOTE = false;
-        }
-        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Carta jogada confirmada pelo servidor`,'effect'); }catch(e){}
-        console.log('[syncManager] PLAY_CARD ação própria aceita e aplicada via servidor');
-        return;
-      }
-      // Para START_MATCH, iniciar partida sincronizada
-      if(pendingAction.actionType === 'START_MATCH' && rec.actionType === 'START_MATCH') {
-        try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
-        try{
-          if (!window.STATE || !window.STATE.isHost) {
-            // Apenas o host publica snapshot inicial.
-            return;
-          }
-
-          if (window.Game && typeof Game.buildSnapshot === 'function' && window.wsClient && typeof wsClient.sendClientSnapshot === 'function') {
-            // Host publishes snapshot after a small delay to ensure both players have finished deck setup
-            setTimeout(function(){
-              try{
-                // Ensure host initializes turn/fragments before publishing snapshot
-                try{ if(typeof beginTurn === 'function') beginTurn(); }catch(e){}
-                var snap = Game.buildSnapshot();
-                wsClient.sendClientSnapshot(snap);
-                console.log('[syncManager] Host published initial snapshot after START_MATCH');
-              }catch(e){
-                console.error('[syncManager] Host snapshot publish error:', e);
-              }
-            }, 200);
-          }
-        }catch(e){}
-        try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
-        // Não redefinir playerChosen aqui; isso quebra o gate de início em MP.
-        // Mantemos os flags até que a partida termine.
-        return;
-      }
-      // Para SET_LEADER, apenas confirmar aceição (renderização feita no wrapper)
-      if(pendingAction.actionType === 'SET_LEADER' && rec.actionType === 'SET_LEADER') {
-        console.log('[syncManager] SET_LEADER ação própria aceita pelo servidor, playerChosen =', playerChosen);
-        return;
-      }
-      
-      return; 
     } 
     
-    // Ação de outro jogador - aplicar remotamente
-    // Importante: Para SET_LEADER de qualquer jogador, atualizar playerChosen globalmente
+    // Tratar todas as ações de jogo validadas da mesma forma, aplicando-as remotamente.
+    const gameActions = ['PLAY_CARD', 'ATTACK', 'END_TURN', 'START_MATCH'];
+    if (gameActions.includes(rec.actionType)) {
+      applyRemoteAction(rec);
+      return;
+    }
+
+    // Tratamento especial para ações que não são de jogo (como SET_LEADER)
     if(rec.actionType === 'SET_LEADER') {
       try{
         const side = rec.payload && rec.payload.side ? String(rec.payload.side) : null;
@@ -192,69 +178,6 @@
         }
       }catch(e){ console.warn('[syncManager] Erro ao processar SET_LEADER remoto', e); }
       return;
-    }
-    
-    if(rec.actionType === 'ATTACK') {
-      if(window.Game && typeof Game.applyResolvedAttack === 'function') {
-        Game.applyResolvedAttack(rec.payload);
-      }
-      try{ if(typeof window.appendLogLine==='function'){ var rp=rec.payload||{}; var tgt=rp.target||{}; window.appendLogLine(`Oponente atacou: ${rp.fromSide} contra ${tgt.type||''}/${tgt.side||''} — dano ${rp.damage||0}`,'effect'); } }catch(e){}
-    } else if(rec.actionType === 'PLAY_CARD') {
-      // Ação PLAY_CARD do oponente — usar playerId canônico para mapear o lado local
-      captureOriginals();
-      try{ 
-        window.__APPLY_REMOTE = true; 
-        if(typeof orig.playFromHand === 'function') {
-          try{
-            const sender = String(rec.playerId||'');
-            const me = String(playerId||'');
-            const ls = (sender === me) ? 'you' : 'ai';
-            orig.playFromHand(ls, rec.payload.index);
-          }catch(err){
-            // fallback antigo (pode falhar se "side" vier em perspectiva do remetente)
-            orig.playFromHand(rec.payload.side, rec.payload.index);
-          }
-        }
-      } finally { 
-        window.__APPLY_REMOTE = false; 
-      }
-      try{ if(typeof renderSide==='function'){ renderSide('you'); renderSide('ai'); } }catch(e){}
-      try{ if(typeof window.render==='function') render(); }catch(e){}
-      try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Oponente jogou carta de seu baralho`,'effect'); }catch(e){}
-    } else {
-      if(rec.actionType === 'END_TURN'){
-        captureOriginals();
-        try{ window.__APPLY_REMOTE = true; if(typeof orig.endTurn==='function') orig.endTurn(); } finally { window.__APPLY_REMOTE = false; }
-        // Apenas chamar beginTurn() se agora é a MINHA vez (STATE.active === 'you')
-        if(window.STATE && window.STATE.active === 'you' && typeof window.beginTurn==='function') { try{ beginTurn(); }catch(e){} }
-        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Oponente encerrou turno`,'effect'); }catch(e){}
-        // Se agora é a minha vez, enviar snapshot atualizado com novos fragmentos e estado
-        try{
-          var myP = String(playerId||'p1');
-          var mySide = (window.MY_SIDE || 'you');
-          // STATE.active foi atualizado em endTurn(), verificar se é 'you' (minha perspectiva)
-          if(window.STATE && window.STATE.active === mySide && typeof window.Game==='object' && typeof window.Game.buildSnapshot==='function'){
-            setTimeout(function(){
-              try{
-                var snap = window.Game.buildSnapshot();
-                if(snap && window.wsClient && typeof window.wsClient.send==='function'){
-                  window.wsClient.send({ type: 'clientSnapshot', matchId: matchId, snapshot: snap });
-                  console.log('[syncManager] END_TURN: Enviando snapshot atualizado (STATE.active=you, maxPool=', snap.you && snap.you.maxMana, '), snap.pool=', snap.pool);
-                }
-              }catch(e){ console.warn('[syncManager] Erro ao enviar snapshot após END_TURN', e); }
-            }, 50);
-          }
-        }catch(e){}
-      } else if(rec.actionType === 'START_MATCH'){
-        try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
-        try{ if(typeof window.appendLogLine==='function') window.appendLogLine('Partida iniciada (autoridade do servidor)','effect'); }catch(e){}
-        // Não redefinir playerChosen aqui; manter até fim da partida.
-      } else {
-        applyRemote(rec.actionType, rec.payload||{}); 
-        try{ if(typeof renderSide==='function'){ renderSide('you'); renderSide('ai'); } }catch(e){}
-        try{ if(typeof window.render==='function') render(); }catch(e){}
-        try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Ação remota aplicada: ${rec.actionType}`,'effect'); }catch(e){}
-      }
     }
   }
 
