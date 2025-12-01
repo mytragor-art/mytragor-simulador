@@ -54,10 +54,7 @@ F
       </select>
     </div>
 
-    <div class="mp-row">
-        <label for="deck-selector">Escolha seu deck</label>
-        <select id="deck-selector" class="mp-input"></select>
-    </div>
+    
 
     <div class="controls">
       <button id="connect" class="gold-btn primary">Criar sala (host)</button>
@@ -93,7 +90,6 @@ F
   const btnJoin = document.getElementById('joinSelected');
   const lobby = $('#lobby');
   const board = $('#board');
-  const deckSelector = $('#deck-selector');
 
   function loadDecks() {
       const decks = JSON.parse(localStorage.getItem('decksSalvos') || '{}');
@@ -105,9 +101,6 @@ F
           deckSelector.appendChild(option);
       }
   }
-  loadDecks();
-
-
   // Lobby websocket (to list active rooms)
   let lobbyWS = null;
   function connectLobbyWS(){
@@ -177,11 +170,6 @@ F
   // to the full simulator page which contains the game scripts and net bootstrap.
   // Create a new room as host (p1)
   btnConnect.onclick = () => {
-    const selectedDeck = deckSelector.value;
-    if (!selectedDeck) {
-        alert('Por favor, escolha um deck para jogar. Se não tiver um, crie no Deckbuilder.');
-        return;
-    }
     ROOM = normalizeRoom(roomInput.value.trim() || ('ROOM' + Math.floor(Math.random()*9000)));
     MY_SIDE = 'p1';
     const isHttps = (function(){ try{ return location.protocol === 'https:'; }catch(e){ return false; } })();
@@ -190,7 +178,6 @@ F
     const SERVER = (host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host)) ? `${proto}://localhost:8081` : `${proto}://${location.host}`;
     localStorage.setItem('mpRoom', ROOM);
     localStorage.setItem('mpSide', MY_SIDE);
-    localStorage.setItem('mpDeck', selectedDeck);
 
     const targetUrlMsg = `Abrindo simulador como host — sala ${ROOM}`;
     log(targetUrlMsg);
@@ -206,17 +193,12 @@ F
 
   // Join the room selected in the lobby (acts as p2)
   if(btnJoin) btnJoin.onclick = () => {
-    const selectedDeck = deckSelector.value;
-    if (!selectedDeck) {
-        alert('Por favor, escolha um deck para jogar. Se não tiver um, crie no Deckbuilder.');
-        return;
-    }
     ROOM = normalizeRoom(roomInput.value.trim());
     if(!ROOM) return log('Selecione uma sala antes de entrar');
     MY_SIDE = 'p2';
     // SEMPRE usar o domínio do Render
     const SERVER = 'wss://mytragor-simulador.onrender.com';
-    localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE); localStorage.setItem('mpDeck', selectedDeck);
+    localStorage.setItem('mpRoom', ROOM); localStorage.setItem('mpSide', MY_SIDE);
     log(`Entrando na sala ${ROOM} como p2...`);
     const url = new URL(location.href);
     const base = url.pathname.endsWith('/') ? url.pathname : url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
