@@ -9,10 +9,20 @@
         var chosen = window.syncManager.playerChosen || {p1:false,p2:false};
         var haveBothLeaders = !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader);
         var bothChosen = !!(chosen.p1 && chosen.p2);
-        if(!haveBothLeaders || !bothChosen){
-          console.warn('[MP] bloqueado: haveBothLeaders=', haveBothLeaders, 'bothChosen=', bothChosen, 'playerChosen=', chosen);
-          try{ if(typeof renderHUD==='function') renderHUD(); }catch(e){}
-          return;
+        // Host exige líderes e ambos escolhidos; cliente aceita avançar com ambos escolhidos
+        var isHost = !!(window.STATE && window.STATE.isHost);
+        if(isHost){
+          if(!haveBothLeaders || !bothChosen){
+            console.warn('[MP] [HOST] bloqueado: haveBothLeaders=', haveBothLeaders, 'bothChosen=', bothChosen, 'playerChosen=', chosen);
+            try{ if(typeof renderHUD==='function') renderHUD(); }catch(e){}
+            return;
+          }
+        } else {
+          if(!bothChosen){
+            console.warn('[MP] [CLIENT] bloqueado: bothChosen=', bothChosen, 'playerChosen=', chosen);
+            try{ if(typeof renderHUD==='function') renderHUD(); }catch(e){}
+            return;
+          }
         }
       }
     }catch(e){ console.warn('[MP] guard error', e); }
@@ -67,6 +77,15 @@
         console.log('[MP] Host publicou snapshot inicial');
       }
     }catch(e){ console.warn('[MP] snapshot publish failed', e); }
+
+    // Atualizar UI para ambos os lados: remover estado de espera
+    try{ if(typeof renderHUD==='function') renderHUD(); }catch(e){}
+    try{
+      var statusEl = document.getElementById('mpStatus');
+      if(statusEl){ statusEl.textContent = 'Partida iniciada!'; }
+      var btn = document.getElementById('phaseActionBtn');
+      if(btn){ btn.disabled = false; }
+    }catch(e){}
   }
   // Expor substituindo startMatch anterior quando em MP
   try{ window.startMatch = startMatchMp; window.start = startMatchMp; }catch(e){ console.warn('[MP] expose startMatch failed', e); }

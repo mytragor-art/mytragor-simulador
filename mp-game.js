@@ -174,4 +174,24 @@
       console.warn('Error rendering HUD:', e);
     }
   }
+
+  // Iniciar partida com segurança: apenas o host envia START_MATCH
+  function safeStartMatch(){
+    try{
+      var isHost = !!(window.STATE && window.STATE.isHost);
+      // Se já marcada como iniciada, apenas atualiza HUD
+      if(window.__MATCH_STARTED){ try{ if(typeof renderHUD==='function') renderHUD(); }catch(e){} return; }
+      // Verifica se ambos escolheram
+      var pc = window.syncManager && syncManager.playerChosen;
+      var bothChosen = !!(pc && pc.p1 && pc.p2);
+      if(!bothChosen){ return; }
+      if(isHost){
+        try{ syncManager.enqueueAndSend('START_MATCH', {}); }catch(e){}
+      }
+      // Marca como iniciado localmente; mp_runtime aplicará lógica adicional
+      try{ window.__MATCH_STARTED = true; }catch(e){}
+      try{ if(typeof window.startMatch==='function') window.startMatch(); }catch(e){}
+      try{ if(typeof renderHUD==='function') renderHUD(); }catch(e){}
+    }catch(e){ console.warn('[mp-game] safeStartMatch error', e); }
+  }
 })();

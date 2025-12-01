@@ -4007,7 +4007,8 @@ function requestAgiotaPayment(side, index, c){
   STATE[side].allies.forEach((a,i)=>{ if(a && a.effect==='agiota' && !(a._agiotaUsed) && (a.hp||0) >= 2) candidates.push({ obj: a, slot: i }); });
   if(!candidates.length) return false;
   // IA heurística: usar se fragments insuficientes
-  if(side === 'ai'){
+  // Em MP, IA não interfere pagando Agiota automaticamente
+  if(side === 'ai' && !window.IS_MULTIPLAYER){
   if(STATE.pool[side] >= (c.cost||0)) return false; // has fragments, don't steal
     const pick = candidates[0];
     pick.obj.hp = Math.max(0, (pick.obj.hp||0) - 2);
@@ -4073,7 +4074,8 @@ function playFromHand(side, index) {
   // Comportamento:
   // - Se a IA está jogando (side === 'ai'), o jogador humano pode responder com o modal de Conversa Fiada (existente).
   // - Se o jogador está jogando (side === 'you') e a IA tem Conversa Fiada na mão, a IA pode usar automaticamente para anular.
-  if ((c.kind === 'spell' || c.kind === 'truque')) {
+  // Em MP, não executar a lógica reativa local (servidor/peer decide)
+  if (!window.IS_MULTIPLAYER && (c.kind === 'spell' || c.kind === 'truque')) {
     // Caso: IA jogando -> mostrar modal para o jogador usar Conversa Fiada
     if (side === 'ai') {
       const idxFiada = STATE['you'].hand.findIndex(card => card && card.name === 'Conversa Fiada');
@@ -4153,7 +4155,8 @@ function playFromHand(side, index) {
 
   // Lógica de escolha 1 — IA decide automaticamente, jogador vê modal
   if (c.escolha1) {
-    if (side === 'ai') {
+    // Em MP, IA não toma decisões locais
+    if (side === 'ai' && !window.IS_MULTIPLAYER) {
       // IA decide entre A/B por heurística simples
       const leader = STATE[side].leader;
       let escolha = 'B';
