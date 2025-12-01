@@ -2,8 +2,7 @@
 (function(){
   if(!window.IS_MULTIPLAYER){ return; }
   function startMatchMp(){
-    console.log('[MP] startMatchMp chamado – aguardando pré-condições');
-    try{ window.__MATCH_STARTED = true; }catch(e){}
+    console.log('[MP] startMatchMp chamado – checando pré-condições');
     // Guard: só inicia se ambos escolheram e líderes existem
     try{
       if(window.syncManager){
@@ -18,6 +17,9 @@
       }
     }catch(e){ console.warn('[MP] guard error', e); }
 
+    // Marca início somente depois de todas as pré-condições atendidas
+    try{ window.__MATCH_STARTED = true; }catch(e){}
+
     // Seed RNG (host apenas) para consistência
     try{
       if(window.STATE && window.STATE.isHost && !window.__RNG_MATCH_SEEDED){
@@ -31,35 +33,40 @@
       }
     }catch(e){ console.warn('[MP] seeding error', e); }
 
-    // Render vazio para iniciar
-    try{ Game.renderEmptyBoard('p1'); Game.renderEmptyBoard('p2'); }catch(e){ console.warn('[MP] renderEmptyBoard error', e); }
+    // Render vazio para iniciar (apenas host coordena estado inicial)
+    try{ if(window.STATE && window.STATE.isHost){ Game.renderEmptyBoard('p1'); Game.renderEmptyBoard('p2'); } }catch(e){ console.warn('[MP] renderEmptyBoard error', e); }
 
-    // Build decks a partir de customDeck (já definidos ao escolher líder)
-    try{ buildDeck('you'); buildDeck('ai'); }catch(e){ console.warn('[MP] buildDeck error', e); }
-
-    // Embaralhar
-    try{ Game.shuffle('you'); Game.shuffle('ai'); }catch(e){ console.warn('[MP] shuffle error', e); }
-
-    // Mãos iniciais (5 cartas cada) – local, serão refletidas via snapshot posterior
+    // Build decks a partir de customDeck: somente host constrói e publica via snapshot
     try{
-      if(!STATE.you.hand) STATE.you.hand = [];
-      if(!STATE.ai.hand) STATE.ai.hand = [];
-      for(let i=0;i<5;i++){
-        if(STATE.you.deck.length) STATE.you.hand.push(STATE.you.deck.pop());
-        if(STATE.ai.deck.length) STATE.ai.hand.push(STATE.ai.deck.pop());
+      if(window.STATE && window.STATE.isHost){
+        buildDeck('you');
+        buildDeck('ai');
       }
-      console.log('[MP] Decks construídos. you.hand=', STATE.you.hand.length, 'ai.hand=', STATE.ai.hand.length);
+    }catch(e){ console.warn('[MP] buildDeck error', e); }
+
+    // Embaralhar: somente host
+    try{ if(window.STATE && window.STATE.isHost){ Game.shuffle('you'); Game.shuffle('ai'); } }catch(e){ console.warn('[MP] shuffle error', e); }
+
+    // Mãos iniciais: somente host distribui e depois snapshot sincroniza nos clientes
+    try{
+      if(window.STATE && window.STATE.isHost){
+        if(!STATE.you.hand) STATE.you.hand = [];
+        if(!STATE.ai.hand) STATE.ai.hand = [];
+        for(let i=0;i<5;i++){
+          if(STATE.you.deck.length) STATE.you.hand.push(STATE.you.deck.pop());
+          if(STATE.ai.deck.length) STATE.ai.hand.push(STATE.ai.deck.pop());
+        }
+        console.log('[MP] [HOST] Decks construídos. you.hand=', STATE.you.hand.length, 'ai.hand=', STATE.ai.hand.length);
+      }
     }catch(e){ console.warn('[MP] draw hands error', e); }
 
-    // Handshake de início
+    // Handshake/snapshot: delegar ao syncManager (host publica após START_MATCH)
     try{
-      if(window.NetPeer && typeof window.NetPeer.sendStart==='function'){
-        const ls = (window.MY_SIDE==='p1'?'you':'ai');
-        const spec = (STATE[ls] && STATE[ls].customDeck) ? STATE[ls].customDeck : (typeof getDeckFor==='function'?getDeckFor(window.MY_SIDE):null);
-        window.NetPeer.sendStart(spec);
-        console.log('[MP] Start handshake enviado');
+      if(window.STATE && window.STATE.isHost && window.syncManager && typeof syncManager.publishInitialSnapshot==='function'){
+        syncManager.publishInitialSnapshot();
+        console.log('[MP] Host publicou snapshot inicial');
       }
-    }catch(e){ console.warn('[MP] sendStart failed', e); }
+    }catch(e){ console.warn('[MP] snapshot publish failed', e); }
   }
   // Expor substituindo startMatch anterior quando em MP
   try{ window.startMatch = startMatchMp; window.start = startMatchMp; }catch(e){ console.warn('[MP] expose startMatch failed', e); }
