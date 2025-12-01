@@ -92,8 +92,11 @@
     }
     
     // Para outras ações, aplicar localmente e capturar snapshot para rollback
-    const before = applyLocal(actionType, payload); 
-    pending.set(id, { actionType, payload, before }); 
+    // const before = applyLocal(actionType, payload); 
+    // pending.set(id, { actionType, payload, before }); 
+    
+    // Modelo não-otimista: sempre aguardar servidor
+    pending.set(id, { actionType, payload, before: null }); 
     if(window.wsClient) wsClient.sendAction(matchId, playerId, id, actionType, payload); 
     return id; 
   }
@@ -126,10 +129,17 @@
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Turno encerrado por ${rec.playerId||''}`,'effect'); }catch(e){}
         return;
       }
-      // Para PLAY_CARD, apenas confirmar aceição (ação já foi aplicada otimisticamente)
+      // Para PLAY_CARD, agora precisamos aplicar a ação que vem do servidor
       if(pendingAction.actionType === 'PLAY_CARD' && rec.actionType === 'PLAY_CARD') {
+        captureOriginals();
+        try{
+          window.__APPLY_REMOTE = true;
+          if(typeof orig.playFromHand === 'function') orig.playFromHand(rec.payload.side, rec.payload.index);
+        } finally {
+          window.__APPLY_REMOTE = false;
+        }
         try{ if(typeof window.appendLogLine==='function') window.appendLogLine(`Carta jogada confirmada pelo servidor`,'effect'); }catch(e){}
-        console.log('[syncManager] PLAY_CARD ação própria aceita pelo servidor');
+        console.log('[syncManager] PLAY_CARD ação própria aceita e aplicada via servidor');
         return;
       }
       // Para START_MATCH, iniciar partida sincronizada
