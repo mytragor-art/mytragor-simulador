@@ -50,7 +50,12 @@
     try{
       if(window.STATE && window.STATE.isHost){
         buildDeck('you');
-        buildDeck('ai');
+        // Em MP, só construir deck do oponente se já existe customDeck definido.
+        if(STATE && STATE.ai && Array.isArray(STATE.ai.customDeck)){
+          buildDeck('ai');
+        } else {
+          console.warn('[MP] [HOST] adiando buildDeck(\'ai\'): customDeck ausente');
+        }
       }
     }catch(e){ console.warn('[MP] buildDeck error', e); }
 
@@ -72,9 +77,16 @@
 
     // Handshake/snapshot: delegar ao syncManager (host publica após START_MATCH)
     try{
-      if(window.STATE && window.STATE.isHost && window.syncManager && typeof syncManager.publishInitialSnapshot==='function'){
-        syncManager.publishInitialSnapshot();
+      if(window.STATE && window.STATE.isHost && window.syncManager && typeof syncManager.publishSnapshot==='function'){
+        syncManager.publishSnapshot();
         console.log('[MP] Host publicou snapshot inicial');
+      } else if(window.STATE && window.STATE.isHost){
+        console.warn('[MP] publishSnapshot indisponível — tentando fallback via wsClient.sendClientSnapshot');
+        if(window.Game && typeof Game.buildSnapshot==='function' && window.wsClient && typeof wsClient.sendClientSnapshot==='function'){
+          const snap = Game.buildSnapshot();
+          wsClient.sendClientSnapshot(snap);
+          console.log('[MP] Fallback: snapshot enviado via wsClient');
+        }
       }
     }catch(e){ console.warn('[MP] snapshot publish failed', e); }
 
