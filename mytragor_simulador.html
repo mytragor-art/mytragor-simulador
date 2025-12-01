@@ -3227,18 +3227,28 @@ function showCharSelect(opts){
   document.getElementById('charSelect').style.display = 'flex';
 }
 
+function setLeaderSafe(side, leaderObj){
+  // Em MP, nunca definir o líder do oponente ('ai') localmente,
+  // a menos que seja uma ação remota explícita.
+  if(window.IS_MULTIPLAYER && side === 'ai' && !window.__APPLY_REMOTE){
+    console.log('[setLeaderSafe] Bloqueada tentativa de definir líder do oponente em MP localmente.');
+    return;
+  }
+  STATE[side].leader = leaderObj;
+}
+
 function hideCharSelect(){
   document.getElementById('charSelect').style.display = 'none';
 }
 
 function selectLeader(idx, opts){
   // Assign chosen leader to player; em MP não definimos líder do oponente localmente
-  STATE.you.leader = {...opts[idx], kind:'leader', img: opts[idx].img || CHOSEN_IMAGES[opts[idx].key]};
+  setLeaderSafe('you', {...opts[idx], kind:'leader', img: opts[idx].img || CHOSEN_IMAGES[opts[idx].key]});
   // Definir líder da IA apenas quando NÃO estiver em modo multiplayer
   try{
     if(!(window.IS_MULTIPLAYER || (typeof IS_MP !== 'undefined' && IS_MP))){
       const other = opts[(idx+1+rnd(Math.max(1, opts.length)))%Math.max(1, opts.length)];
-      STATE.ai.leader = {...other, kind:'leader', img: other.img || CHOSEN_IMAGES[other.key]};
+      setLeaderSafe('ai', {...other, kind:'leader', img: other.img || CHOSEN_IMAGES[other.key]});
     }
   }catch(e){}
   // Limpar deck customizado quando usar seleção manual
@@ -3526,10 +3536,10 @@ function selectSavedDeck(deck) {
     const leaderOpts = getLeaderOpts();
     const randomLeader = leaderOpts.length ? leaderOpts[rnd(leaderOpts.length)] : null;
     if(randomLeader){
-      STATE.ai.leader = { ...randomLeader, kind: 'leader', img: randomLeader.img || CHOSEN_IMAGES[randomLeader.key] };
+      setLeaderSafe('ai', { ...randomLeader, kind: 'leader', img: randomLeader.img || CHOSEN_IMAGES[randomLeader.key] });
     } else {
       // fallback hardcoded
-      STATE.ai.leader = { key:'valbrak', name:'Valbrak', kind:'leader', ac:13, hp:20, maxHp:20, atkBonus:2, damage:2, filiacao:'Arcana', img: CHOSEN_IMAGES.valbrak };
+      setLeaderSafe('ai', { key:'valbrak', name:'Valbrak', kind:'leader', ac:13, hp:20, maxHp:20, atkBonus:2, damage:2, filiacao:'Arcana', img: CHOSEN_IMAGES.valbrak });
     }
   }
   
