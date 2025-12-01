@@ -3782,7 +3782,16 @@ function startMatch(){
   try{ Game.renderEmptyBoard('p1'); Game.renderEmptyBoard('p2'); }catch(e){ console.warn('renderEmptyBoard error', e); }
 
   // 2.2 Build decks from customDeck (já foi armazenado no SET_LEADER)
-  try{ buildDeck('you'); buildDeck('ai'); }catch(e){ console.warn('startMatch buildDeck error', e); }
+  try{
+    buildDeck('you');
+    // Em MP, só construa o deck do oponente se o customDeck já estiver presente.
+    // Isso evita cair em decks/ líderes aleatórios de IA.
+    if(!window.IS_MULTIPLAYER || (STATE && STATE.ai && Array.isArray(STATE.ai.customDeck))){
+      buildDeck('ai');
+    } else {
+      console.warn('[startMatch MP] adiando buildDeck(\'ai\'): customDeck ausente');
+    }
+  }catch(e){ console.warn('startMatch buildDeck error', e); }
 
   // 2.3 Shuffle both decks
   try{ Game.shuffle('you'); Game.shuffle('ai'); }catch(e){ console.warn('startMatch shuffle error', e); }
