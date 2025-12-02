@@ -184,7 +184,20 @@
       // Verifica se ambos escolheram
       var pc = window.syncManager && syncManager.playerChosen;
       var bothChosen = !!(pc && pc.p1 && pc.p2);
-      if(!bothChosen){ return; }
+      if(!bothChosen){
+        try{ var s=document.getElementById('mpStatus'); if(s) s.textContent='Aguardando escolhas…'; }catch(e){}
+        return;
+      }
+      // Verifica decks e líderes prontos antes de iniciar (reforço UX)
+      var leadersReady = !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader);
+      var youDeckOk = !!(STATE && STATE.you && Array.isArray(STATE.you.customDeck) && STATE.you.customDeck.length>0);
+      var aiDeckOk  = !!(STATE && STATE.ai && Array.isArray(STATE.ai.customDeck) && STATE.ai.customDeck.length>0);
+      if(!(leadersReady && youDeckOk && aiDeckOk)){
+        try{ var s2=document.getElementById('mpStatus'); if(s2) s2.textContent='Aguardando baralhos e líderes de ambos…'; }catch(e){}
+        // Também logar para depuração
+        try{ console.warn('[mp-game] START_MATCH bloqueado: leadersReady=', leadersReady, 'youDeckOk=', youDeckOk, 'aiDeckOk=', aiDeckOk); }catch(e){}
+        return;
+      }
       if(isHost){
         try{ syncManager.enqueueAndSend('START_MATCH', {}); }catch(e){}
       }

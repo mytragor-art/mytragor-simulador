@@ -69,6 +69,28 @@
     console.log('[syncManager] enqueueAndSend:', actionType, payload);
     const id = uuid(); 
 
+    // Bloqueio extra para START_MATCH: exigir líderes e decks prontos em ambos os lados
+    if(actionType === 'START_MATCH'){
+      try{
+        const isHost = !!(window.STATE && window.STATE.isHost);
+        if(!isHost){
+          console.warn('[syncManager] START_MATCH bloqueado (não é host)');
+          try{ if(typeof window.appendLogLine==='function') appendLogLine('Aguardando host iniciar a partida…','effect'); }catch(e){}
+          return null;
+        }
+        const leadersReady = !!(window.STATE && STATE.you && STATE.ai && STATE.you.leader && STATE.ai.leader);
+        const youDeckOk = !!(STATE && STATE.you && Array.isArray(STATE.you.customDeck) && STATE.you.customDeck.length>0);
+        const aiDeckOk  = !!(STATE && STATE.ai && Array.isArray(STATE.ai.customDeck) && STATE.ai.customDeck.length>0);
+        if(!(leadersReady && youDeckOk && aiDeckOk)){
+          console.warn('[syncManager] START_MATCH bloqueado: leadersReady=', leadersReady, 'youDeckOk=', youDeckOk, 'aiDeckOk=', aiDeckOk);
+          try{ if(typeof window.appendLogLine==='function') appendLogLine('Aguardando ambos: líder e deck prontos para iniciar.','effect'); }catch(e){}
+          // Atualiza status na UI se disponível
+          try{ var s=document.getElementById('mpStatus'); if(s) s.textContent='Aguardando baralhos/líderes…'; }catch(e){}
+          return null;
+        }
+      }catch(e){ console.warn('[syncManager] START_MATCH guard error', e); }
+    }
+
     if(actionType === 'SET_LEADER'){
       try{
         const side = String((window.localSide||playerId||'p1'));
@@ -116,12 +138,16 @@
           orig.playFromHand(localSide, payload.index);
         }
       } else if (actionType === 'END_TURN') {
+        // Aplicar alternância de turno sempre em ambos os lados
         if (typeof orig.endTurn === 'function') {
           orig.endTurn();
         }
-        // Se o turno que começou é o nosso, chamar beginTurn()
-        if (window.STATE && window.STATE.active === 'you' && typeof window.beginTurn === 'function') {
+        // Autoridade: apenas o HOST roda o início de turno (pool/maxPool/draw)
+        // O cliente aguarda o snapshot do host para refletir os fragmentos.
+        if (window.STATE && window.STATE.isHost && typeof window.beginTurn === 'function') {
           try { beginTurn(); } catch(e) {}
+          // Publicar snapshot após atualizar estado de turno para refletir fragments em todos os clientes
+          try { if (typeof window.syncManager?.publishSnapshot === 'function') window.syncManager.publishSnapshot(); } catch(e) {}
         }
       } else if (actionType === 'ATTACK') {
         if (window.Game && typeof Game.applyResolvedAttack === 'function') {

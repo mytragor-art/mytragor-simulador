@@ -262,7 +262,15 @@
     try{
       var el = document.getElementById('mpStatus');
       const chosen = window.syncManager.playerChosen; // Usa diretamente do syncManager
-      if(hasBoth() && bothHaveChosen()){
+      // Requer também baralhos prontos (customDeck com cartas) para ambos os lados
+      const decksReady = (function(){
+        try{
+          const youDeck = window.STATE && STATE.you && Array.isArray(STATE.you.customDeck) && STATE.you.customDeck.length>0;
+          const aiDeck  = window.STATE && STATE.ai && Array.isArray(STATE.ai.customDeck) && STATE.ai.customDeck.length>0;
+          return youDeck && aiDeck;
+        }catch(e){ return false; }
+      })();
+      if(hasBoth() && bothHaveChosen() && decksReady){
         console.log('[tryStart] GATE PASSED: hasBoth=true, bothHaveChosen=true, playerChosen=', chosen);
         if(!startRequested){
           startRequested = true;
@@ -279,12 +287,13 @@
         var ai  = !!(window.STATE && STATE.ai && STATE.ai.leader);
         var youChosen = !!(chosen.p1);
         var aiChosen = !!(chosen.p2);
-        console.log('[tryStart] GATE FAILED: hasBoth=' + (you && ai) + ', bothHaveChosen=' + (youChosen && aiChosen) + ', playerChosen=', chosen);
+        console.log('[tryStart] GATE FAILED: hasBoth=' + (you && ai) + ', bothHaveChosen=' + (youChosen && aiChosen) + ', decksReady=' + decksReady + ', playerChosen=', chosen);
         var statusMsg = '';
         if(!youChosen && !aiChosen){ statusMsg = 'Escolha seu baralho e líder. Aguardando ambos…'; }
         else if(youChosen && !aiChosen){ statusMsg = 'Você escolheu. Aguardando o oponente escolher…'; }
         else if(!youChosen && aiChosen){ statusMsg = 'Oponente escolheu. Aguardando você escolher…'; }
-        else { statusMsg = 'Ambos escolheram. Pronto para iniciar!'; }
+        else if(!decksReady){ statusMsg = 'Ambos escolheram o líder. Aguardando baralhos carregarem…'; }
+        else { statusMsg = 'Ambos escolhidos. Pronto para iniciar!'; }
         if(el){ el.textContent = statusMsg; }
         return false;
       }

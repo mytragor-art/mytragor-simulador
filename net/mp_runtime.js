@@ -50,11 +50,11 @@
     try{
       if(window.STATE && window.STATE.isHost){
         buildDeck('you');
-        // Em MP, só construir deck do oponente se já existe customDeck definido.
-        if(STATE && STATE.ai && Array.isArray(STATE.ai.customDeck)){
+        // Em MP, só construir deck do oponente se já existe customDeck E líder definidos.
+        if(STATE && STATE.ai && Array.isArray(STATE.ai.customDeck) && STATE.ai.customDeck.length>0 && STATE.ai.leader){
           buildDeck('ai');
         } else {
-          console.warn('[MP] [HOST] adiando buildDeck(\'ai\'): customDeck ausente');
+          console.warn('[MP] [HOST] adiando buildDeck(\'ai\'): customDeck/leader ausente');
         }
       }
     }catch(e){ console.warn('[MP] buildDeck error', e); }
